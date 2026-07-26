@@ -1,0 +1,323 @@
+import {
+  BadgeCheck,
+  BriefcaseBusiness,
+  ChevronRight,
+  Heart,
+  Menu,
+  PackageOpen,
+  Search,
+  ShieldCheck,
+  ShoppingBag,
+  Star,
+  UserRound,
+  X,
+  Zap,
+} from "lucide-react";
+import { FormEvent, useEffect, useState } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { STAFF_ROLES } from "../api/client";
+import { useAuth } from "../auth/AuthContext";
+import { useCart } from "../commerce/CartContext";
+import type { CatalogProduct } from "../data/catalog";
+import { useLocale } from "../i18n/LocaleContext";
+
+export function YselloReferenceHeader() {
+  const { user } = useAuth();
+  const { count } = useCart();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const [query, setQuery] = useState("");
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
+  const accountPath = user
+    ? STAFF_ROLES.includes(user.role)
+      ? "/admin"
+      : user.role === "SELLER"
+        ? "/seller"
+        : "/dashboard"
+    : "/sign-in";
+
+  useEffect(() => {
+    setMenuOpen(false);
+    setMobileSearchOpen(false);
+  }, [location.pathname, location.hash]);
+
+  function submitSearch(event: FormEvent) {
+    event.preventDefault();
+    const value = query.trim();
+    navigate(`/catalog${value ? `?q=${encodeURIComponent(value)}` : ""}`);
+  }
+
+  return (
+    <header className="ys-ref-header">
+      <div className="ys-ref-announcement">
+        <span>
+          <Zap aria-hidden="true" /> Instant delivery
+        </span>
+        <span>•</span>
+        <span>Verified sellers</span>
+        <span>•</span>
+        <span>Buyer protection</span>
+      </div>
+      <div className="ys-ref-nav">
+        <Link className="ys-ref-wordmark" to="/" aria-label="Ysello home">
+          <strong>ysello</strong>
+          <span>.com</span>
+        </Link>
+        <nav className="ys-ref-desktop-links" aria-label="Primary navigation">
+          <Link to="/catalog">Marketplace</Link>
+          <Link to="/#categories">Categories</Link>
+          <Link to="/#how-it-works">How It Works</Link>
+          <Link to="/seller/apply">Become a Seller</Link>
+        </nav>
+        <form className="ys-ref-global-search" onSubmit={submitSearch}>
+          <Search aria-hidden="true" />
+          <input
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            aria-label="Search accounts, games, AI tools and digital products"
+            placeholder="Search accounts, games, AI tools and more"
+          />
+        </form>
+        <div className="ys-ref-desktop-actions">
+          <Link to={accountPath}>{user ? "Account" : "Sign In"}</Link>
+          <Link className="ys-ref-primary-button" to={user ? accountPath : "/register"}>
+            {user ? "Dashboard" : "Get Started"}
+          </Link>
+          <Link className="ys-ref-cart-button" to="/cart" aria-label={`Cart with ${count} items`}>
+            <ShoppingBag aria-hidden="true" />
+            {count ? <b>{count}</b> : null}
+          </Link>
+        </div>
+        <div className="ys-ref-mobile-actions">
+          <button
+            type="button"
+            aria-label="Search"
+            aria-expanded={mobileSearchOpen}
+            onClick={() => setMobileSearchOpen((open) => !open)}
+          >
+            <Search aria-hidden="true" />
+          </button>
+          <Link to={accountPath} aria-label={user ? "Account" : "Sign in"}>
+            <UserRound aria-hidden="true" />
+          </Link>
+          <button
+            type="button"
+            aria-label="Open menu"
+            aria-expanded={menuOpen}
+            onClick={() => setMenuOpen(true)}
+          >
+            <Menu aria-hidden="true" />
+          </button>
+        </div>
+      </div>
+      {mobileSearchOpen ? (
+        <form className="ys-ref-mobile-search" onSubmit={submitSearch}>
+          <Search aria-hidden="true" />
+          <input
+            autoFocus
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            aria-label="Search marketplace"
+            placeholder="Search products"
+          />
+          <button type="submit">Search</button>
+        </form>
+      ) : null}
+      {menuOpen ? (
+        <>
+          <button
+            type="button"
+            className="ys-ref-menu-scrim"
+            aria-label="Close menu"
+            onClick={() => setMenuOpen(false)}
+          />
+          <nav className="ys-ref-mobile-menu" aria-label="Mobile navigation">
+            <div>
+              <Link className="ys-ref-wordmark" to="/">
+                <strong>ysello</strong>
+                <span>.com</span>
+              </Link>
+              <button
+                type="button"
+                aria-label="Close menu"
+                onClick={() => setMenuOpen(false)}
+              >
+                <X aria-hidden="true" />
+              </button>
+            </div>
+            <Link to="/">Home</Link>
+            <Link to="/catalog">Marketplace</Link>
+            <Link to="/#categories">Categories</Link>
+            <Link to="/#how-it-works">How It Works</Link>
+            <Link to="/seller/apply">Become a Seller</Link>
+            <Link to="/buyer-protection">Buyer Protection</Link>
+            <Link to="/cart">
+              Cart <span>{count}</span>
+            </Link>
+            <Link className="ys-ref-primary-button" to={user ? accountPath : "/register"}>
+              {user ? "Dashboard" : "Get Started"}
+            </Link>
+          </nav>
+        </>
+      ) : null}
+    </header>
+  );
+}
+
+export function YselloReferenceFooter() {
+  return (
+    <footer className="ys-ref-footer">
+      <section className="ys-ref-footer-cta">
+        <div>
+          <ShoppingBag aria-hidden="true" />
+          <span>
+            <strong>Ready to Find Your Next Digital Product?</strong>
+            <small>Browse trusted listings across every category.</small>
+          </span>
+        </div>
+        <Link className="ys-ref-primary-button" to="/catalog">
+          Browse Marketplace <ChevronRight aria-hidden="true" />
+        </Link>
+      </section>
+      <div className="ys-ref-footer-grid">
+        <div className="ys-ref-footer-brand">
+          <Link className="ys-ref-wordmark" to="/">
+            <strong>ysello</strong>
+            <span>.com</span>
+          </Link>
+          <p>
+            A trusted marketplace for digital products, gaming, AI tools and
+            professional services.
+          </p>
+          <span>
+            <ShieldCheck aria-hidden="true" /> Protected marketplace checkout
+          </span>
+        </div>
+        <div>
+          <strong>Marketplace</strong>
+          <Link to="/catalog">All Products</Link>
+          <Link to="/#categories">Categories</Link>
+          <Link to="/#products">Trending Now</Link>
+          <Link to="/#sellers">Top Sellers</Link>
+        </div>
+        <div>
+          <strong>Sell</strong>
+          <Link to="/seller/apply">Become a Seller</Link>
+          <Link to="/seller">Seller Dashboard</Link>
+          <Link to="/seller-policy">Seller Policy</Link>
+          <Link to="/support">Seller Support</Link>
+        </div>
+        <div>
+          <strong>Support</strong>
+          <Link to="/support">Help Center</Link>
+          <Link to="/buyer-protection">Buyer Protection</Link>
+          <Link to="/contact">Contact Us</Link>
+          <Link to="/terms">Terms & Safety</Link>
+        </div>
+        <div>
+          <strong>Company</strong>
+          <Link to="/about">About Us</Link>
+          <Link to="/blog">Guides</Link>
+          <Link to="/privacy">Privacy Policy</Link>
+          <Link to="/copyright">Copyright</Link>
+        </div>
+      </div>
+      <div className="ys-ref-footer-bottom">
+        <span>© 2026 ysello.com. All rights reserved.</span>
+        <span>Visa · Mastercard · PayPal · Apple Pay · Google Pay</span>
+      </div>
+    </footer>
+  );
+}
+
+type ProductCardProps = {
+  product: CatalogProduct;
+  onBuy?: (product: CatalogProduct) => void;
+  layout?: "grid" | "list";
+};
+
+function productTone(product: CatalogProduct) {
+  const key = `${product.category} ${product.title}`.toLowerCase();
+  if (key.includes("social") || key.includes("instagram") || key.includes("tiktok"))
+    return "social";
+  if (key.includes("game") || key.includes("steam") || key.includes("valorant"))
+    return "gaming";
+  if (key.includes("ai") || key.includes("chatgpt") || key.includes("midjourney"))
+    return "ai";
+  if (key.includes("stream") || key.includes("netflix")) return "streaming";
+  return "digital";
+}
+
+export function YselloReferenceProductCard({
+  product,
+  onBuy,
+  layout = "grid",
+}: ProductCardProps) {
+  const { formatMoney } = useLocale();
+  const [saved, setSaved] = useState(false);
+  const categoryParts = product.category.split(" / ");
+  const categoryLabel =
+    categoryParts[categoryParts.length - 1] ?? product.category;
+  const canPurchase =
+    product.type === "SERVICE" || (product.stockCount ?? 0) > 0;
+  const ProductIcon =
+    product.type === "SERVICE" ? BriefcaseBusiness : PackageOpen;
+
+  return (
+    <article className={`ys-ref-product-card ${layout} tone-${productTone(product)}`}>
+      <div className="ys-ref-product-media">
+        {product.imageUrl ? (
+          <img src={product.imageUrl} alt="" loading="lazy" />
+        ) : (
+          <span className="ys-ref-product-symbol" aria-hidden="true">
+            {product.icon || <ProductIcon />}
+          </span>
+        )}
+        <Link to={`/categories/${product.categorySlug}`}>{categoryLabel}</Link>
+        <button
+          type="button"
+          className={saved ? "saved" : ""}
+          aria-label={saved ? "Remove from favorites" : "Add to favorites"}
+          aria-pressed={saved}
+          onClick={() => setSaved((value) => !value)}
+        >
+          <Heart fill={saved ? "currentColor" : "none"} aria-hidden="true" />
+        </button>
+      </div>
+      <div className="ys-ref-product-copy">
+        <Link className="ys-ref-product-title" to={`/products/${product.slug}`}>
+          {product.title}
+        </Link>
+        <p>{product.description}</p>
+        <div className="ys-ref-product-price-row">
+          <strong>{formatMoney(product.priceCents)}</strong>
+          <span>
+            <BadgeCheck aria-hidden="true" /> Verified
+          </span>
+        </div>
+        <div className="ys-ref-product-meta">
+          <span>
+            <Star fill="currentColor" aria-hidden="true" />{" "}
+            {product.rating || "New"} <small>({product.reviews})</small>
+          </span>
+          <span>
+            <Zap aria-hidden="true" /> {product.delivery || "Instant"}
+          </span>
+        </div>
+        <div className="ys-ref-product-card-actions">
+          <Link to={`/products/${product.slug}`}>View details</Link>
+          {onBuy ? (
+            <button
+              type="button"
+              disabled={!canPurchase}
+              onClick={() => onBuy(product)}
+            >
+              {canPurchase ? "Add to cart" : "Unavailable"}
+            </button>
+          ) : null}
+        </div>
+      </div>
+    </article>
+  );
+}

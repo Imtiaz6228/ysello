@@ -1,13 +1,11 @@
 import {
   AppWindow,
-  ArrowRight,
   Bot,
   BriefcaseBusiness,
   ChevronDown,
   Gamepad2,
-  GraduationCap,
+  Gift,
   Grid2X2,
-  Headphones,
   List,
   Mail,
   MessageCircle,
@@ -17,65 +15,54 @@ import {
   Search,
   ShieldCheck,
   SlidersHorizontal,
-  Sparkles,
+  Star,
+  Users,
+  Zap,
 } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useCart } from "../commerce/CartContext";
-import {
-  categoryMatches,
-  productCategoryBuckets,
-} from "../commerce/catalogHierarchy";
+import { categoryMatches } from "../commerce/catalogHierarchy";
 import {
   useMarketplaceCategories,
   useMarketplaceProducts,
 } from "../commerce/useMarketplace";
-import { MarketFooter, MarketHeader } from "../components/MarketHeader";
-import { MarketplaceProductCard } from "../components/MarketplaceProductCard";
+import {
+  YselloReferenceFooter,
+  YselloReferenceHeader,
+  YselloReferenceProductCard,
+} from "../components/YselloReferenceLayout";
 import { Seo } from "../components/Seo";
-import type { CatalogProduct } from "../data/catalog";
-import { useLocale } from "../i18n/LocaleContext";
+import type { CatalogCategory, CatalogProduct } from "../data/catalog";
 
 type SortMode = "popular" | "price_asc" | "price_desc" | "newest";
-type ViewMode = "list" | "grid";
+type ViewMode = "grid" | "list";
 type ProductKind = "all" | "DOWNLOAD" | "SERVICE";
 type PriceBand = "all" | "under_25" | "25_50" | "over_50";
 
 function CategoryGlyph({ slug }: { slug: string }) {
   const key = slug.toLowerCase();
   const Icon =
-    key.includes("email") || key.includes("google")
-      ? Mail
-      : key === "ai" ||
-          key.startsWith("ai-") ||
-          key.includes("artificial-intelligence") ||
-          key.includes("workflow")
-        ? Bot
-        : key.includes("game")
-          ? Gamepad2
-          : key.includes("design") ||
-              key.includes("creative") ||
-              key.includes("art")
-            ? Palette
-            : key.includes("audio") ||
-                key.includes("music") ||
-                key.includes("stream")
-              ? Headphones
+    key.includes("social") ||
+    key.includes("instagram") ||
+    key.includes("facebook") ||
+    key.includes("tiktok")
+      ? Users
+      : key.includes("game")
+        ? Gamepad2
+        : key.includes("ai") || key.includes("productivity")
+          ? Bot
+          : key.includes("mail") || key.includes("email")
+            ? Mail
+            : key.includes("design") || key.includes("creative")
+              ? Palette
               : key.includes("software") || key.includes("app")
                 ? AppWindow
-                : key.includes("course") || key.includes("education")
-                  ? GraduationCap
-                  : key.includes("business")
-                    ? BriefcaseBusiness
-                    : key.includes("social") ||
-                        key.includes("instagram") ||
-                        key.includes("facebook") ||
-                        key.includes("twitter") ||
-                        key.includes("discord") ||
-                        key.includes("telegram") ||
-                        key.includes("tiktok")
-                      ? MessageCircle
-                      : PackageOpen;
+                : key.includes("business")
+                  ? BriefcaseBusiness
+                  : key.includes("message")
+                    ? MessageCircle
+                    : PackageOpen;
   return <Icon aria-hidden="true" />;
 }
 
@@ -89,97 +76,109 @@ function sortProducts(products: CatalogProduct[], sort: SortMode) {
         : b.badge === "New"
           ? 1
           : b.reviews - a.reviews;
-    return (
-      Number(String(b.sales).replace(/[^0-9.]/g, "")) -
-        Number(String(a.sales).replace(/[^0-9.]/g, "")) || b.reviews - a.reviews
-    );
+    return b.reviews - a.reviews;
   });
 }
 
+function findRoot(
+  roots: CatalogCategory[],
+  patterns: string[],
+  fallback: string,
+) {
+  return (
+    roots.find((item) => {
+      const value = `${item.name} ${item.slug}`.toLowerCase();
+      return patterns.some((pattern) => value.includes(pattern));
+    })?.slug ?? fallback
+  );
+}
+
 export function CatalogPage() {
-  const { t } = useLocale();
-  const { add } = useCart();
   const navigate = useNavigate();
+  const { add } = useCart();
+  const products = useMarketplaceProducts();
+  const categories = useMarketplaceCategories();
   const [searchParams, setSearchParams] = useSearchParams();
   const [query, setQueryState] = useState(searchParams.get("q") ?? "");
   const [category, setCategoryState] = useState(
     searchParams.get("category") ?? "all",
   );
-  const [expanded, setExpanded] = useState("");
-  const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
-  const [categoryQuery, setCategoryQuery] = useState("");
   const [sort, setSort] = useState<SortMode>("popular");
   const [view, setView] = useState<ViewMode>("grid");
   const [stockOnly, setStockOnly] = useState(false);
   const [kind, setKind] = useState<ProductKind>("all");
   const [priceBand, setPriceBand] = useState<PriceBand>("all");
   const [minimumRating, setMinimumRating] = useState("all");
-  const products = useMarketplaceProducts();
-  const categories = useMarketplaceCategories();
+  const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
 
-  useEffect(() => {
-    if (category === "all") {
-      setExpanded("");
-      return;
-    }
-    let current = categories.find((item) => item.slug === category);
-    while (current?.parentSlug)
-      current = categories.find((item) => item.slug === current?.parentSlug);
-    setExpanded(current?.slug ?? "");
-  }, [categories, category]);
-
-  const parentCategories = useMemo(
-    () => categories.filter((item) => !item.parentSlug),
+  const rootCategories = useMemo(
+    () => categories.filter((item) => !item.parentSlug && !item.parentId),
     [categories],
   );
-  const childrenByParent = useMemo(
-    () =>
-      new Map(
-        parentCategories.map((parent) => [
-          parent.slug,
-          categories.filter((item) => item.parentSlug === parent.slug),
-        ]),
-      ),
-    [categories, parentCategories],
+
+  const quickCategories = useMemo(
+    () => [
+      {
+        label: "Social Accounts",
+        slug: findRoot(
+          rootCategories,
+          ["social", "instagram"],
+          "social-media-marketplace",
+        ),
+        icon: Users,
+      },
+      {
+        label: "Gaming",
+        slug: findRoot(rootCategories, ["game"], "games"),
+        icon: Gamepad2,
+      },
+      {
+        label: "AI Platforms",
+        slug: findRoot(rootCategories, ["ai", "productivity"], "ai-platforms"),
+        icon: Bot,
+      },
+      {
+        label: "Digital Goods",
+        slug: findRoot(
+          rootCategories,
+          ["subscription", "software", "digital"],
+          "subscription-platforms",
+        ),
+        icon: Gift,
+      },
+    ],
+    [rootCategories],
   );
-  const categoryCounts = useMemo(() => {
-    const counts = new Map<string, number>();
-    for (const product of products) {
-      for (const bucket of productCategoryBuckets(
-        product.categorySlug,
-        categories,
-      ))
-        counts.set(bucket, (counts.get(bucket) ?? 0) + 1);
-    }
-    return counts;
-  }, [categories, products]);
 
   const filteredProducts = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
-    const matches = products.filter((product) => {
-      const isInStock =
-        product.type === "SERVICE" || (product.stockCount ?? 0) > 0;
-      return (
-        categoryMatches(product.categorySlug, category, categories) &&
-        (!stockOnly || isInStock) &&
-        (kind === "all" || product.type === kind) &&
-        (priceBand === "all" ||
-          (priceBand === "under_25" && product.priceCents < 2500) ||
-          (priceBand === "25_50" &&
-            product.priceCents >= 2500 &&
-            product.priceCents <= 5000) ||
-          (priceBand === "over_50" && product.priceCents > 5000)) &&
-        (minimumRating === "all" || product.rating >= Number(minimumRating)) &&
-        (!normalizedQuery ||
-          `${product.title} ${product.description} ${product.seller} ${product.category}`
-            .toLowerCase()
-            .includes(normalizedQuery))
-      );
-    });
-    return sortProducts(matches, sort);
+    return sortProducts(
+      products.filter((product) => {
+        const inStock =
+          product.type === "SERVICE" || (product.stockCount ?? 0) > 0;
+        return (
+          categoryMatches(product.categorySlug, category, categories) &&
+          (!stockOnly || inStock) &&
+          (kind === "all" || product.type === kind) &&
+          (priceBand === "all" ||
+            (priceBand === "under_25" && product.priceCents < 2500) ||
+            (priceBand === "25_50" &&
+              product.priceCents >= 2500 &&
+              product.priceCents <= 5000) ||
+            (priceBand === "over_50" && product.priceCents > 5000)) &&
+          (minimumRating === "all" ||
+            product.rating >= Number(minimumRating)) &&
+          (!normalizedQuery ||
+            `${product.title} ${product.description} ${product.seller} ${product.category}`
+              .toLowerCase()
+              .includes(normalizedQuery))
+        );
+      }),
+      sort,
+    );
   }, [
-    category,
     categories,
+    category,
     kind,
     minimumRating,
     priceBand,
@@ -189,48 +188,22 @@ export function CatalogPage() {
     stockOnly,
   ]);
 
-  function addToCart(product: CatalogProduct) {
-    add(product);
-    navigate("/cart");
+  function updateParam(key: string, value: string, defaultValue = "") {
+    const next = new URLSearchParams(searchParams);
+    if (value && value !== defaultValue) next.set(key, value);
+    else next.delete(key);
+    setSearchParams(next, { replace: true });
   }
 
   function setQuery(value: string) {
     setQueryState(value);
-    const next = new URLSearchParams(searchParams);
-    if (value) next.set("q", value);
-    else next.delete("q");
-    setSearchParams(next, { replace: true });
+    updateParam("q", value);
   }
 
   function setCategory(value: string) {
     setCategoryState(value);
-    const next = new URLSearchParams(searchParams);
-    if (value !== "all") next.set("category", value);
-    else next.delete("category");
-    setSearchParams(next, { replace: true });
+    updateParam("category", value, "all");
   }
-
-  const visibleParents = parentCategories.filter(
-    (item) =>
-      !categoryQuery.trim() ||
-      `${item.name} ${item.description}`
-        .toLowerCase()
-        .includes(categoryQuery.toLowerCase()) ||
-      (childrenByParent.get(item.slug) ?? []).some((child) =>
-        `${child.name} ${child.description}`
-          .toLowerCase()
-          .includes(categoryQuery.toLowerCase()),
-      ),
-  );
-  const activeCategory = categories.find((item) => item.slug === category);
-  const activeFilterCount = [
-    category !== "all",
-    Boolean(query.trim()),
-    stockOnly,
-    kind !== "all",
-    priceBand !== "all",
-    minimumRating !== "all",
-  ].filter(Boolean).length;
 
   function clearFilters() {
     setQuery("");
@@ -241,392 +214,343 @@ export function CatalogPage() {
     setMinimumRating("all");
   }
 
+  function buy(product: CatalogProduct) {
+    add(product);
+    navigate("/cart");
+  }
+
+  const activeCategory = categories.find((item) => item.slug === category);
+  const activeFilterCount = [
+    Boolean(query.trim()),
+    category !== "all",
+    stockOnly,
+    kind !== "all",
+    priceBand !== "all",
+    minimumRating !== "all",
+  ].filter(Boolean).length;
+
   return (
-    <main className="commerce-page market-browse-page">
+    <main
+      className="ys-ref-page ys-ref-catalog"
+      data-legacy-hooks="commerce-page market-browse-page"
+    >
       <Seo
-        title="Browse products and categories"
-        description="Explore approved digital products and expert services by category, seller, price, delivery type, and availability on Ysello."
+        title="Explore the Ysello Marketplace"
+        description="Find verified digital products, gaming resources, AI tools and professional services from trusted sellers."
         canonicalPath="/catalog"
-        schema={{
-          "@context": "https://schema.org",
-          "@type": "CollectionPage",
-          name: "Ysello digital marketplace catalog",
-          description:
-            "Approved digital products and expert services with clear delivery and seller details.",
-          url: `${window.location.origin}/catalog`,
-        }}
       />
-      <MarketHeader />
-      <section className="catalog-hero market-browser-hero">
-        <span className="section-index">
-          {t("allCategories").toUpperCase()}
-        </span>
-        <h1>{t("browse")}</h1>
-        <div className="catalog-search">
-          <Search />
-          <input
-            aria-label="Search marketplace"
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            placeholder={t("search")}
-          />
-        </div>
-      </section>
-      <section className="mobile-category-pills" aria-label="Quick categories">
-        <button
-          className={category === "all" ? "active" : ""}
-          aria-pressed={category === "all"}
-          onClick={() => setCategory("all")}
-        >
-          {t("allCategories")} <span>{products.length}</span>
-        </button>
-        {parentCategories.map((item) => (
-          <button
-            key={item.slug}
-            className={category === item.slug ? "active" : ""}
-            aria-pressed={category === item.slug}
-            onClick={() => {
-              setCategory(item.slug);
-              setExpanded(item.slug);
-            }}
-          >
-            {item.name}{" "}
-            <span>
-              {categoryCounts.get(item.slug) ?? item.productCount ?? 0}
-            </span>
-          </button>
-        ))}
-      </section>
-      <section className="catalog-discovery-intro" id="departments">
-        <div className="catalog-section-heading">
+      <YselloReferenceHeader />
+      <div className="ys-ref-catalog-shell">
+        <nav className="ys-ref-breadcrumb" aria-label="Breadcrumb">
+          <Link to="/">Home</Link>
+          <span>/</span>
+          <span>Marketplace</span>
+        </nav>
+        <section className="ys-ref-catalog-hero">
           <div>
-            <span className="section-index">
-              <Sparkles /> CURATED DEPARTMENTS
-            </span>
-            <h2>Find the right digital product faster.</h2>
-            <p>
-              Browse professional assets, software, courses, creative tools, and
-              seller-delivered services with clear licensing and delivery
-              details.
-            </p>
+            <h1>Explore the Marketplace</h1>
+            <p>Find verified digital products from trusted sellers</p>
           </div>
-          <Link to="/support">
-            Buying guide <ArrowRight />
-          </Link>
-        </div>
-        <div className="catalog-department-grid">
-          {parentCategories.slice(0, 12).map((item) => (
-            <button
-              type="button"
-              key={item.slug}
-              className={category === item.slug ? "active" : ""}
-              aria-pressed={category === item.slug}
-              onClick={() => {
-                setCategory(item.slug);
-                setExpanded(item.slug);
-                document
-                  .querySelector(".market-browser-layout")
-                  ?.scrollIntoView({ behavior: "smooth", block: "start" });
-              }}
-            >
-              <span>
-                <CategoryGlyph slug={item.slug} />
-              </span>
-              <div>
-                <strong>{item.name}</strong>
-                <small>
-                  {(childrenByParent.get(item.slug) ?? []).length} specialties ·{" "}
-                  {categoryCounts.get(item.slug) ?? item.productCount ?? 0}{" "}
-                  {(categoryCounts.get(item.slug) ?? item.productCount ?? 0) ===
-                  1
-                    ? "product"
-                    : "products"}
-                </small>
-              </div>
-              <ArrowRight />
-            </button>
-          ))}
-        </div>
-        <div className="catalog-confidence-row">
-          <span>
-            <ShieldCheck /> Clear licenses and delivery terms
-          </span>
-          <span>
-            <ShieldCheck /> Moderated seller listings
-          </span>
-          <span>
-            <ShieldCheck /> Order-linked support
-          </span>
-        </div>
-      </section>
-      <section className="market-browser-layout">
+          <label>
+            <Search aria-hidden="true" />
+            <input
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              aria-label="Search products"
+              placeholder="Search products"
+            />
+          </label>
+        </section>
+
+        <section className="ys-ref-catalog-tabs" aria-label="Quick categories">
+          <button
+            type="button"
+            className={category === "all" ? "active" : ""}
+            aria-pressed={category === "all"}
+            onClick={() => setCategory("all")}
+          >
+            <Grid2X2 aria-hidden="true" /> All Products
+          </button>
+          {quickCategories.map((item) => {
+            const Icon = item.icon;
+            return (
+              <button
+                type="button"
+                key={item.label}
+                className={category === item.slug ? "active" : ""}
+                aria-pressed={category === item.slug}
+                onClick={() => setCategory(item.slug)}
+              >
+                <Icon aria-hidden="true" /> {item.label}
+              </button>
+            );
+          })}
+        </section>
+
         <button
           type="button"
-          className="mobile-catalog-filters-toggle"
+          className="ys-ref-mobile-filter-button"
           aria-expanded={mobileFiltersOpen}
-          aria-controls="catalog-filter-directory"
           onClick={() => setMobileFiltersOpen((open) => !open)}
         >
-          <SlidersHorizontal />{" "}
-          {mobileFiltersOpen
-            ? "Hide filters & categories"
-            : "Filters & categories"}
+          <SlidersHorizontal aria-hidden="true" />
+          Filters
           {activeFilterCount ? <span>{activeFilterCount}</span> : null}
-          <ChevronDown />
+          <ChevronDown aria-hidden="true" />
         </button>
-        <aside
-          id="catalog-filter-directory"
-          className={`category-directory ${mobileFiltersOpen ? "mobile-open" : ""}`}
-        >
-          <div className="directory-card">
+
+        <section className="ys-ref-market-layout">
+          <aside
+            className={`ys-ref-filter-panel ${mobileFiltersOpen ? "mobile-open" : ""}`}
+          >
             <header>
-              <strong>{t("allCategories")}</strong>
-              <span>{categories.length}</span>
+              <strong>Filters</strong>
+              <button type="button" onClick={clearFilters}>
+                Clear all
+              </button>
             </header>
-            <label className="directory-check">
-              <input
-                type="checkbox"
-                checked={stockOnly}
-                onChange={(event) => setStockOnly(event.target.checked)}
-              />{" "}
-              {t("inStock")}
-            </label>
-            <div className="directory-filter-stack">
+            <fieldset>
+              <legend>Category</legend>
               <label>
-                <span>Product type</span>
-                <select
-                  value={kind}
-                  onChange={(event) =>
-                    setKind(event.target.value as ProductKind)
-                  }
-                >
-                  <option value="all">All products</option>
-                  <option value="DOWNLOAD">Instant downloads</option>
-                  <option value="SERVICE">Seller services</option>
-                </select>
+                <input
+                  type="radio"
+                  name="category"
+                  checked={category === "all"}
+                  onChange={() => setCategory("all")}
+                />
+                <span>All Categories</span>
+                <small>{products.length}</small>
+              </label>
+              {rootCategories.slice(0, 10).map((item) => (
+                <label key={item.slug}>
+                  <input
+                    type="radio"
+                    name="category"
+                    checked={category === item.slug}
+                    onChange={() => setCategory(item.slug)}
+                  />
+                  <span>{item.name}</span>
+                  <small>
+                    {
+                      products.filter((product) =>
+                        categoryMatches(
+                          product.categorySlug,
+                          item.slug,
+                          categories,
+                        ),
+                      ).length
+                    }
+                  </small>
+                </label>
+              ))}
+            </fieldset>
+            <fieldset>
+              <legend>Price Range</legend>
+              {[
+                ["all", "Any price"],
+                ["under_25", "Under $25"],
+                ["25_50", "$25 – $50"],
+                ["over_50", "Over $50"],
+              ].map(([value, label]) => (
+                <label key={value}>
+                  <input
+                    type="radio"
+                    name="price"
+                    checked={priceBand === value}
+                    onChange={() => setPriceBand(value as PriceBand)}
+                  />
+                  <span>{label}</span>
+                </label>
+              ))}
+            </fieldset>
+            <fieldset>
+              <legend>Delivery</legend>
+              <label>
+                <input
+                  type="checkbox"
+                  checked={stockOnly}
+                  onChange={(event) => setStockOnly(event.target.checked)}
+                />
+                <span>
+                  <Zap aria-hidden="true" /> Available now
+                </span>
+              </label>
+            </fieldset>
+            <fieldset>
+              <legend>Product Type</legend>
+              <label>
+                <input
+                  type="radio"
+                  name="kind"
+                  checked={kind === "all"}
+                  onChange={() => setKind("all")}
+                />
+                <span>All products</span>
               </label>
               <label>
-                <span>Price</span>
-                <select
-                  value={priceBand}
-                  onChange={(event) =>
-                    setPriceBand(event.target.value as PriceBand)
-                  }
-                >
-                  <option value="all">Any price</option>
-                  <option value="under_25">Under $25</option>
-                  <option value="25_50">$25–$50</option>
-                  <option value="over_50">Over $50</option>
-                </select>
+                <input
+                  type="radio"
+                  name="kind"
+                  checked={kind === "DOWNLOAD"}
+                  onChange={() => setKind("DOWNLOAD")}
+                />
+                <span>Instant downloads</span>
               </label>
               <label>
-                <span>Rating</span>
-                <select
-                  value={minimumRating}
-                  onChange={(event) => setMinimumRating(event.target.value)}
-                >
-                  <option value="all">Any rating</option>
-                  <option value="4.5">4.5 and above</option>
-                  <option value="4.8">4.8 and above</option>
-                </select>
+                <input
+                  type="radio"
+                  name="kind"
+                  checked={kind === "SERVICE"}
+                  onChange={() => setKind("SERVICE")}
+                />
+                <span>Seller services</span>
               </label>
-            </div>
-            <div className="directory-search">
-              <Search />
-              <input
-                aria-label="Search categories"
-                value={categoryQuery}
-                onChange={(event) => setCategoryQuery(event.target.value)}
-                placeholder="Search category name..."
-              />
-            </div>
-            <button
-              className={
-                category === "all" ? "directory-all active" : "directory-all"
-              }
-              aria-pressed={category === "all"}
-              onClick={() => setCategory("all")}
-            >
-              {t("viewAll")} <span>{products.length}</span>
-            </button>
-          </div>
-          <div className="directory-list">
-            {visibleParents.map((parent) => {
-              const children = childrenByParent.get(parent.slug) ?? [];
-              const open = expanded === parent.slug;
-              return (
-                <div
-                  className={`directory-group ${open ? "open" : ""}`}
-                  key={parent.slug}
-                >
-                  <button
-                    className={category === parent.slug ? "active" : ""}
-                    aria-expanded={open}
-                    aria-pressed={category === parent.slug}
-                    onClick={() => {
-                      setExpanded(open ? "" : parent.slug);
-                      setCategory(parent.slug);
-                    }}
-                  >
-                    <span className="cat-icon">
-                      <CategoryGlyph slug={parent.slug} />
-                    </span>
-                    <strong>{parent.name}</strong>
-                    <small>
-                      {categoryCounts.get(parent.slug) ??
-                        parent.productCount ??
-                        0}
-                    </small>
-                    <ChevronDown />
-                  </button>
-                  {open ? (
-                    <div className="subcategory-chip-list">
-                      <Link to={`/categories/${parent.slug}`}>→ View All</Link>
-                      {children.map((child) => (
-                        <button
-                          type="button"
-                          className={category === child.slug ? "active" : ""}
-                          aria-pressed={category === child.slug}
-                          key={child.slug}
-                          onClick={() => setCategory(child.slug)}
-                        >
-                          {child.name}
-                        </button>
-                      ))}
-                    </div>
-                  ) : null}
-                </div>
-              );
-            })}
-          </div>
-        </aside>
-        <div className="market-results-panel">
-          <div className="catalog-results-context">
-            <div>
+            </fieldset>
+            <fieldset>
+              <legend>Rating</legend>
+              {["all", "4.5", "4.8"].map((value) => (
+                <label key={value}>
+                  <input
+                    type="radio"
+                    name="rating"
+                    checked={minimumRating === value}
+                    onChange={() => setMinimumRating(value)}
+                  />
+                  <span>
+                    {value === "all" ? (
+                      "Any rating"
+                    ) : (
+                      <>
+                        <Star fill="currentColor" aria-hidden="true" /> {value} &
+                        up
+                      </>
+                    )}
+                  </span>
+                </label>
+              ))}
+            </fieldset>
+            <div className="ys-ref-filter-protection">
+              <ShieldCheck aria-hidden="true" />
               <span>
-                <CategoryGlyph slug={activeCategory?.slug ?? "marketplace"} />
+                <strong>Buyer Protection</strong>
+                <small>Eligible orders stay protected.</small>
               </span>
+            </div>
+          </aside>
+
+          <div className="ys-ref-results">
+            <div className="ys-ref-results-toolbar">
               <div>
-                <small>
-                  {activeCategory ? "SELECTED CATEGORY" : "ALL PRODUCTS"}
-                </small>
-                <strong>{activeCategory?.name ?? "Marketplace catalog"}</strong>
-                <p>
-                  {activeCategory?.description ??
-                    "Explore every department or narrow the catalog with precise filters."}
-                </p>
+                <strong>{filteredProducts.length.toLocaleString()}</strong>
+                <span> listings</span>
+              </div>
+              <div className="ys-ref-active-filters" role="status">
+                {activeCategory ? (
+                  <button type="button" onClick={() => setCategory("all")}>
+                    {activeCategory.name} ×
+                  </button>
+                ) : null}
+                {query.trim() ? (
+                  <button type="button" onClick={() => setQuery("")}>
+                    Search: {query.trim()} ×
+                  </button>
+                ) : null}
+                {priceBand !== "all" ? (
+                  <button type="button" onClick={() => setPriceBand("all")}>
+                    Price filter ×
+                  </button>
+                ) : null}
+                {stockOnly ? (
+                  <button type="button" onClick={() => setStockOnly(false)}>
+                    Available now ×
+                  </button>
+                ) : null}
+              </div>
+              {activeFilterCount ? (
+                <button
+                  className="ys-ref-reset-link"
+                  type="button"
+                  onClick={clearFilters}
+                >
+                  <RotateCcw aria-hidden="true" /> Clear all
+                </button>
+              ) : null}
+              <div className="ys-ref-view-controls">
+                <button
+                  type="button"
+                  className={view === "grid" ? "active" : ""}
+                  aria-label="Grid view"
+                  aria-pressed={view === "grid"}
+                  onClick={() => setView("grid")}
+                >
+                  <Grid2X2 aria-hidden="true" />
+                </button>
+                <button
+                  type="button"
+                  className={view === "list" ? "active" : ""}
+                  aria-label="List view"
+                  aria-pressed={view === "list"}
+                  onClick={() => setView("list")}
+                >
+                  <List aria-hidden="true" />
+                </button>
+                <label>
+                  <span>Sort:</span>
+                  <select
+                    aria-label="Sort products"
+                    value={sort}
+                    onChange={(event) =>
+                      setSort(event.target.value as SortMode)
+                    }
+                  >
+                    <option value="popular">Recommended</option>
+                    <option value="price_asc">Price: Low to High</option>
+                    <option value="price_desc">Price: High to Low</option>
+                    <option value="newest">Newest</option>
+                  </select>
+                </label>
               </div>
             </div>
-            {activeFilterCount ? (
-              <button type="button" onClick={clearFilters}>
-                <RotateCcw /> Reset {activeFilterCount} filter
-                {activeFilterCount === 1 ? "" : "s"}
-              </button>
+
+            <div className={`ys-ref-catalog-grid ${view}`}>
+              {filteredProducts.map((product) => (
+                <YselloReferenceProductCard
+                  key={product.id}
+                  product={product}
+                  layout={view}
+                  onBuy={buy}
+                />
+              ))}
+            </div>
+            {!filteredProducts.length ? (
+              <div className="ys-ref-empty-state">
+                <Search aria-hidden="true" />
+                <strong>No matching products</strong>
+                <span>Try clearing a filter or using a broader search.</span>
+                <button type="button" onClick={clearFilters}>
+                  Clear all filters
+                </button>
+              </div>
+            ) : null}
+            {filteredProducts.length ? (
+              <nav className="ys-ref-pagination" aria-label="Pagination">
+                <button type="button" disabled>
+                  ‹
+                </button>
+                <button type="button" className="active">
+                  1
+                </button>
+                <button type="button">2</button>
+                <button type="button">3</button>
+                <span>…</span>
+                <button type="button">12</button>
+                <button type="button">›</button>
+              </nav>
             ) : null}
           </div>
-          <div className="market-filter-bar">
-            <div>
-              <strong>{filteredProducts.length}</strong>
-              <span>
-                {filteredProducts.length === 1 ? "product" : "products"}
-              </span>
-            </div>
-            <div className="filter-controls">
-              <label>
-                <SlidersHorizontal />{" "}
-                <select
-                  aria-label="Sort products"
-                  value={sort}
-                  onChange={(event) => setSort(event.target.value as SortMode)}
-                >
-                  <option value="popular">Default - Popular</option>
-                  <option value="price_asc">Price: Low → High</option>
-                  <option value="price_desc">Price: High → Low</option>
-                  <option value="newest">Newest</option>
-                </select>
-              </label>
-              <button
-                className={view === "list" ? "active" : ""}
-                onClick={() => setView("list")}
-                aria-label="List view"
-                aria-pressed={view === "list"}
-              >
-                <List />
-              </button>
-              <button
-                className={view === "grid" ? "active" : ""}
-                onClick={() => setView("grid")}
-                aria-label="Grid view"
-                aria-pressed={view === "grid"}
-              >
-                <Grid2X2 />
-              </button>
-            </div>
-          </div>
-          {activeFilterCount ? (
-            <div className="active-filter-summary" role="status">
-              <span>
-                Showing {filteredProducts.length} matched product
-                {filteredProducts.length === 1 ? "" : "s"}
-              </span>
-              {query.trim() ? (
-                <button onClick={() => setQuery("")}>
-                  Search: “{query.trim()}” ×
-                </button>
-              ) : null}
-              {category !== "all" ? (
-                <button onClick={() => setCategory("all")}>
-                  {activeCategory?.name} ×
-                </button>
-              ) : null}
-              {kind !== "all" ? (
-                <button onClick={() => setKind("all")}>
-                  {kind === "DOWNLOAD" ? "Downloads" : "Services"} ×
-                </button>
-              ) : null}
-              {priceBand !== "all" ? (
-                <button onClick={() => setPriceBand("all")}>
-                  Price filter ×
-                </button>
-              ) : null}
-              {minimumRating !== "all" ? (
-                <button onClick={() => setMinimumRating("all")}>
-                  {minimumRating}+ rating ×
-                </button>
-              ) : null}
-              {stockOnly ? (
-                <button onClick={() => setStockOnly(false)}>In stock ×</button>
-              ) : null}
-            </div>
-          ) : null}
-          <div
-            className={`market-product-scroll ${view === "grid" ? "grid" : ""}`}
-          >
-            {filteredProducts.map((product) => (
-              <MarketplaceProductCard
-                key={product.id}
-                product={product}
-                onBuy={addToCart}
-                layout={view}
-              />
-            ))}
-          </div>
-          {!filteredProducts.length ? (
-            <div className="no-results">
-              <Search />
-              <strong>No matching products</strong>
-              <span>
-                Try another category, remove the stock filter, or use a broader
-                phrase.
-              </span>
-              <button type="button" onClick={clearFilters}>
-                Clear all filters
-              </button>
-            </div>
-          ) : null}
-        </div>
-      </section>
-      <MarketFooter />
+        </section>
+      </div>
+      <YselloReferenceFooter />
     </main>
   );
 }
