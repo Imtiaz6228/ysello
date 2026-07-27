@@ -20,9 +20,7 @@ import {
   useMarketplaceCategory,
   useMarketplaceProducts,
 } from "../commerce/useMarketplace";
-import {
-  YselloReferenceProductCard,
-} from "../components/YselloReferenceLayout";
+import { YselloReferenceProductCard } from "../components/YselloReferenceLayout";
 import { MarketFooter, MarketHeader } from "../components/MarketHeader";
 import { Seo } from "../components/Seo";
 import type { CatalogProduct } from "../data/catalog";
@@ -57,6 +55,11 @@ export function CategoryPage() {
   const [kind, setKind] = useState<"all" | "DOWNLOAD" | "SERVICE">("all");
   const [sort, setSort] = useState<SortMode>("popular");
   const [view, setView] = useState<ViewMode>("grid");
+  const [priceBand, setPriceBand] = useState<
+    "all" | "under_25" | "25_50" | "over_50"
+  >("all");
+  const [minimumRating, setMinimumRating] = useState("all");
+  const [availableOnly, setAvailableOnly] = useState(false);
 
   const children = useMemo(
     () => categories.filter((item) => item.parentSlug === slug),
@@ -65,7 +68,9 @@ export function CategoryPage() {
   const siblings = useMemo(
     () =>
       categories
-        .filter((item) => !item.parentSlug && !item.parentId && item.slug !== slug)
+        .filter(
+          (item) => !item.parentSlug && !item.parentId && item.slug !== slug,
+        )
         .slice(0, 4),
     [categories, slug],
   );
@@ -86,16 +91,47 @@ export function CategoryPage() {
           subFilter === "all" ||
           categoryMatches(product.categorySlug, subFilter, categories);
         const matchesKind = kind === "all" || product.type === kind;
+        const matchesPrice =
+          priceBand === "all" ||
+          (priceBand === "under_25" && product.priceCents < 2500) ||
+          (priceBand === "25_50" &&
+            product.priceCents >= 2500 &&
+            product.priceCents <= 5000) ||
+          (priceBand === "over_50" && product.priceCents > 5000);
+        const matchesRating =
+          minimumRating === "all" || product.rating >= Number(minimumRating);
+        const matchesAvailability =
+          !availableOnly ||
+          product.type === "SERVICE" ||
+          (product.stockCount ?? 0) > 0;
         const matchesQuery =
           !normalized ||
           `${product.title} ${product.description} ${product.seller}`
             .toLowerCase()
             .includes(normalized);
-        return inSubcategory && matchesKind && matchesQuery;
+        return (
+          inSubcategory &&
+          matchesKind &&
+          matchesPrice &&
+          matchesRating &&
+          matchesAvailability &&
+          matchesQuery
+        );
       }),
       sort,
     );
-  }, [categories, categoryProducts, kind, query, slug, sort, subFilter]);
+  }, [
+    availableOnly,
+    categories,
+    categoryProducts,
+    kind,
+    minimumRating,
+    priceBand,
+    query,
+    slug,
+    sort,
+    subFilter,
+  ]);
 
   function buy(product: CatalogProduct) {
     add(product);
@@ -217,112 +253,248 @@ export function CategoryPage() {
           </span>
         </section>
 
-        <section className="ys-ref-category-products">
-          <div className="ys-ref-category-toolbar">
-            <div>
-              <strong>{filteredProducts.length}</strong>
-              <span> product{filteredProducts.length === 1 ? "" : "s"} found</span>
-            </div>
-            {children.length ? (
-              <div className="ys-ref-category-filter-tabs">
-                <button
-                  type="button"
-                  className={subFilter === "all" ? "active" : ""}
-                  onClick={() => setSubFilter("all")}
-                >
-                  All
-                </button>
-                {children.slice(0, 6).map((child) => (
-                  <button
-                    type="button"
-                    key={child.slug}
-                    className={subFilter === child.slug ? "active" : ""}
-                    onClick={() => setSubFilter(child.slug)}
-                  >
-                    {child.name}
-                  </button>
-                ))}
-              </div>
-            ) : null}
-            <div className="ys-ref-category-controls">
-              <label>
-                <SlidersHorizontal aria-hidden="true" />
-                <select
-                  aria-label="Product type"
-                  value={kind}
-                  onChange={(event) =>
-                    setKind(
-                      event.target.value as "all" | "DOWNLOAD" | "SERVICE",
-                    )
-                  }
-                >
-                  <option value="all">All types</option>
-                  <option value="DOWNLOAD">Downloads</option>
-                  <option value="SERVICE">Services</option>
-                </select>
-              </label>
-              <label>
-                Sort:
-                <select
-                  aria-label="Sort products"
-                  value={sort}
-                  onChange={(event) =>
-                    setSort(event.target.value as SortMode)
-                  }
-                >
-                  <option value="popular">Recommended</option>
-                  <option value="price_asc">Price: Low to High</option>
-                  <option value="price_desc">Price: High to Low</option>
-                  <option value="newest">Newest</option>
-                </select>
-              </label>
-              <button
-                type="button"
-                className={view === "grid" ? "active" : ""}
-                onClick={() => setView("grid")}
-                aria-label="Grid view"
-              >
-                <Grid2X2 aria-hidden="true" />
-              </button>
-              <button
-                type="button"
-                className={view === "list" ? "active" : ""}
-                onClick={() => setView("list")}
-                aria-label="List view"
-              >
-                <List aria-hidden="true" />
-              </button>
-            </div>
-          </div>
-
-          <div className={`ys-ref-catalog-grid ${view}`}>
-            {filteredProducts.map((product) => (
-              <YselloReferenceProductCard
-                key={product.id}
-                product={product}
-                layout={view}
-                onBuy={buy}
-              />
-            ))}
-          </div>
-          {!filteredProducts.length ? (
-            <div className="ys-ref-empty-state">
-              <Search aria-hidden="true" />
-              <strong>No matching products</strong>
-              <span>Try another specialty or a broader search.</span>
+        <div className="ys-category-market-layout">
+          <aside className="ys-category-filter-panel">
+            <header>
+              <strong>Filter products</strong>
               <button
                 type="button"
                 onClick={() => {
-                  setQuery("");
                   setSubFilter("all");
                   setKind("all");
+                  setPriceBand("all");
+                  setMinimumRating("all");
+                  setAvailableOnly(false);
                 }}
               >
-                Reset filters
+                Clear all
               </button>
+            </header>
+
+            {children.length ? (
+              <fieldset>
+                <legend>Specialty</legend>
+                <label>
+                  <input
+                    type="radio"
+                    name="subcategory"
+                    checked={subFilter === "all"}
+                    onChange={() => setSubFilter("all")}
+                  />
+                  <span>All {category.name}</span>
+                </label>
+                {children.slice(0, 8).map((child) => (
+                  <label key={child.slug}>
+                    <input
+                      type="radio"
+                      name="subcategory"
+                      checked={subFilter === child.slug}
+                      onChange={() => setSubFilter(child.slug)}
+                    />
+                    <span>{child.name}</span>
+                  </label>
+                ))}
+              </fieldset>
+            ) : null}
+
+            <fieldset>
+              <legend>Product type</legend>
+              {[
+                ["all", "All products"],
+                ["DOWNLOAD", "Instant downloads"],
+                ["SERVICE", "Professional services"],
+              ].map(([value, label]) => (
+                <label key={value}>
+                  <input
+                    type="radio"
+                    name="category-kind"
+                    checked={kind === value}
+                    onChange={() =>
+                      setKind(value as "all" | "DOWNLOAD" | "SERVICE")
+                    }
+                  />
+                  <span>{label}</span>
+                </label>
+              ))}
+            </fieldset>
+
+            <fieldset>
+              <legend>Price</legend>
+              {[
+                ["all", "Any price"],
+                ["under_25", "Under $25"],
+                ["25_50", "$25 – $50"],
+                ["over_50", "Over $50"],
+              ].map(([value, label]) => (
+                <label key={value}>
+                  <input
+                    type="radio"
+                    name="category-price"
+                    checked={priceBand === value}
+                    onChange={() =>
+                      setPriceBand(
+                        value as "all" | "under_25" | "25_50" | "over_50",
+                      )
+                    }
+                  />
+                  <span>{label}</span>
+                </label>
+              ))}
+            </fieldset>
+
+            <fieldset>
+              <legend>Rating</legend>
+              {[
+                ["all", "Any rating"],
+                ["4.5", "4.5 & up"],
+                ["4.8", "4.8 & up"],
+              ].map(([value, label]) => (
+                <label key={value}>
+                  <input
+                    type="radio"
+                    name="category-rating"
+                    checked={minimumRating === value}
+                    onChange={() => setMinimumRating(value)}
+                  />
+                  <span>{label}</span>
+                </label>
+              ))}
+            </fieldset>
+
+            <fieldset>
+              <legend>Availability</legend>
+              <label>
+                <input
+                  type="checkbox"
+                  checked={availableOnly}
+                  onChange={(event) => setAvailableOnly(event.target.checked)}
+                />
+                <span>Available now</span>
+              </label>
+            </fieldset>
+
+            <div className="ys-category-protection">
+              <ShieldCheck aria-hidden="true" />
+              <span>
+                <strong>Buyer Protection</strong>
+                <small>Support stays linked to eligible orders.</small>
+              </span>
             </div>
-          ) : null}
-        </section>
+          </aside>
+
+          <section className="ys-ref-category-products">
+            <div className="ys-ref-category-toolbar">
+              <div>
+                <strong>{filteredProducts.length}</strong>
+                <span>
+                  {" "}
+                  product{filteredProducts.length === 1 ? "" : "s"} found
+                </span>
+              </div>
+              {children.length ? (
+                <div className="ys-ref-category-filter-tabs">
+                  <button
+                    type="button"
+                    className={subFilter === "all" ? "active" : ""}
+                    onClick={() => setSubFilter("all")}
+                  >
+                    All
+                  </button>
+                  {children.slice(0, 6).map((child) => (
+                    <button
+                      type="button"
+                      key={child.slug}
+                      className={subFilter === child.slug ? "active" : ""}
+                      onClick={() => setSubFilter(child.slug)}
+                    >
+                      {child.name}
+                    </button>
+                  ))}
+                </div>
+              ) : null}
+              <div className="ys-ref-category-controls">
+                <label>
+                  <SlidersHorizontal aria-hidden="true" />
+                  <select
+                    aria-label="Product type"
+                    value={kind}
+                    onChange={(event) =>
+                      setKind(
+                        event.target.value as "all" | "DOWNLOAD" | "SERVICE",
+                      )
+                    }
+                  >
+                    <option value="all">All types</option>
+                    <option value="DOWNLOAD">Downloads</option>
+                    <option value="SERVICE">Services</option>
+                  </select>
+                </label>
+                <label>
+                  Sort:
+                  <select
+                    aria-label="Sort products"
+                    value={sort}
+                    onChange={(event) =>
+                      setSort(event.target.value as SortMode)
+                    }
+                  >
+                    <option value="popular">Recommended</option>
+                    <option value="price_asc">Price: Low to High</option>
+                    <option value="price_desc">Price: High to Low</option>
+                    <option value="newest">Newest</option>
+                  </select>
+                </label>
+                <button
+                  type="button"
+                  className={view === "grid" ? "active" : ""}
+                  onClick={() => setView("grid")}
+                  aria-label="Grid view"
+                >
+                  <Grid2X2 aria-hidden="true" />
+                </button>
+                <button
+                  type="button"
+                  className={view === "list" ? "active" : ""}
+                  onClick={() => setView("list")}
+                  aria-label="List view"
+                >
+                  <List aria-hidden="true" />
+                </button>
+              </div>
+            </div>
+
+            <div className={`ys-ref-catalog-grid ${view}`}>
+              {filteredProducts.map((product) => (
+                <YselloReferenceProductCard
+                  key={product.id}
+                  product={product}
+                  layout={view}
+                  onBuy={buy}
+                />
+              ))}
+            </div>
+            {!filteredProducts.length ? (
+              <div className="ys-ref-empty-state">
+                <Search aria-hidden="true" />
+                <strong>No matching products</strong>
+                <span>Try another specialty or a broader search.</span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setQuery("");
+                    setSubFilter("all");
+                    setKind("all");
+                    setPriceBand("all");
+                    setMinimumRating("all");
+                    setAvailableOnly(false);
+                  }}
+                >
+                  Reset filters
+                </button>
+              </div>
+            ) : null}
+          </section>
+        </div>
 
         {siblings.length ? (
           <section className="ys-ref-section ys-ref-related-categories">

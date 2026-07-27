@@ -27,6 +27,7 @@ import "./premium-redesign.css";
 import "./product-grid.css";
 import "./ysello-reference-redesign.css";
 import "./marketplace-unified.css";
+import "./g2a-inspired.css";
 import { LocaleProvider } from "./i18n/LocaleContext";
 import { AppErrorBoundary } from "./components/AppErrorBoundary";
 

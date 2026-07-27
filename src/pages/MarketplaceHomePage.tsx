@@ -348,6 +348,17 @@ export function MarketplaceHomePage() {
             src="/marketplace-assets/hero-marketplace.webp"
             alt="A curated collection of digital product and service cards in the Ysello marketplace"
           />
+          <div className="market-featured-deal">
+            <span>FEATURED THIS WEEK</span>
+            <strong>Build smarter. Launch faster.</strong>
+            <p>Save on selected AI, design and business toolkits.</p>
+            <div>
+              <b>UP TO 35% OFF</b>
+              <Link to="/catalog?sort=popular">
+                Shop the deal <ArrowRight aria-hidden="true" />
+              </Link>
+            </div>
+          </div>
           <span className="market-visual-badge visual-badge-one">
             <ShieldCheck aria-hidden="true" />
             Protected checkout
@@ -363,7 +374,10 @@ export function MarketplaceHomePage() {
         </div>
       </section>
 
-      <section className="market-trust-grid" aria-label="Why buyers choose Ysello">
+      <section
+        className="market-trust-grid"
+        aria-label="Why buyers choose Ysello"
+      >
         {trustItems.map(({ title, text, icon: Icon, tone }) => (
           <article className={`tone-${tone}`} key={title}>
             <span>
@@ -420,10 +434,7 @@ export function MarketplaceHomePage() {
         >
           <strong>{focusedCategory.name}</strong>
           {focusedCategory.subcategories.slice(0, 8).map((subcategory) => (
-            <Link
-              key={subcategory.slug}
-              to={`/categories/${subcategory.slug}`}
-            >
+            <Link key={subcategory.slug} to={`/categories/${subcategory.slug}`}>
               <span>{subcategory.name}</span>
               <small>{subcategory.description}</small>
               <ArrowRight aria-hidden="true" />
@@ -446,7 +457,10 @@ export function MarketplaceHomePage() {
           href="/catalog?kind=SERVICE"
           action="Browse services"
         />
-        <div className="market-service-chips" aria-label="Popular service types">
+        <div
+          className="market-service-chips"
+          aria-label="Popular service types"
+        >
           {serviceHighlights.map((service) => (
             <span key={service}>
               <Check aria-hidden="true" /> {service}
@@ -481,7 +495,10 @@ export function MarketplaceHomePage() {
         />
       </section>
 
-      <section className="market-home-section market-how-section" id="how-it-works">
+      <section
+        className="market-home-section market-how-section"
+        id="how-it-works"
+      >
         <SectionHeading
           eyebrow="A clear buying flow"
           title="How Ysello works"
@@ -534,8 +551,8 @@ export function MarketplaceHomePage() {
           </span>
           <h2>Clear support when a digital order needs attention.</h2>
           <p>
-            Ysello keeps the listing, checkout confirmation, delivery record
-            and support conversation tied to the same order.
+            Ysello keeps the listing, checkout confirmation, delivery record and
+            support conversation tied to the same order.
           </p>
           <ul>
             {[
@@ -690,7 +707,11 @@ export function MarketplaceHomePage() {
                 <footer>
                   <span aria-label={`${review.rating} out of 5 stars`}>
                     {Array.from({ length: review.rating }).map((_, index) => (
-                      <Star key={index} fill="currentColor" aria-hidden="true" />
+                      <Star
+                        key={index}
+                        fill="currentColor"
+                        aria-hidden="true"
+                      />
                     ))}
                   </span>
                   <Link to={`/products/${review.productSlug}`}>

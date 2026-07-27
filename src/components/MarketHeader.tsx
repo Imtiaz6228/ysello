@@ -176,6 +176,23 @@ export function MarketHeader() {
         </button>
       </div>
 
+      <nav
+        className="market-department-bar"
+        aria-label="Marketplace departments"
+      >
+        <Link className="market-department-all" to="/catalog">
+          <Grid2X2 aria-hidden="true" /> All products
+        </Link>
+        {marketplaceTaxonomy.slice(0, 6).map((category) => (
+          <Link key={category.slug} to={`/categories/${category.slug}`}>
+            {category.name}
+          </Link>
+        ))}
+        <Link className="market-department-hot" to="/catalog?sort=popular">
+          Hot deals <span>HOT</span>
+        </Link>
+      </nav>
+
       {categoriesOpen ? (
         <div className="market-category-layer">
           <button
@@ -299,7 +316,8 @@ export function MarketFooter() {
           <span>
             <strong>Buy with confidence.</strong>
             <small>
-              Clear listing details, protected checkout and order-linked support.
+              Clear listing details, protected checkout and order-linked
+              support.
             </small>
           </span>
         </div>
