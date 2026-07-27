@@ -11,7 +11,7 @@ import {
 import { Link, useLocation, useSearchParams } from "react-router-dom";
 import { ApiError, apiRequest } from "../api/client";
 import { useCart } from "../commerce/CartContext";
-import { MarketHeader } from "../components/MarketHeader";
+import { MarketFooter, MarketHeader } from "../components/MarketHeader";
 import { Seo } from "../components/Seo";
 
 type CryptoPayment = {
@@ -291,6 +291,7 @@ export function OrderConfirmationPage() {
           </Link>
         </div>
       </section>
+      <MarketFooter />
     </main>
   );
 }

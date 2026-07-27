@@ -15,7 +15,7 @@ import {
 import { Link, useParams } from "react-router-dom";
 import { ApiError, apiDownloadUrl, apiRequest } from "../api/client";
 import { useAuth } from "../auth/AuthContext";
-import { MarketHeader } from "../components/MarketHeader";
+import { MarketFooter, MarketHeader } from "../components/MarketHeader";
 import { Seo } from "../components/Seo";
 import { useLocale } from "../i18n/LocaleContext";
 
@@ -760,6 +760,7 @@ export function OrderDeliveryPage() {
           </div>
         </form>
       </div>
+      <MarketFooter />
     </main>
   );
 }

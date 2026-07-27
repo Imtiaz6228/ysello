@@ -64,12 +64,12 @@ export function ProductPage() {
             "@type": "Product",
             name: product.title,
             description: product.description,
-            url: `${window.location.origin}/products/${product.slug}`,
+            url: `https://ysello.com/products/${product.slug}`,
             sku: product.sku || product.id,
             category: product.category,
             offers: {
               "@type": "Offer",
-              url: `${window.location.origin}/products/${product.slug}`,
+              url: `https://ysello.com/products/${product.slug}`,
               price: (product.priceCents / 100).toFixed(2),
               priceCurrency: "USD",
               availability:
@@ -79,7 +79,7 @@ export function ProductPage() {
               seller: {
                 "@type": "Organization",
                 name: product.seller,
-                url: `${window.location.origin}/stores/${product.sellerSlug}`,
+                url: `https://ysello.com/stores/${product.sellerSlug}`,
               },
             },
             ...(product.reviews > 0 && product.rating > 0
@@ -581,21 +581,32 @@ export function ProductPage() {
           </p>
         </div>
         <div className="review-cards">
-          <article>
-            <span>
-              {product.reviews > 0 ? `${product.rating.toFixed(1)} / 5` : "NEW"}
-            </span>
-            <p>
-              {product.reviews > 0
-                ? `Based on ${product.reviews} verified purchase${product.reviews === 1 ? "" : "s"}. Individual reviews will appear here when review content is available.`
-                : "This listing has no verified buyer reviews yet. Only customers with a paid order can publish one."}
-            </p>
-            <small>
-              {product.reviews > 0
-                ? "Verified-purchase aggregate"
-                : "Be the first verified buyer to review"}
-            </small>
-          </article>
+          {product.verifiedReviews?.length ? (
+            product.verifiedReviews.map((review) => (
+              <article key={review.id}>
+                <span>{review.rating.toFixed(1)} / 5</span>
+                <p>“{review.body}”</p>
+                <small>
+                  <BadgeCheck aria-hidden="true" /> {review.buyerName} ·
+                  Verified purchase ·{" "}
+                  {new Intl.DateTimeFormat("en", {
+                    month: "short",
+                    day: "numeric",
+                    year: "numeric",
+                  }).format(new Date(review.createdAt))}
+                </small>
+              </article>
+            ))
+          ) : (
+            <article>
+              <span>NEW</span>
+              <p>
+                This listing has no verified buyer reviews yet. Only customers
+                with an eligible completed order can publish one.
+              </p>
+              <small>Be the first verified buyer to review</small>
+            </article>
+          )}
         </div>
       </section>
 

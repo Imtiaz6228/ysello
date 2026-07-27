@@ -4,8 +4,49 @@ import { z } from "zod";
 import { prisma } from "../lib/prisma.js";
 import { asyncHandler } from "../middleware/error-handler.js";
 import { equivalentCategorySlugs } from "../data/categoryAliases.js";
+import { marketplaceTaxonomySlugs } from "../data/marketplaceTaxonomy.js";
 
 export const marketplaceRouter = Router();
+
+const publicCategorySlugs = [...marketplaceTaxonomySlugs];
+const prohibitedListingPhrases = [
+  "social account",
+  "social-media account",
+  "email account",
+  "gaming account",
+  "game account",
+  "streaming account",
+  "company account",
+  "aged account",
+  "old account",
+  "new account",
+  "login credential",
+  "session cookie",
+  "recovery access",
+  "2fa key",
+  "with followers",
+  "fake engagement",
+  "fake review",
+  "unauthorized license key",
+];
+
+function publicListingPolicyWhere() {
+  return {
+    category: {
+      isActive: true,
+      slug: { in: publicCategorySlugs },
+    },
+    NOT: prohibitedListingPhrases.flatMap((phrase) => [
+      { name: { contains: phrase, mode: "insensitive" as const } },
+      {
+        shortDescription: {
+          contains: phrase,
+          mode: "insensitive" as const,
+        },
+      },
+    ]),
+  };
+}
 
 async function categoryAndDescendantIds(slug: string) {
   const categories = await prisma.category.findMany({
@@ -39,7 +80,7 @@ marketplaceRouter.get(
   "/categories",
   asyncHandler(async (_req, res) => {
     const categories = await prisma.category.findMany({
-      where: { isActive: true },
+      where: { isActive: true, slug: { in: publicCategorySlugs } },
       orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
       include: {
         parent: { select: { id: true, slug: true, name: true } },
@@ -109,7 +150,7 @@ marketplaceRouter.get(
     const products = await prisma.product.findMany({
       where: {
         status: ProductStatus.APPROVED,
-        category: { isActive: true },
+        ...publicListingPolicyWhere(),
         seller: query.seller
           ? {
               isSuspended: false,
@@ -150,7 +191,7 @@ marketplaceRouter.get(
       where: {
         slug,
         status: ProductStatus.APPROVED,
-        category: { isActive: true },
+        ...publicListingPolicyWhere(),
         seller: {
           isSuspended: false,
           sellerProfile: { isSuspended: false, isVerified: true },
@@ -215,6 +256,41 @@ marketplaceRouter.get(
 );
 
 marketplaceRouter.get(
+  "/reviews",
+  asyncHandler(async (_req, res) => {
+    const reviews = await prisma.review.findMany({
+      where: {
+        isVisible: true,
+        orderItem: {
+          order: {
+            status: { in: ["DELIVERED", "COMPLETED"] },
+          },
+        },
+        product: {
+          status: ProductStatus.APPROVED,
+          ...publicListingPolicyWhere(),
+          seller: {
+            isSuspended: false,
+            sellerProfile: { isSuspended: false, isVerified: true },
+          },
+        },
+      },
+      orderBy: { createdAt: "desc" },
+      take: 12,
+      select: {
+        id: true,
+        rating: true,
+        body: true,
+        createdAt: true,
+        buyer: { select: { firstName: true } },
+        product: { select: { name: true, slug: true } },
+      },
+    });
+    res.json({ reviews });
+  }),
+);
+
+marketplaceRouter.get(
   "/stores/:slug",
   asyncHandler(async (req, res) => {
     const slug = z.string().min(1).max(160).parse(req.params.slug);
@@ -239,7 +315,7 @@ marketplaceRouter.get(
       where: {
         sellerId: store.userId,
         status: ProductStatus.APPROVED,
-        category: { isActive: true },
+        ...publicListingPolicyWhere(),
       },
       include: {
         category: { include: { parent: { include: { parent: true } } } },

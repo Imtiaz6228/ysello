@@ -1,4 +1,5 @@
 import { prisma } from "../lib/prisma.js";
+import { marketplaceTaxonomy } from "../data/marketplaceTaxonomy.js";
 
 export type DefaultCategory = {
   slug: string;
@@ -16,7 +17,7 @@ export type DefaultCategory = {
   isTrending?: boolean;
 };
 
-const legacyMarketplaceCategories: DefaultCategory[] = [
+const _legacyMarketplaceCategories: DefaultCategory[] = [
   {
     slug: "social-media",
     name: "Social media",
@@ -733,9 +734,31 @@ const legacyMarketplaceCategories: DefaultCategory[] = [
 ];
 
 export const defaultMarketplaceCategories: DefaultCategory[] = [
-  ...new Map(
-    legacyMarketplaceCategories.map((category) => [category.slug, category]),
-  ).values(),
+  ...marketplaceTaxonomy.flatMap((category, categoryIndex) => [
+    {
+      slug: category.slug,
+      name: category.name,
+      description: category.description,
+      icon: category.icon,
+      sortOrder: (categoryIndex + 1) * 100,
+      seoTitle: `${category.name} | Ysello`,
+      seoDescription: category.description,
+      isFeatured: true,
+      isTrending: categoryIndex < 4,
+    },
+    ...category.subcategories.map((subcategory, subcategoryIndex) => ({
+      slug: subcategory.slug,
+      parentSlug: category.slug,
+      name: subcategory.name,
+      description: subcategory.description,
+      icon: category.icon,
+      sortOrder: (categoryIndex + 1) * 100 + subcategoryIndex + 1,
+      seoTitle: `${subcategory.name} | Ysello`,
+      seoDescription: subcategory.description,
+      isFeatured: false,
+      isTrending: false,
+    })),
+  ]),
 ];
 
 let ensuredCategoriesAt = 0;

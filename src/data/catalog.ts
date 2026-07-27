@@ -43,6 +43,7 @@ export type CatalogProduct = {
   formats?: string[];
   version?: string;
   updatedAt?: string;
+  publishedAt?: string | null;
   galleryUrls?: string[];
   videoUrl?: string | null;
   attributes?: Record<string, unknown>;
@@ -54,6 +55,13 @@ export type CatalogProduct = {
   maximumOrder?: number | null;
   sku?: string | null;
   tags?: string[];
+  verifiedReviews?: Array<{
+    id: string;
+    rating: number;
+    body: string;
+    createdAt: string;
+    buyerName: string;
+  }>;
 };
 
 const legacyCatalogCategories: CatalogCategory[] = [

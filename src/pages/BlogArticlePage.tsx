@@ -23,16 +23,16 @@ export function BlogArticlePage() {
           description: post.excerpt,
           datePublished: post.publishedIso,
           dateModified: post.publishedIso,
-          mainEntityOfPage: `${window.location.origin}/blog/${post.slug}`,
+          mainEntityOfPage: `https://ysello.com/blog/${post.slug}`,
           author: {
             "@type": "Organization",
             name: "Ysello",
-            url: window.location.origin,
+            url: "https://ysello.com",
           },
           publisher: {
             "@type": "Organization",
             name: "Ysello",
-            url: window.location.origin,
+            url: "https://ysello.com",
           },
         }}
       />

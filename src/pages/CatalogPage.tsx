@@ -3,12 +3,8 @@ import {
   Bot,
   BriefcaseBusiness,
   ChevronDown,
-  Gamepad2,
-  Gift,
   Grid2X2,
   List,
-  Mail,
-  MessageCircle,
   PackageOpen,
   Palette,
   RotateCcw,
@@ -16,10 +12,9 @@ import {
   ShieldCheck,
   SlidersHorizontal,
   Star,
-  Users,
   Zap,
 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useCart } from "../commerce/CartContext";
 import { categoryMatches } from "../commerce/catalogHierarchy";
@@ -27,15 +22,18 @@ import {
   useMarketplaceCategories,
   useMarketplaceProducts,
 } from "../commerce/useMarketplace";
-import {
-  YselloReferenceFooter,
-  YselloReferenceHeader,
-  YselloReferenceProductCard,
-} from "../components/YselloReferenceLayout";
+import { YselloReferenceProductCard } from "../components/YselloReferenceLayout";
+import { MarketFooter, MarketHeader } from "../components/MarketHeader";
 import { Seo } from "../components/Seo";
 import type { CatalogCategory, CatalogProduct } from "../data/catalog";
+import { marketplaceTaxonomy } from "../data/marketplaceTaxonomy";
 
-type SortMode = "popular" | "price_asc" | "price_desc" | "newest";
+type SortMode =
+  | "popular"
+  | "rating"
+  | "price_asc"
+  | "price_desc"
+  | "newest";
 type ViewMode = "grid" | "list";
 type ProductKind = "all" | "DOWNLOAD" | "SERVICE";
 type PriceBand = "all" | "under_25" | "25_50" | "over_50";
@@ -43,26 +41,17 @@ type PriceBand = "all" | "under_25" | "25_50" | "over_50";
 function CategoryGlyph({ slug }: { slug: string }) {
   const key = slug.toLowerCase();
   const Icon =
-    key.includes("social") ||
-    key.includes("instagram") ||
-    key.includes("facebook") ||
-    key.includes("tiktok")
-      ? Users
-      : key.includes("game")
-        ? Gamepad2
-        : key.includes("ai") || key.includes("productivity")
-          ? Bot
-          : key.includes("mail") || key.includes("email")
-            ? Mail
-            : key.includes("design") || key.includes("creative")
-              ? Palette
-              : key.includes("software") || key.includes("app")
-                ? AppWindow
-                : key.includes("business")
-                  ? BriefcaseBusiness
-                  : key.includes("message")
-                    ? MessageCircle
-                    : PackageOpen;
+    key.includes("ai") || key.includes("workflow")
+      ? Bot
+      : key.includes("design") || key.includes("creative")
+        ? Palette
+        : key.includes("software") || key.includes("app")
+          ? AppWindow
+          : key.includes("business") ||
+              key.includes("service") ||
+              key.includes("learning")
+            ? BriefcaseBusiness
+            : PackageOpen;
   return <Icon aria-hidden="true" />;
 }
 
@@ -70,6 +59,8 @@ function sortProducts(products: CatalogProduct[], sort: SortMode) {
   return [...products].sort((a, b) => {
     if (sort === "price_asc") return a.priceCents - b.priceCents;
     if (sort === "price_desc") return b.priceCents - a.priceCents;
+    if (sort === "rating")
+      return b.rating - a.rating || b.reviews - a.reviews;
     if (sort === "newest")
       return a.badge === "New"
         ? -1
@@ -103,13 +94,18 @@ export function CatalogPage() {
   const [category, setCategoryState] = useState(
     searchParams.get("category") ?? "all",
   );
-  const [sort, setSort] = useState<SortMode>("popular");
+  const [sort, setSort] = useState<SortMode>(
+    (searchParams.get("sort") as SortMode) ?? "popular",
+  );
   const [view, setView] = useState<ViewMode>("grid");
   const [stockOnly, setStockOnly] = useState(false);
-  const [kind, setKind] = useState<ProductKind>("all");
+  const [kind, setKind] = useState<ProductKind>(
+    (searchParams.get("kind") as ProductKind) ?? "all",
+  );
   const [priceBand, setPriceBand] = useState<PriceBand>("all");
   const [minimumRating, setMinimumRating] = useState("all");
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
+  const [visibleCount, setVisibleCount] = useState(24);
 
   const rootCategories = useMemo(
     () => categories.filter((item) => !item.parentSlug && !item.parentId),
@@ -117,36 +113,11 @@ export function CatalogPage() {
   );
 
   const quickCategories = useMemo(
-    () => [
-      {
-        label: "Social Accounts",
-        slug: findRoot(
-          rootCategories,
-          ["social", "instagram"],
-          "social-media-marketplace",
-        ),
-        icon: Users,
-      },
-      {
-        label: "Gaming",
-        slug: findRoot(rootCategories, ["game"], "games"),
-        icon: Gamepad2,
-      },
-      {
-        label: "AI Platforms",
-        slug: findRoot(rootCategories, ["ai", "productivity"], "ai-platforms"),
-        icon: Bot,
-      },
-      {
-        label: "Digital Goods",
-        slug: findRoot(
-          rootCategories,
-          ["subscription", "software", "digital"],
-          "subscription-platforms",
-        ),
-        icon: Gift,
-      },
-    ],
+    () =>
+      marketplaceTaxonomy.slice(0, 4).map((item) => ({
+        label: item.name,
+        slug: findRoot(rootCategories, [item.slug, item.name], item.slug),
+      })),
     [rootCategories],
   );
 
@@ -188,6 +159,18 @@ export function CatalogPage() {
     stockOnly,
   ]);
 
+  useEffect(() => setVisibleCount(24), [
+    category,
+    kind,
+    minimumRating,
+    priceBand,
+    query,
+    sort,
+    stockOnly,
+  ]);
+
+  const visibleProducts = filteredProducts.slice(0, visibleCount);
+
   function updateParam(key: string, value: string, defaultValue = "") {
     const next = new URLSearchParams(searchParams);
     if (value && value !== defaultValue) next.set(key, value);
@@ -206,12 +189,13 @@ export function CatalogPage() {
   }
 
   function clearFilters() {
-    setQuery("");
-    setCategory("all");
+    setQueryState("");
+    setCategoryState("all");
     setStockOnly(false);
     setKind("all");
     setPriceBand("all");
     setMinimumRating("all");
+    setSearchParams(new URLSearchParams(), { replace: true });
   }
 
   function buy(product: CatalogProduct) {
@@ -236,10 +220,10 @@ export function CatalogPage() {
     >
       <Seo
         title="Explore the Ysello Marketplace"
-        description="Find verified digital products, gaming resources, AI tools and professional services from trusted sellers."
+        description="Find licensed digital products, creative assets, AI workflows and professional services from verified sellers."
         canonicalPath="/catalog"
       />
-      <YselloReferenceHeader />
+      <MarketHeader />
       <div className="ys-ref-catalog-shell">
         <nav className="ys-ref-breadcrumb" aria-label="Breadcrumb">
           <Link to="/">Home</Link>
@@ -249,7 +233,10 @@ export function CatalogPage() {
         <section className="ys-ref-catalog-hero">
           <div>
             <h1>Explore the Marketplace</h1>
-            <p>Find verified digital products from trusted sellers</p>
+            <p>
+              Find licensed digital goods and professional services from
+              verified sellers.
+            </p>
           </div>
           <label>
             <Search aria-hidden="true" />
@@ -272,7 +259,6 @@ export function CatalogPage() {
             <Grid2X2 aria-hidden="true" /> All Products
           </button>
           {quickCategories.map((item) => {
-            const Icon = item.icon;
             return (
               <button
                 type="button"
@@ -281,7 +267,7 @@ export function CatalogPage() {
                 aria-pressed={category === item.slug}
                 onClick={() => setCategory(item.slug)}
               >
-                <Icon aria-hidden="true" /> {item.label}
+                <CategoryGlyph slug={item.slug} /> {item.label}
               </button>
             );
           })}
@@ -321,7 +307,7 @@ export function CatalogPage() {
                 <span>All Categories</span>
                 <small>{products.length}</small>
               </label>
-              {rootCategories.slice(0, 10).map((item) => (
+              {rootCategories.slice(0, 8).map((item) => (
                 <label key={item.slug}>
                   <input
                     type="radio"
@@ -503,7 +489,8 @@ export function CatalogPage() {
                       setSort(event.target.value as SortMode)
                     }
                   >
-                    <option value="popular">Recommended</option>
+                    <option value="popular">Best Selling</option>
+                    <option value="rating">Rating</option>
                     <option value="price_asc">Price: Low to High</option>
                     <option value="price_desc">Price: High to Low</option>
                     <option value="newest">Newest</option>
@@ -513,7 +500,7 @@ export function CatalogPage() {
             </div>
 
             <div className={`ys-ref-catalog-grid ${view}`}>
-              {filteredProducts.map((product) => (
+              {visibleProducts.map((product) => (
                 <YselloReferenceProductCard
                   key={product.id}
                   product={product}
@@ -532,25 +519,23 @@ export function CatalogPage() {
                 </button>
               </div>
             ) : null}
-            {filteredProducts.length ? (
-              <nav className="ys-ref-pagination" aria-label="Pagination">
-                <button type="button" disabled>
-                  ‹
+            {visibleProducts.length < filteredProducts.length ? (
+              <div className="ys-ref-load-more">
+                <button
+                  type="button"
+                  onClick={() => setVisibleCount((count) => count + 24)}
+                >
+                  Load more products
                 </button>
-                <button type="button" className="active">
-                  1
-                </button>
-                <button type="button">2</button>
-                <button type="button">3</button>
-                <span>…</span>
-                <button type="button">12</button>
-                <button type="button">›</button>
-              </nav>
+                <span>
+                  Showing {visibleProducts.length} of {filteredProducts.length}
+                </span>
+              </div>
             ) : null}
           </div>
         </section>
       </div>
-      <YselloReferenceFooter />
+      <MarketFooter />
     </main>
   );
 }

@@ -9,7 +9,6 @@ import {
   ShieldCheck,
   SlidersHorizontal,
   Sparkles,
-  Star,
   Zap,
 } from "lucide-react";
 import { useMemo, useState } from "react";
@@ -22,10 +21,9 @@ import {
   useMarketplaceProducts,
 } from "../commerce/useMarketplace";
 import {
-  YselloReferenceFooter,
-  YselloReferenceHeader,
   YselloReferenceProductCard,
 } from "../components/YselloReferenceLayout";
+import { MarketFooter, MarketHeader } from "../components/MarketHeader";
 import { Seo } from "../components/Seo";
 import type { CatalogProduct } from "../data/catalog";
 import { NotFoundPage } from "./NotFoundPage";
@@ -107,7 +105,7 @@ export function CategoryPage() {
   if (loading)
     return (
       <main className="ys-ref-page" data-legacy-hook="commerce-page">
-        <YselloReferenceHeader />
+        <MarketHeader />
         <div className="ys-ref-empty-state">
           <PackageOpen aria-hidden="true" />
           <strong>Loading category…</strong>
@@ -130,7 +128,7 @@ export function CategoryPage() {
         description={category.description}
         canonicalPath={`/categories/${slug}`}
       />
-      <YselloReferenceHeader />
+      <MarketHeader />
       <div className="ys-ref-category-shell">
         <nav className="ys-ref-breadcrumb" aria-label="Breadcrumb">
           <Link to="/">Home</Link>
@@ -363,7 +361,7 @@ export function CategoryPage() {
           </Link>
         </section>
       </div>
-      <YselloReferenceFooter />
+      <MarketFooter />
     </main>
   );
 }

@@ -2,11 +2,36 @@ import { useEffect, useMemo, useState } from "react";
 import { apiRequest, mediaUrl } from "../api/client";
 import {
   catalogCategories,
-  catalogProducts,
   type CatalogCategory,
   type CatalogProduct,
 } from "../data/catalog";
 import { useLocale } from "../i18n/LocaleContext";
+import { marketplaceTaxonomy } from "../data/marketplaceTaxonomy";
+
+const taxonomyCategories: CatalogCategory[] = marketplaceTaxonomy.flatMap(
+  (category, categoryIndex) => [
+    {
+      id: `taxonomy-${category.slug}`,
+      slug: category.slug,
+      name: category.name,
+      description: category.description,
+      icon: category.icon,
+      sortOrder: (categoryIndex + 1) * 100,
+      productCount: 0,
+      isFeatured: true,
+    },
+    ...category.subcategories.map((subcategory, subcategoryIndex) => ({
+      id: `taxonomy-${subcategory.slug}`,
+      slug: subcategory.slug,
+      parentSlug: category.slug,
+      name: subcategory.name,
+      description: subcategory.description,
+      icon: category.icon,
+      sortOrder: (categoryIndex + 1) * 100 + subcategoryIndex + 1,
+      productCount: 0,
+    })),
+  ],
+);
 
 type ApiCategory = {
   id: string;
@@ -82,6 +107,14 @@ type ApiProduct = {
   maximumOrder?: number | null;
   sku?: string | null;
   tags?: string[];
+  publishedAt?: string | null;
+  reviews?: Array<{
+    id: string;
+    rating: number;
+    body: string;
+    createdAt: string;
+    buyer: { firstName: string };
+  }>;
 };
 
 function iconForSlug(slug: string, index = 0) {
@@ -182,6 +215,14 @@ function mapProduct(
     maximumOrder: product.maximumOrder,
     sku: product.sku,
     tags: product.tags,
+    publishedAt: product.publishedAt,
+    verifiedReviews: product.reviews?.map((review) => ({
+      id: review.id,
+      rating: review.rating,
+      body: review.body,
+      createdAt: review.createdAt,
+      buyerName: review.buyer.firstName || "Verified buyer",
+    })),
   };
 }
 
@@ -217,9 +258,7 @@ function mapCategories(categories: ApiCategory[]): CatalogCategory[] {
 
 export function useMarketplaceProducts() {
   const { locale } = useLocale();
-  const [products, setProducts] = useState<CatalogProduct[]>(
-    import.meta.env.DEV ? catalogProducts : [],
-  );
+  const [products, setProducts] = useState<CatalogProduct[]>([]);
   useEffect(() => {
     void apiRequest<{ products: ApiProduct[] }>(
       "/api/marketplace/products?take=96",
@@ -231,17 +270,14 @@ export function useMarketplaceProducts() {
           ),
         ),
       )
-      .catch(() => {
-        if (!import.meta.env.DEV) setProducts([]);
-      });
+      .catch(() => setProducts([]));
   }, [locale]);
   return products;
 }
 
 export function useMarketplaceCategories() {
-  const [categories, setCategories] = useState<CatalogCategory[]>(
-    import.meta.env.DEV ? catalogCategories : [],
-  );
+  const [categories, setCategories] =
+    useState<CatalogCategory[]>(taxonomyCategories);
   useEffect(() => {
     void apiRequest<{ categories: ApiCategory[] }>(
       "/api/marketplace/categories",
@@ -257,11 +293,7 @@ export function useMarketplaceCategories() {
 
 export function useMarketplaceProduct(slug?: string) {
   const { locale } = useLocale();
-  const [product, setProduct] = useState<CatalogProduct | undefined>(() =>
-    import.meta.env.DEV
-      ? catalogProducts.find((item) => item.slug === slug)
-      : undefined,
-  );
+  const [product, setProduct] = useState<CatalogProduct | undefined>();
   const [loading, setLoading] = useState(Boolean(slug));
   useEffect(() => {
     if (!slug) return;
@@ -269,13 +301,7 @@ export function useMarketplaceProduct(slug?: string) {
       `/api/marketplace/products/${encodeURIComponent(slug)}`,
     )
       .then((data) => setProduct(mapProduct(data.product, 0, locale)))
-      .catch(() =>
-        setProduct(
-          import.meta.env.DEV
-            ? catalogProducts.find((item) => item.slug === slug)
-            : undefined,
-        ),
-      )
+      .catch(() => setProduct(undefined))
       .finally(() => setLoading(false));
   }, [locale, slug]);
   return { product, loading };
@@ -303,6 +329,58 @@ export type FeaturedStore = {
   mark: string;
   logoUrl?: string | null;
 };
+
+export type PublicMarketplaceReview = {
+  id: string;
+  buyerName: string;
+  initials: string;
+  productName: string;
+  productSlug: string;
+  rating: number;
+  body: string;
+  createdAt: string;
+  date: string;
+};
+
+export function useMarketplaceReviews() {
+  const [reviews, setReviews] = useState<PublicMarketplaceReview[]>([]);
+  useEffect(() => {
+    void apiRequest<{
+      reviews: Array<{
+        id: string;
+        rating: number;
+        body: string;
+        createdAt: string;
+        buyer: { firstName: string };
+        product: { name: string; slug: string };
+      }>;
+    }>("/api/marketplace/reviews")
+      .then((data) =>
+        setReviews(
+          data.reviews.map((review) => {
+            const buyerName = review.buyer.firstName || "Verified buyer";
+            return {
+              id: review.id,
+              buyerName,
+              initials: buyerName.slice(0, 2).toUpperCase(),
+              productName: review.product.name,
+              productSlug: review.product.slug,
+              rating: review.rating,
+              body: review.body,
+              createdAt: review.createdAt,
+              date: new Intl.DateTimeFormat("en", {
+                month: "short",
+                day: "numeric",
+                year: "numeric",
+              }).format(new Date(review.createdAt)),
+            };
+          }),
+        ),
+      )
+      .catch(() => setReviews([]));
+  }, []);
+  return reviews;
+}
 export function useMarketplaceStores() {
   const [stores, setStores] = useState<FeaturedStore[]>([]);
   useEffect(() => {

@@ -13,9 +13,14 @@ type SeoProps = {
 
 const viteEnvironment = import.meta.env || {};
 const browserOrigin =
-  typeof window === "undefined" ? "http://localhost" : window.location.origin;
+  typeof window === "undefined" ? "https://ysello.com" : window.location.origin;
 const configuredOrigin = String(
-  viteEnvironment.VITE_SITE_URL || browserOrigin,
+  viteEnvironment.VITE_SITE_URL ||
+    (browserOrigin.includes("localhost") ||
+    browserOrigin.includes("terminal.local") ||
+    browserOrigin.includes("chatgpt.site")
+      ? "https://ysello.com"
+      : browserOrigin),
 ).replace(/\/+$/, "");
 
 const indexDirective =

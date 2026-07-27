@@ -14,7 +14,7 @@ import { Link, Navigate, useNavigate } from "react-router-dom";
 import { ApiError, apiRequest } from "../api/client";
 import { useAuth } from "../auth/AuthContext";
 import { useCart } from "../commerce/CartContext";
-import { MarketHeader } from "../components/MarketHeader";
+import { MarketFooter, MarketHeader } from "../components/MarketHeader";
 import { Seo } from "../components/Seo";
 import { useLocale } from "../i18n/LocaleContext";
 
@@ -277,6 +277,7 @@ export function CheckoutPage() {
           </p>
         </aside>
       </form>
+      <MarketFooter />
     </main>
   );
 }
