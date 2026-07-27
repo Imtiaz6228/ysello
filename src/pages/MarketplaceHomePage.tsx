@@ -605,7 +605,17 @@ export function MarketplaceHomePage() {
   const [email, setEmail] = useState("");
   const [subscribed, setSubscribed] = useState(false);
 
-  const products = apiProducts.length ? apiProducts : catalogProducts;
+  const products = useMemo(() => {
+    const seenIds = new Set<string>();
+    const seenSlugs = new Set<string>();
+
+    return [...apiProducts, ...catalogProducts].filter((product) => {
+      if (seenIds.has(product.id) || seenSlugs.has(product.slug)) return false;
+      seenIds.add(product.id);
+      seenSlugs.add(product.slug);
+      return true;
+    });
+  }, [apiProducts]);
   const trendingProducts = useMemo(
     () =>
       [...products]

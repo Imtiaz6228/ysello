@@ -2613,3 +2613,770 @@
     grid-template-columns: 23px 1fr;
   }
 }
+
+/*
+ * Mobile readability pass
+ * The approved desktop composition stays unchanged. On small screens, content
+ * gets a true mobile hierarchy instead of a scaled-down desktop hierarchy.
+ */
+@media (max-width: 700px) {
+  .ysa-nav-shell,
+  .ysa-mobile-search,
+  .ysa-hero,
+  .ysa-trust-strip,
+  .ysa-section,
+  .ysa-seller-banner,
+  .ysa-newsletter,
+  .ysa-footer {
+    width: calc(100% - 32px);
+  }
+
+  .ysa-nav-shell {
+    min-height: 64px;
+  }
+
+  .ysa-mobile-search {
+    min-height: 50px;
+    margin-bottom: 6px;
+    border-radius: 12px;
+  }
+
+  .ysa-mobile-search input {
+    height: 48px;
+    font-size: 15px;
+  }
+
+  .ysa-mobile-menu > a:not(.ysa-start-button) {
+    min-height: 50px;
+    font-size: 15px;
+  }
+
+  .ysa-hero {
+    min-height: 0;
+    padding: 30px 0 20px;
+    grid-template-columns: 1fr;
+    gap: 22px;
+  }
+
+  .ysa-hero-copy {
+    position: relative;
+    z-index: 2;
+  }
+
+  .ysa-hero-copy h1 {
+    max-width: 10ch;
+    font-size: clamp(40px, 11.2vw, 50px);
+    line-height: 1.01;
+    letter-spacing: -0.055em;
+  }
+
+  .ysa-hero-copy p {
+    max-width: 34ch;
+    margin: 18px 0 20px;
+    font-size: 16px;
+    line-height: 1.58;
+  }
+
+  .ysa-hero-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .ysa-hero-actions .ysa-primary-button,
+  .ysa-hero-actions .ysa-secondary-button {
+    min-height: 52px;
+    padding: 0 14px;
+    border-radius: 11px;
+    font-size: 14px;
+  }
+
+  .ysa-hero-art {
+    width: min(100%, 390px);
+    min-height: 312px;
+    margin: 0 auto;
+    transform: none;
+  }
+
+  .ysa-blob.blob-one {
+    width: 265px;
+    height: 235px;
+    top: 28px;
+    left: 64px;
+  }
+
+  .ysa-blob.blob-two {
+    width: 180px;
+    height: 86px;
+    left: 22px;
+    bottom: 8px;
+  }
+
+  .ysa-blob.blob-three {
+    width: 76px;
+    height: 76px;
+    top: 106px;
+    left: 8px;
+  }
+
+  .ysa-blob.blob-four {
+    width: 132px;
+    height: 70px;
+    right: -4px;
+    bottom: 30px;
+  }
+
+  .ysa-market-card {
+    width: 146px;
+    min-height: 103px;
+    padding: 11px;
+    grid-template-columns: 34px 1fr;
+    gap: 7px;
+    border-radius: 11px;
+  }
+
+  .ysa-market-card > span {
+    width: 34px;
+    height: 34px;
+    border-radius: 8px;
+  }
+
+  .ysa-market-card > span svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  .ysa-market-card strong {
+    font-size: 10px;
+  }
+
+  .ysa-market-card small {
+    font-size: 7px;
+  }
+
+  .ysa-market-card.social {
+    top: 0;
+    left: 64px;
+  }
+
+  .ysa-market-card.gaming {
+    top: 38px;
+    right: 0;
+  }
+
+  .ysa-market-card.ai {
+    left: 43px;
+    bottom: 3px;
+  }
+
+  .ysa-market-card.software {
+    right: 0;
+    bottom: 8px;
+  }
+
+  .ysa-mini-chart {
+    min-height: 30px;
+  }
+
+  .ysa-float-icon {
+    width: 38px;
+    height: 38px;
+    border-width: 4px;
+    border-radius: 10px;
+  }
+
+  .ysa-float-icon svg {
+    width: 16px;
+    height: 16px;
+  }
+
+  .ysa-float-icon.shield {
+    left: 29px;
+    top: 121px;
+  }
+
+  .ysa-float-icon.bolt {
+    left: 14px;
+    bottom: 42px;
+  }
+
+  .ysa-float-icon.cart {
+    right: 2px;
+    bottom: 20px;
+  }
+
+  .ysa-trust-strip {
+    min-height: 92px;
+    padding: 8px;
+    gap: 8px;
+    border-radius: 12px;
+    scroll-snap-type: x mandatory;
+  }
+
+  .ysa-trust-strip article {
+    min-width: 210px;
+    min-height: 74px;
+    padding: 12px;
+    gap: 11px;
+    border-radius: 10px;
+    scroll-snap-align: start;
+  }
+
+  .ysa-trust-strip article > span {
+    width: 42px;
+    height: 42px;
+    flex-basis: 42px;
+    border-radius: 10px;
+  }
+
+  .ysa-trust-strip svg {
+    width: 23px;
+    height: 23px;
+  }
+
+  .ysa-trust-strip strong {
+    font-size: 14px;
+  }
+
+  .ysa-trust-strip small {
+    font-size: 11px;
+    line-height: 1.35;
+  }
+
+  .ysa-section {
+    padding-top: 42px;
+  }
+
+  .ysa-section-heading {
+    min-height: 36px;
+    margin-bottom: 18px;
+    gap: 12px;
+  }
+
+  .ysa-section-heading h2 {
+    font-size: 23px;
+    line-height: 1.15;
+    letter-spacing: -0.035em;
+  }
+
+  .ysa-section-heading > a {
+    flex: none;
+    gap: 5px;
+    font-size: 12px;
+  }
+
+  .ysa-section-heading > a svg {
+    width: 14px;
+    height: 14px;
+  }
+
+  .ysa-category-grid {
+    gap: 11px;
+  }
+
+  .ysa-category-card {
+    min-height: 116px;
+    padding: 15px;
+    grid-template-columns: 46px minmax(0, 1fr);
+    gap: 4px 11px;
+    border-radius: 12px;
+  }
+
+  .ysa-category-card > span {
+    width: 46px;
+    height: 46px;
+    border-radius: 11px;
+  }
+
+  .ysa-category-card > span svg {
+    width: 28px;
+    height: 28px;
+  }
+
+  .ysa-category-card > strong {
+    font-size: 14px;
+    line-height: 1.25;
+  }
+
+  .ysa-category-card > small {
+    display: -webkit-box;
+    overflow: hidden;
+    font-size: 11px;
+    line-height: 1.4;
+    text-overflow: initial;
+    white-space: normal;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+  }
+
+  .ysa-product-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .ysa-product-card {
+    min-height: 132px;
+    grid-template-columns: 116px minmax(0, 1fr);
+    border-radius: 13px;
+  }
+
+  .ysa-product-media {
+    width: 116px;
+    min-height: 132px;
+  }
+
+  .ysa-product-media > svg {
+    width: 64px;
+    height: 64px;
+    padding: 13px;
+    border-radius: 16px;
+  }
+
+  .ysa-product-media::before {
+    width: 112px;
+    height: 112px;
+  }
+
+  .ysa-product-orbit {
+    width: 98px;
+    height: 54px;
+  }
+
+  .ysa-product-copy {
+    min-height: 132px;
+    padding: 13px 14px;
+  }
+
+  .ysa-product-title {
+    min-height: 38px;
+    font-size: 15px;
+    line-height: 1.28;
+  }
+
+  .ysa-product-seller,
+  .ysa-product-rating {
+    margin-top: 5px;
+    gap: 4px;
+    font-size: 11px;
+  }
+
+  .ysa-product-seller svg,
+  .ysa-product-rating svg {
+    width: 12px;
+    height: 12px;
+    flex-basis: 12px;
+  }
+
+  .ysa-delivery-badge {
+    margin-top: 6px;
+    padding: 3px 6px;
+    gap: 3px;
+    font-size: 10px;
+  }
+
+  .ysa-delivery-badge svg {
+    width: 10px;
+    height: 10px;
+  }
+
+  .ysa-product-price {
+    padding-top: 5px;
+    font-size: 18px;
+  }
+
+  .ysa-seller-banner {
+    min-height: 0;
+    margin-top: 30px;
+    padding: 26px 22px;
+    grid-template-columns: 1fr;
+    gap: 24px;
+    border-radius: 16px;
+  }
+
+  .ysa-seller-copy h2 {
+    font-size: 34px;
+    line-height: 1.03;
+  }
+
+  .ysa-seller-copy > p {
+    max-width: 34ch;
+    margin: 13px 0 18px;
+    font-size: 14px;
+    line-height: 1.6;
+  }
+
+  .ysa-seller-benefits {
+    gap: 12px;
+  }
+
+  .ysa-seller-benefits > span {
+    gap: 4px;
+  }
+
+  .ysa-seller-benefits svg {
+    width: 27px;
+    height: 27px;
+    padding: 5px;
+    border-radius: 8px;
+  }
+
+  .ysa-seller-benefits strong {
+    font-size: 12px;
+  }
+
+  .ysa-seller-benefits small {
+    font-size: 10px;
+    line-height: 1.4;
+  }
+
+  .ysa-banner-button {
+    min-height: 50px;
+    margin-top: 20px;
+    padding: 0 18px;
+    border-radius: 10px;
+    font-size: 14px;
+  }
+
+  .ysa-seller-dashboard {
+    min-height: 262px;
+    padding: 14px;
+    border-radius: 12px;
+  }
+
+  .ysa-seller-dashboard > header {
+    font-size: 11px;
+  }
+
+  .ysa-dashboard-stats {
+    margin-top: 11px;
+    gap: 8px;
+  }
+
+  .ysa-dashboard-stats > span {
+    padding: 8px;
+    gap: 3px;
+    border-radius: 8px;
+  }
+
+  .ysa-dashboard-stats small,
+  .ysa-dashboard-main small {
+    font-size: 8px;
+  }
+
+  .ysa-dashboard-stats strong {
+    font-size: 14px;
+  }
+
+  .ysa-dashboard-stats em {
+    font-size: 7px;
+  }
+
+  .ysa-dashboard-main {
+    margin-top: 9px;
+    gap: 8px;
+  }
+
+  .ysa-dashboard-main > div,
+  .ysa-dashboard-main > ul {
+    min-height: 122px;
+    padding: 8px;
+    border-radius: 8px;
+  }
+
+  .ysa-dashboard-main svg {
+    height: 90px;
+  }
+
+  .ysa-dashboard-main ul {
+    gap: 7px;
+  }
+
+  .ysa-dashboard-main li {
+    grid-template-columns: 7px 1fr auto;
+    gap: 4px;
+    font-size: 7px;
+  }
+
+  .ysa-dashboard-main li i {
+    width: 7px;
+    height: 7px;
+  }
+
+  .ysa-platform-section {
+    padding-top: 30px;
+  }
+
+  .ysa-platform-row {
+    gap: 10px;
+    scroll-snap-type: x mandatory;
+  }
+
+  .ysa-platform-row > a {
+    min-width: 172px;
+    min-height: 72px;
+    padding: 13px;
+    gap: 11px;
+    border-radius: 11px;
+    scroll-snap-align: start;
+  }
+
+  .ysa-platform-row svg {
+    width: 28px;
+    height: 28px;
+    flex-basis: 28px;
+  }
+
+  .ysa-platform-row strong {
+    font-size: 13px;
+  }
+
+  .ysa-platform-row small {
+    font-size: 10px;
+  }
+
+  .ysa-benefit-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 11px;
+  }
+
+  .ysa-benefit-grid article {
+    min-height: 150px;
+    padding: 17px 15px;
+    gap: 10px;
+    border-radius: 12px;
+  }
+
+  .ysa-benefit-grid article > span {
+    width: 46px;
+    height: 46px;
+    flex-basis: 46px;
+    border-radius: 11px;
+  }
+
+  .ysa-benefit-grid svg {
+    width: 25px;
+    height: 25px;
+  }
+
+  .ysa-benefit-grid strong {
+    font-size: 14px;
+    line-height: 1.25;
+  }
+
+  .ysa-benefit-grid p {
+    margin-top: 5px;
+    font-size: 11.5px;
+    line-height: 1.5;
+  }
+
+  .ysa-testimonial-grid {
+    margin-right: -16px;
+    padding-right: 16px;
+    gap: 12px;
+  }
+
+  .ysa-testimonial-grid article {
+    min-width: 88%;
+    min-height: 178px;
+    padding: 21px;
+    border-radius: 12px;
+  }
+
+  .ysa-testimonial-grid article > p {
+    font-size: 14px;
+    line-height: 1.6;
+  }
+
+  .ysa-testimonial-grid article > div {
+    margin-top: 20px;
+    grid-template-columns: 40px 1fr auto;
+    gap: 10px;
+  }
+
+  .ysa-testimonial-grid article > div > span {
+    width: 40px;
+    height: 40px;
+    font-size: 11px;
+  }
+
+  .ysa-testimonial-grid strong {
+    font-size: 13px;
+  }
+
+  .ysa-testimonial-grid i svg {
+    width: 13px;
+    height: 13px;
+  }
+
+  .ysa-faq-section {
+    padding-top: 36px;
+  }
+
+  .ysa-faq-list {
+    border-radius: 12px;
+  }
+
+  .ysa-faq-list summary {
+    min-height: 60px;
+    padding: 0 16px;
+    font-size: 14px;
+    line-height: 1.35;
+  }
+
+  .ysa-faq-list summary svg {
+    width: 16px;
+    height: 16px;
+  }
+
+  .ysa-faq-list details p {
+    padding: 0 16px 17px;
+    font-size: 13px;
+    line-height: 1.6;
+  }
+
+  .ysa-newsletter {
+    min-height: 0;
+    margin-top: 28px;
+    padding: 18px;
+    grid-template-columns: 48px minmax(0, 1fr);
+    gap: 12px;
+    border-radius: 13px;
+  }
+
+  .ysa-newsletter > span {
+    width: 46px;
+    height: 46px;
+  }
+
+  .ysa-newsletter > span svg {
+    width: 23px;
+    height: 23px;
+  }
+
+  .ysa-newsletter > div strong {
+    font-size: 15px;
+    line-height: 1.3;
+  }
+
+  .ysa-newsletter > div small {
+    margin-top: 4px;
+    font-size: 11px;
+    line-height: 1.4;
+  }
+
+  .ysa-newsletter form {
+    min-height: 50px;
+    gap: 8px;
+  }
+
+  .ysa-newsletter input {
+    padding: 0 13px;
+    border-radius: 9px;
+    font-size: 14px;
+  }
+
+  .ysa-newsletter button {
+    padding: 0 16px;
+    border-radius: 9px;
+    font-size: 13px;
+  }
+
+  .ysa-footer {
+    padding: 20px 0 116px;
+  }
+
+  .ysa-mobile-footer-groups {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 9px;
+  }
+
+  .ysa-mobile-footer-groups details {
+    border-radius: 10px;
+  }
+
+  .ysa-mobile-footer-groups summary {
+    min-height: 46px;
+    padding: 0 13px;
+    font-size: 12px;
+  }
+
+  .ysa-mobile-footer-groups a {
+    min-height: 36px;
+    padding: 9px 13px;
+    font-size: 11px;
+  }
+
+  .ysa-footer-bottom {
+    margin-top: 15px;
+    padding-top: 15px;
+    font-size: 10px;
+  }
+
+  .mobile-bottom-nav {
+    right: 10px !important;
+    bottom: max(10px, env(safe-area-inset-bottom)) !important;
+    left: 10px !important;
+    min-height: 76px !important;
+    padding: 7px !important;
+    border-radius: 22px !important;
+  }
+
+  .mobile-bottom-nav > a {
+    min-height: 62px !important;
+    gap: 4px !important;
+    border-radius: 16px !important;
+    font-size: 11px !important;
+  }
+
+  .mobile-bottom-nav > a svg {
+    width: 24px !important;
+    height: 24px !important;
+  }
+
+  .support-widget-fab,
+  .support-fab-polished {
+    right: 18px !important;
+    bottom: calc(100px + env(safe-area-inset-bottom)) !important;
+    width: 54px !important;
+    height: 54px !important;
+    border-radius: 17px !important;
+  }
+
+  .support-widget-pro {
+    right: 12px !important;
+    bottom: calc(96px + env(safe-area-inset-bottom)) !important;
+    width: calc(100vw - 24px) !important;
+    max-height: calc(100dvh - 116px) !important;
+  }
+}
+
+@media (max-width: 380px) {
+  .ysa-hero-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .ysa-hero-copy h1 {
+    font-size: 38px;
+  }
+
+  .ysa-hero-art {
+    transform: scale(0.94);
+    transform-origin: center center;
+  }
+
+  .ysa-category-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .ysa-category-card {
+    min-height: 104px;
+  }
+
+  .ysa-product-card {
+    grid-template-columns: 104px minmax(0, 1fr);
+  }
+
+  .ysa-product-media {
+    width: 104px;
+  }
+}
