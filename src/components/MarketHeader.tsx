@@ -180,6 +180,7 @@ export function MarketHeader() {
   const [activeMega, setActiveMega] = useState<string | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [mobileCategory, setMobileCategory] = useState<string | null>(null);
+  const [promoVisible, setPromoVisible] = useState(true);
   const menuButtonRef = useRef<HTMLButtonElement>(null);
   const drawerRef = useRef<HTMLElement>(null);
   const accountPath = user
@@ -249,23 +250,34 @@ export function MarketHeader() {
 
   return (
     <header className="market-shell-header g2-market-header">
-      <div className="g2-campaign-banner">
-        <span className="g2-campaign-orb" aria-hidden="true" />
-        <p>
-          <b>YSello</b>
-          <strong>Marketplace picks</strong>
-          <span>Fresh digital tools, assets and services</span>
-        </p>
-        <Link to="/catalog?sort=popular">Explore bestsellers</Link>
-      </div>
+      {promoVisible ? (
+        <div className="g2-campaign-banner">
+          <p>
+            <b>Ysello</b>
+            <strong>Editor’s picks</strong>
+            <span>Fresh digital tools, assets and services</span>
+          </p>
+          <Link to="/catalog?sort=popular">Explore bestsellers</Link>
+          <button
+            type="button"
+            aria-label="Close promotion"
+            onClick={() => setPromoVisible(false)}
+          >
+            <X aria-hidden="true" />
+          </button>
+        </div>
+      ) : null}
 
       <div className="g2-header-dark">
         <div className="market-main-nav g2-main-nav">
-          <Link className="market-wordmark" to="/" aria-label="Ysello home">
+          <Link
+            className="market-wordmark market-wordmark--header"
+            to="/"
+            aria-label="Ysello home"
+          >
             <img src="/ysello-mark.svg" alt="" width="46" height="46" />
             <span>
               <strong>ysello</strong>
-              <small>digital marketplace</small>
             </span>
           </Link>
 
@@ -303,7 +315,7 @@ export function MarketHeader() {
 
           <div className="market-header-actions g2-header-actions">
             <div className="g2-header-locale">
-              <LocaleSwitcher />
+              <LocaleSwitcher compact />
             </div>
             <Link className="market-sign-in" to={accountPath}>
               <UserRound aria-hidden="true" />
@@ -345,7 +357,7 @@ export function MarketHeader() {
           className="market-department-bar g2-department-bar"
           aria-label="Marketplace departments"
         >
-          {marketplaceTaxonomy.slice(0, 7).map((category, index) => (
+          {marketplaceTaxonomy.slice(0, 6).map((category, index) => (
             <button
               key={category.slug}
               type="button"

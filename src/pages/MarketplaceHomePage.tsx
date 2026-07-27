@@ -25,6 +25,7 @@ import type { LucideIcon } from "lucide-react";
 import { FormEvent, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useCart } from "../commerce/CartContext";
+import { categoryMatches } from "../commerce/catalogHierarchy";
 import {
   useMarketplaceCategories,
   useMarketplaceProducts,
@@ -51,11 +52,11 @@ const categoryIcons: Record<string, LucideIcon> = {
 };
 
 const categoryArt: Record<string, string> = {
-  "ai-tools-workflows": "/category-art/ai-productivity.webp",
-  "design-creative-assets": "/category-art/design-creative.webp",
-  "software-productivity": "/category-art/software.webp",
-  "website-themes-plugins": "/category-art/social-media.webp",
-  "video-streaming-assets": "/category-art/design-creative.webp",
+  "ai-tools-workflows": "/editorial/abstract-ai.webp",
+  "design-creative-assets": "/editorial/color-shapes.webp",
+  "software-productivity": "/editorial/creator-studio.webp",
+  "website-themes-plugins": "/editorial/gaming-workspace.webp",
+  "video-streaming-assets": "/editorial/creator-studio.webp",
   "business-marketing-kits": "/category-art/business.webp",
   "learning-resources-guides": "/category-art/courses.webp",
   "professional-digital-services": "/marketplace-assets/seller-growth.webp",
@@ -126,6 +127,18 @@ function categoryCount(
     .reduce((total, category) => total + (category.productCount ?? 0), 0);
 }
 
+function mergeProductPicks(
+  preferred: CatalogProduct[],
+  fallback: CatalogProduct[],
+  limit = 12,
+) {
+  const merged = new Map<string, CatalogProduct>();
+  [...preferred, ...fallback].forEach((product) => {
+    if (merged.size < limit) merged.set(product.id, product);
+  });
+  return [...merged.values()];
+}
+
 function SectionHeading({
   title,
   text,
@@ -185,38 +198,6 @@ function ProductRail({
   );
 }
 
-function HeroProduct({
-  product,
-  index,
-}: {
-  product?: CatalogProduct;
-  index: number;
-}) {
-  if (!product) {
-    return (
-      <Link className={`g2-hero-tile tile-${index + 1}`} to="/catalog">
-        <span>MARKETPLACE PICK</span>
-        <strong>Discover digital products</strong>
-      </Link>
-    );
-  }
-
-  return (
-    <Link
-      className={`g2-hero-tile tile-${index + 1}`}
-      to={`/products/${product.slug}`}
-    >
-      {product.imageUrl ? (
-        <img src={product.imageUrl} alt="" />
-      ) : (
-        <i aria-hidden="true">{product.icon}</i>
-      )}
-      <span>{index === 0 ? "BESTSELLER" : product.badge}</span>
-      <strong>{product.title}</strong>
-    </Link>
-  );
-}
-
 export function MarketplaceHomePage() {
   const navigate = useNavigate();
   const { add } = useCart();
@@ -263,6 +244,67 @@ export function MarketplaceHomePage() {
   const services = useMemo(
     () => products.filter((product) => product.type === "SERVICE").slice(0, 12),
     [products],
+  );
+
+  const instantDownloads = useMemo(
+    () =>
+      mergeProductPicks(
+        bestSellers.filter((product) => product.type === "DOWNLOAD"),
+        newArrivals.filter((product) => product.type === "DOWNLOAD"),
+      ),
+    [bestSellers, newArrivals],
+  );
+
+  const creativePicks = useMemo(
+    () =>
+      mergeProductPicks(
+        products.filter(
+          (product) =>
+            categoryMatches(
+              product.categorySlug,
+              "design-creative-assets",
+              categories,
+            ) ||
+            categoryMatches(
+              product.categorySlug,
+              "website-themes-plugins",
+              categories,
+            ) ||
+            categoryMatches(
+              product.categorySlug,
+              "video-streaming-assets",
+              categories,
+            ),
+        ),
+        bestSellers,
+      ),
+    [bestSellers, categories, products],
+  );
+
+  const workPicks = useMemo(
+    () =>
+      mergeProductPicks(
+        products.filter(
+          (product) =>
+            categoryMatches(
+              product.categorySlug,
+              "software-productivity",
+              categories,
+            ) ||
+            categoryMatches(
+              product.categorySlug,
+              "business-marketing-kits",
+              categories,
+            ) ||
+            categoryMatches(
+              product.categorySlug,
+              "learning-resources-guides",
+              categories,
+            ),
+        ),
+        newArrivals,
+      ),
+    [categories, newArrivals, products],
   );
 
   const bundleProducts = bestSellers.slice(0, 3);
@@ -319,31 +361,38 @@ export function MarketplaceHomePage() {
       />
       <MarketHeader />
 
-      <section className="market-home-hero pro-market-hero g2-home-hero">
+      <section
+        className="market-home-hero pro-market-hero g2-home-hero"
+        aria-labelledby="marketplace-hero-title"
+      >
         <div className="g2-hero-intro">
           <span>
-            <Zap aria-hidden="true" /> YSELLO BESTSELLERS
+            <Zap aria-hidden="true" /> YSELLO SELECTS
           </span>
-          <h1>Digital products for every big idea.</h1>
+          <h1 id="marketplace-hero-title">
+            Everything digital, ready for your next move.
+          </h1>
           <p>
-            Shop verified tools, creative assets and expert services with clear
-            delivery and seller details.
+            Discover trusted software, creator assets, practical AI tools and
+            expert services—with every detail clear before checkout.
           </p>
           <div>
             <Link to="/catalog">
-              Explore marketplace <ArrowRight aria-hidden="true" />
+              Shop marketplace <ArrowRight aria-hidden="true" />
             </Link>
             <Link to="/seller/apply">Start selling</Link>
           </div>
         </div>
-        <div className="g2-hero-tiles" aria-label="Featured marketplace items">
-          {[0, 1, 2, 3].map((index) => (
-            <HeroProduct
-              key={bestSellers[index]?.id ?? index}
-              product={bestSellers[index]}
-              index={index}
-            />
-          ))}
+        <div className="g2-hero-proof" aria-label="Marketplace benefits">
+          <span>
+            <BadgeCheck aria-hidden="true" /> Verified sellers
+          </span>
+          <span>
+            <Download aria-hidden="true" /> Fast digital delivery
+          </span>
+          <span>
+            <ShieldCheck aria-hidden="true" /> Protected checkout
+          </span>
         </div>
       </section>
 
@@ -498,6 +547,45 @@ export function MarketplaceHomePage() {
         <ProductRail
           products={newArrivals.slice(0, 6)}
           emptyTitle="No new products yet."
+          onBuy={buy}
+        />
+      </section>
+
+      <section className="market-home-section g2-home-section">
+        <SectionHeading
+          title="Instant downloads"
+          text="Ready-to-use files, templates and tools delivered directly to your account."
+          href="/catalog?kind=DOWNLOAD&sort=popular"
+        />
+        <ProductRail
+          products={instantDownloads.slice(0, 6)}
+          emptyTitle="No instant downloads are published yet."
+          onBuy={buy}
+        />
+      </section>
+
+      <section className="market-home-section g2-home-section">
+        <SectionHeading
+          title="Creative studio picks"
+          text="Design systems, web assets, motion packs and creator resources."
+          href="/categories/design-creative-assets"
+        />
+        <ProductRail
+          products={creativePicks.slice(0, 6)}
+          emptyTitle="No creative products are published yet."
+          onBuy={buy}
+        />
+      </section>
+
+      <section className="market-home-section g2-home-section">
+        <SectionHeading
+          title="Tools for work and business"
+          text="Productivity systems, commercial templates and specialist learning resources."
+          href="/categories/software-productivity"
+        />
+        <ProductRail
+          products={workPicks.slice(0, 6)}
+          emptyTitle="No business tools are published yet."
           onBuy={buy}
         />
       </section>

@@ -52,7 +52,11 @@ export function LocaleSwitcher({ compact = false }: { compact?: boolean }) {
         <span className="locale-flag">{activeLanguage.flag}</span>
         <span className="locale-control-copy">
           <small>{t("language")}</small>
-          <b>{activeLanguage.native}</b>
+          <b>
+            {compact
+              ? activeLanguage.code.split("-")[0].toUpperCase()
+              : activeLanguage.native}
+          </b>
         </span>
         <ChevronDown size={14} />
       </button>
