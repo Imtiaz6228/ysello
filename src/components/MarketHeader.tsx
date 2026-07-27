@@ -1,35 +1,173 @@
 import {
   ArrowRight,
   BadgeCheck,
+  Bot,
+  Boxes,
+  BriefcaseBusiness,
   ChevronDown,
   Clock3,
+  Code2,
+  Grid2X2,
+  Heart,
   LifeBuoy,
   Menu,
+  MonitorDown,
   PackageSearch,
-  Grid2X2,
+  Palette,
   Search,
   ShieldCheck,
-  ShoppingBag,
+  ShoppingCart,
+  Sparkles,
   Store,
   UserRound,
+  Video,
   X,
-  Zap,
 } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import { FormEvent, useEffect, useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { STAFF_ROLES } from "../api/client";
 import { useAuth } from "../auth/AuthContext";
 import { useCart } from "../commerce/CartContext";
-import { marketplaceTaxonomy } from "../data/marketplaceTaxonomy";
-import { LocaleSwitcher } from "./LocaleSwitcher";
+import {
+  marketplaceTaxonomy,
+  type MarketplaceTaxonomyItem,
+} from "../data/marketplaceTaxonomy";
 import { useLocale } from "../i18n/LocaleContext";
+import { LocaleSwitcher } from "./LocaleSwitcher";
 
-const trustItems = [
-  { label: "Instant delivery", icon: Zap },
-  { label: "Protected checkout", icon: ShieldCheck },
-  { label: "Verified sellers", icon: BadgeCheck },
-  { label: "Human support", icon: LifeBuoy },
-];
+const categoryIcons: Record<string, LucideIcon> = {
+  "ai-tools-workflows": Bot,
+  "design-creative-assets": Palette,
+  "software-productivity": MonitorDown,
+  "website-themes-plugins": Code2,
+  "video-streaming-assets": Video,
+  "business-marketing-kits": BriefcaseBusiness,
+  "learning-resources-guides": Boxes,
+  "professional-digital-services": Sparkles,
+};
+
+const departmentLabels: Record<string, string> = {
+  "ai-tools-workflows": "AI tools",
+  "design-creative-assets": "Creative",
+  "software-productivity": "Software",
+  "website-themes-plugins": "Web assets",
+  "video-streaming-assets": "Video",
+  "business-marketing-kits": "Business",
+  "learning-resources-guides": "Learning",
+  "professional-digital-services": "Services",
+};
+
+function DepartmentIcon({ category }: { category: MarketplaceTaxonomyItem }) {
+  const Icon = categoryIcons[category.slug] ?? Grid2X2;
+  return <Icon aria-hidden="true" />;
+}
+
+function MegaMenu({
+  category,
+  onClose,
+}: {
+  category: MarketplaceTaxonomyItem;
+  onClose: () => void;
+}) {
+  const companionDepartments = marketplaceTaxonomy
+    .filter((item) => item.slug !== category.slug)
+    .slice(0, 5);
+
+  return (
+    <section
+      id="market-category-menu"
+      className="g2-mega-menu"
+      aria-label={`${category.name} menu`}
+    >
+      <div className="g2-mega-inner">
+        <div className="g2-mega-lead">
+          <span className={`g2-mega-icon tone-${category.accent}`}>
+            <DepartmentIcon category={category} />
+          </span>
+          <p>Explore department</p>
+          <h2>{category.name}</h2>
+          <span>{category.description}</span>
+          <Link to={`/categories/${category.slug}`} onClick={onClose}>
+            Shop all {departmentLabels[category.slug] ?? category.name}
+            <ArrowRight aria-hidden="true" />
+          </Link>
+        </div>
+
+        <div className="g2-mega-column">
+          <strong>Featured categories</strong>
+          {category.subcategories.map((subcategory) => (
+            <Link
+              key={subcategory.slug}
+              to={`/categories/${subcategory.slug}`}
+              onClick={onClose}
+            >
+              <span>{subcategory.name}</span>
+              <small>{subcategory.description}</small>
+            </Link>
+          ))}
+        </div>
+
+        <div className="g2-mega-column">
+          <strong>Shop by format</strong>
+          <Link to={`/categories/${category.slug}`} onClick={onClose}>
+            All digital products
+          </Link>
+          <Link
+            to={`/catalog?category=${category.slug}&kind=DOWNLOAD`}
+            onClick={onClose}
+          >
+            Instant downloads
+          </Link>
+          <Link
+            to={`/catalog?category=${category.slug}&kind=SERVICE`}
+            onClick={onClose}
+          >
+            Professional services
+          </Link>
+          <Link
+            to={`/catalog?category=${category.slug}&sort=popular`}
+            onClick={onClose}
+          >
+            Bestselling now
+          </Link>
+          <Link
+            to={`/catalog?category=${category.slug}&sort=newest`}
+            onClick={onClose}
+          >
+            New releases
+          </Link>
+        </div>
+
+        <div className="g2-mega-column">
+          <strong>More departments</strong>
+          {companionDepartments.map((item) => (
+            <Link
+              key={item.slug}
+              to={`/categories/${item.slug}`}
+              onClick={onClose}
+            >
+              {item.name}
+            </Link>
+          ))}
+        </div>
+
+        <Link
+          className={`g2-mega-promo tone-${category.accent}`}
+          to={`/categories/${category.slug}`}
+          onClick={onClose}
+        >
+          <span>Curated marketplace</span>
+          <strong>Verified resources for your next project.</strong>
+          <small>Clear licensing, delivery terms and seller details.</small>
+          <i>
+            Discover all <ArrowRight aria-hidden="true" />
+          </i>
+        </Link>
+      </div>
+    </section>
+  );
+}
 
 export function MarketHeader() {
   const { user } = useAuth();
@@ -38,8 +176,10 @@ export function MarketHeader() {
   const navigate = useNavigate();
   const location = useLocation();
   const [query, setQuery] = useState("");
-  const [categoriesOpen, setCategoriesOpen] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState("all");
+  const [activeMega, setActiveMega] = useState<string | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [mobileCategory, setMobileCategory] = useState<string | null>(null);
   const menuButtonRef = useRef<HTMLButtonElement>(null);
   const drawerRef = useRef<HTMLElement>(null);
   const accountPath = user
@@ -49,17 +189,21 @@ export function MarketHeader() {
         ? "/seller"
         : "/dashboard"
     : "/sign-in";
+  const activeCategory =
+    marketplaceTaxonomy.find((category) => category.slug === activeMega) ??
+    null;
 
   useEffect(() => {
-    setCategoriesOpen(false);
+    setActiveMega(null);
     setMenuOpen(false);
-  }, [location.hash, location.pathname]);
+    setMobileCategory(null);
+  }, [location.hash, location.pathname, location.search]);
 
   useEffect(() => {
-    if (!menuOpen && !categoriesOpen) return;
+    if (!menuOpen && !activeMega) return;
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
-        setCategoriesOpen(false);
+        setActiveMega(null);
         setMenuOpen(false);
         menuButtonRef.current?.focus();
       }
@@ -87,159 +231,153 @@ export function MarketHeader() {
       document.body.style.overflow = previousOverflow;
       window.removeEventListener("keydown", onKeyDown);
     };
-  }, [categoriesOpen, menuOpen]);
+  }, [activeMega, menuOpen]);
 
   function submitSearch(event: FormEvent) {
     event.preventDefault();
+    const params = new URLSearchParams();
     const value = query.trim();
-    navigate(`/catalog${value ? `?q=${encodeURIComponent(value)}` : ""}`);
+    if (value) params.set("q", value);
+    if (selectedCategory !== "all") params.set("category", selectedCategory);
+    navigate(`/catalog${params.size ? `?${params.toString()}` : ""}`);
+    setMenuOpen(false);
+  }
+
+  function toggleMega(slug: string) {
+    setActiveMega((current) => (current === slug ? null : slug));
   }
 
   return (
-    <header className="market-shell-header">
-      <div className="market-trust-strip" aria-label="Marketplace assurances">
-        <div>
-          {trustItems.map(({ label, icon: Icon }) => (
-            <span key={label}>
-              <Icon aria-hidden="true" />
-              {label}
-            </span>
-          ))}
-        </div>
+    <header className="market-shell-header g2-market-header">
+      <div className="g2-campaign-banner">
+        <span className="g2-campaign-orb" aria-hidden="true" />
+        <p>
+          <b>YSello</b>
+          <strong>Marketplace picks</strong>
+          <span>Fresh digital tools, assets and services</span>
+        </p>
+        <Link to="/catalog?sort=popular">Explore bestsellers</Link>
       </div>
 
-      <div className="market-main-nav">
-        <Link className="market-wordmark" to="/" aria-label="Ysello home">
-          <img src="/ysello-mark.svg" alt="" width="40" height="40" />
-          <span>
-            <strong>ysello</strong>
-            <small>digital marketplace</small>
-          </span>
-        </Link>
+      <div className="g2-header-dark">
+        <div className="market-main-nav g2-main-nav">
+          <Link className="market-wordmark" to="/" aria-label="Ysello home">
+            <img src="/ysello-mark.svg" alt="" width="46" height="46" />
+            <span>
+              <strong>ysello</strong>
+              <small>digital marketplace</small>
+            </span>
+          </Link>
 
-        <nav className="market-desktop-links" aria-label="Primary navigation">
-          <Link to="/catalog">Browse</Link>
-          <button
-            type="button"
-            aria-expanded={categoriesOpen}
-            aria-controls="market-category-menu"
-            onClick={() => setCategoriesOpen((open) => !open)}
+          <form
+            className="market-header-search commerce-global-search g2-header-search"
+            onSubmit={submitSearch}
           >
-            <span>{t("categories")}</span> <ChevronDown aria-hidden="true" />
+            <Search aria-hidden="true" />
+            <input
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              aria-label="Search digital tools, assets and services"
+              placeholder="What are you looking for?"
+            />
+            <label>
+              <span className="sr-only">Search category</span>
+              <select
+                value={selectedCategory}
+                onChange={(event) => setSelectedCategory(event.target.value)}
+                aria-label="Search category"
+              >
+                <option value="all">All categories</option>
+                {marketplaceTaxonomy.map((category) => (
+                  <option key={category.slug} value={category.slug}>
+                    {category.name}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown aria-hidden="true" />
+            </label>
+            <button type="submit" aria-label="Search marketplace">
+              <Search aria-hidden="true" />
+            </button>
+          </form>
+
+          <div className="market-header-actions g2-header-actions">
+            <div className="g2-header-locale">
+              <LocaleSwitcher />
+            </div>
+            <Link className="market-sign-in" to={accountPath}>
+              <UserRound aria-hidden="true" />
+              <span>
+                <small>{user ? "Welcome back" : "Sign in"}</small>
+                <strong>{user ? "My account" : "Register"}</strong>
+              </span>
+            </Link>
+            <Link
+              className="g2-round-action"
+              to={user ? "/dashboard" : "/sign-in"}
+              aria-label="Saved items"
+            >
+              <Heart aria-hidden="true" />
+            </Link>
+            <Link
+              className="market-cart-button g2-round-action"
+              to="/cart"
+              aria-label={`Cart with ${count} item${count === 1 ? "" : "s"}`}
+            >
+              <ShoppingCart aria-hidden="true" />
+              {count ? <b>{count}</b> : null}
+            </Link>
+          </div>
+
+          <button
+            ref={menuButtonRef}
+            className="market-mobile-menu-button"
+            type="button"
+            aria-label="Open navigation menu"
+            aria-expanded={menuOpen}
+            onClick={() => setMenuOpen(true)}
+          >
+            <Menu aria-hidden="true" />
           </button>
-          <Link to="/#how-it-works">How It Works</Link>
-          <Link to="/seller/apply">Start Selling</Link>
-          <Link to="/support">Support</Link>
+        </div>
+
+        <nav
+          className="market-department-bar g2-department-bar"
+          aria-label="Marketplace departments"
+        >
+          {marketplaceTaxonomy.slice(0, 7).map((category, index) => (
+            <button
+              key={category.slug}
+              type="button"
+              className={activeMega === category.slug ? "active" : ""}
+              aria-expanded={activeMega === category.slug}
+              aria-controls="market-category-menu"
+              onClick={() => toggleMega(category.slug)}
+              onFocus={() => setActiveMega(category.slug)}
+              onMouseEnter={() => setActiveMega(category.slug)}
+            >
+              <DepartmentIcon category={category} />
+              <span>{departmentLabels[category.slug] ?? category.name}</span>
+              {index === 2 ? <b>HOT</b> : null}
+            </button>
+          ))}
+          <Link className="g2-department-cta" to="/seller/apply">
+            <Store aria-hidden="true" /> Start selling
+          </Link>
         </nav>
 
-        <form
-          className="market-header-search commerce-global-search"
-          onSubmit={submitSearch}
-        >
-          <Search aria-hidden="true" />
-          <input
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            aria-label="Search templates, tools, assets and services"
-            placeholder="Search marketplace"
-          />
-          <button type="submit" aria-label="Search marketplace">
-            <ArrowRight aria-hidden="true" />
-          </button>
-        </form>
-
-        <div className="market-header-actions">
-          <Link className="market-sign-in" to={accountPath}>
-            <UserRound aria-hidden="true" />
-            <span>{user ? "Account" : "Sign In"}</span>
-          </Link>
-          <Link
-            className="market-cart-button"
-            to="/cart"
-            aria-label={`Cart with ${count} item${count === 1 ? "" : "s"}`}
+        {activeCategory ? (
+          <div
+            className="g2-mega-layer"
+            onMouseLeave={() => setActiveMega(null)}
           >
-            <ShoppingBag aria-hidden="true" />
-            <span>Cart</span>
-            {count ? <b>{count}</b> : null}
-          </Link>
-        </div>
-
-        <button
-          ref={menuButtonRef}
-          className="market-mobile-menu-button"
-          type="button"
-          aria-label="Open navigation menu"
-          aria-expanded={menuOpen}
-          onClick={() => setMenuOpen(true)}
-        >
-          <Menu aria-hidden="true" />
-        </button>
+            <MegaMenu
+              category={activeCategory}
+              onClose={() => setActiveMega(null)}
+            />
+          </div>
+        ) : null}
       </div>
-
-      <nav
-        className="market-department-bar"
-        aria-label="Marketplace departments"
-      >
-        <Link className="market-department-all" to="/catalog">
-          <Grid2X2 aria-hidden="true" /> All products
-        </Link>
-        {marketplaceTaxonomy.slice(0, 6).map((category) => (
-          <Link key={category.slug} to={`/categories/${category.slug}`}>
-            {category.name}
-          </Link>
-        ))}
-        <Link className="market-department-hot" to="/catalog?sort=popular">
-          Hot deals <span>HOT</span>
-        </Link>
-      </nav>
-
-      {categoriesOpen ? (
-        <div className="market-category-layer">
-          <button
-            className="market-category-scrim"
-            type="button"
-            aria-label="Close categories"
-            onClick={() => setCategoriesOpen(false)}
-          />
-          <section
-            id="market-category-menu"
-            className="market-category-menu"
-            aria-label="Marketplace categories"
-          >
-            <header>
-              <div>
-                <span>Browse by category</span>
-                <strong>Find the right digital resource.</strong>
-              </div>
-              <Link to="/catalog">
-                View all categories <ArrowRight aria-hidden="true" />
-              </Link>
-            </header>
-            <div>
-              {marketplaceTaxonomy.map((category) => (
-                <Link
-                  to={`/categories/${category.slug}`}
-                  key={category.slug}
-                  className={`taxonomy-link tone-${category.accent}`}
-                >
-                  <i aria-hidden="true">{category.icon}</i>
-                  <span>
-                    <strong>{category.name}</strong>
-                    <small>{category.description}</small>
-                    <em>
-                      {category.subcategories
-                        .slice(0, 2)
-                        .map((item) => item.name)
-                        .join(" · ")}
-                    </em>
-                  </span>
-                  <ArrowRight aria-hidden="true" />
-                </Link>
-              ))}
-            </div>
-          </section>
-        </div>
-      ) : null}
 
       {menuOpen ? (
         <>
@@ -251,12 +389,12 @@ export function MarketHeader() {
           />
           <nav
             ref={drawerRef}
-            className="market-mobile-drawer"
+            className="market-mobile-drawer g2-mobile-drawer"
             aria-label="Mobile navigation"
           >
             <header>
               <Link className="market-wordmark" to="/">
-                <img src="/ysello-mark.svg" alt="" width="38" height="38" />
+                <img src="/ysello-mark.svg" alt="" width="42" height="42" />
                 <span>
                   <strong>ysello</strong>
                   <small>digital marketplace</small>
@@ -270,33 +408,81 @@ export function MarketHeader() {
                 <X aria-hidden="true" />
               </button>
             </header>
-            <form onSubmit={submitSearch}>
+
+            <form className="g2-mobile-search" onSubmit={submitSearch}>
               <Search aria-hidden="true" />
               <input
                 autoFocus
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
                 aria-label="Search marketplace"
-                placeholder="Search tools, assets and services"
+                placeholder="Search the marketplace"
               />
+              <button type="submit">Search</button>
             </form>
-            <Link to="/catalog">
-              <PackageSearch aria-hidden="true" /> Marketplace
-            </Link>
-            <Link to="/#categories">All categories</Link>
-            <Link to="/#products">
-              <Grid2X2 aria-hidden="true" /> Products
-            </Link>
-            <Link to="/#how-it-works">How Ysello works</Link>
-            <Link to="/seller/apply">Start selling</Link>
-            <Link to="/buyer-protection">Buyer protection</Link>
-            <Link to="/support">Support center</Link>
-            <Link to="/cart">
-              Cart <span>{count}</span>
-            </Link>
-            <Link className="market-mobile-account" to={accountPath}>
-              {user ? "Open account" : "Sign in"}
-            </Link>
+
+            <div className="g2-mobile-quick-links">
+              <Link to="/catalog">
+                <PackageSearch aria-hidden="true" /> Marketplace
+              </Link>
+              <Link to="/#products">
+                <Grid2X2 aria-hidden="true" /> Products
+              </Link>
+              <Link to="/cart">
+                <ShoppingCart aria-hidden="true" /> Cart <span>{count}</span>
+              </Link>
+              <Link to={accountPath}>
+                <UserRound aria-hidden="true" /> {user ? "Account" : "Sign in"}
+              </Link>
+            </div>
+
+            <section className="g2-mobile-categories">
+              <div>
+                <strong>
+                  <span>{t("categories")}</span>
+                </strong>
+                <Link to="/catalog">View all</Link>
+              </div>
+              {marketplaceTaxonomy.map((category) => {
+                const expanded = mobileCategory === category.slug;
+                return (
+                  <div className="g2-mobile-category" key={category.slug}>
+                    <button
+                      type="button"
+                      aria-expanded={expanded}
+                      onClick={() =>
+                        setMobileCategory(expanded ? null : category.slug)
+                      }
+                    >
+                      <DepartmentIcon category={category} />
+                      <span>{category.name}</span>
+                      <ChevronDown aria-hidden="true" />
+                    </button>
+                    {expanded ? (
+                      <div>
+                        <Link to={`/categories/${category.slug}`}>
+                          All {category.name}
+                        </Link>
+                        {category.subcategories.map((subcategory) => (
+                          <Link
+                            key={subcategory.slug}
+                            to={`/categories/${subcategory.slug}`}
+                          >
+                            {subcategory.name}
+                          </Link>
+                        ))}
+                      </div>
+                    ) : null}
+                  </div>
+                );
+              })}
+            </section>
+
+            <div className="g2-mobile-secondary-links">
+              <Link to="/seller/apply">Start selling</Link>
+              <Link to="/buyer-protection">Buyer protection</Link>
+              <Link to="/support">Support center</Link>
+            </div>
             <div className="market-mobile-locale">
               <LocaleSwitcher />
             </div>
@@ -309,78 +495,94 @@ export function MarketHeader() {
 
 export function MarketFooter() {
   return (
-    <footer className="market-site-footer">
-      <section className="market-footer-promise">
+    <footer className="market-site-footer g2-site-footer">
+      <div className="g2-payment-row">
         <div>
-          <ShieldCheck aria-hidden="true" />
-          <span>
-            <strong>Buy with confidence.</strong>
-            <small>
-              Clear listing details, protected checkout and order-linked
-              support.
-            </small>
-          </span>
+          <strong>VISA</strong>
+          <strong>mastercard</strong>
+          <strong>PayPal</strong>
+          <span>and other secure payment methods at checkout</span>
         </div>
-        <Link to="/buyer-protection">
-          Read buyer protection <ArrowRight aria-hidden="true" />
-        </Link>
-      </section>
+        <LocaleSwitcher />
+      </div>
 
-      <div className="market-footer-grid">
-        <div className="market-footer-brand">
+      <div className="market-footer-grid g2-footer-grid">
+        <div>
+          <strong>About</strong>
+          <Link to="/about">Company</Link>
+          <Link to="/catalog">Marketplace</Link>
+          <Link to="/buyer-protection">Marketplace security</Link>
+          <Link to="/contact">Contact</Link>
+        </div>
+        <div>
+          <strong>For buyers</strong>
+          <Link to="/support">Buyer support</Link>
+          <Link to="/catalog">How to buy</Link>
+          <Link to="/buyer-protection">Buyer protection</Link>
+          <Link to="/blog">Marketplace guides</Link>
+        </div>
+        <div>
+          <strong>For sellers</strong>
+          <Link to="/support">Seller support</Link>
+          <Link to="/seller/apply">How to sell</Link>
+          <Link to="/seller">Seller dashboard</Link>
+          <Link to="/seller-policy">Seller policy</Link>
+        </div>
+        <div>
+          <strong>Support & legal</strong>
+          <Link to="/terms">Terms and conditions</Link>
+          <Link to="/privacy">Privacy and cookies</Link>
+          <Link to="/refund-policy">Refund policy</Link>
+          <Link to="/prohibited-products">Prohibited products</Link>
+        </div>
+        <div>
+          <strong>Discover</strong>
+          <Link to="/blog">News and guides</Link>
+          <Link to="/catalog?sort=newest">New releases</Link>
+          <Link to="/catalog?sort=popular">Bestsellers</Link>
+          <Link to="/#categories">Category map</Link>
+        </div>
+        <div className="g2-footer-brand">
           <Link className="market-wordmark" to="/">
-            <img src="/ysello-mark.svg" alt="" width="42" height="42" />
+            <img src="/ysello-mark.svg" alt="" width="44" height="44" />
             <span>
               <strong>ysello</strong>
               <small>digital marketplace</small>
             </span>
           </Link>
           <p>
-            Licensed digital goods and professional services from verified
-            marketplace sellers.
+            Digital products and professional services from verified marketplace
+            sellers.
           </p>
           <span>
-            <Clock3 aria-hidden="true" /> Payment options are shown securely at
-            checkout.
+            <BadgeCheck aria-hidden="true" /> Verified listings
           </span>
-        </div>
-        <div>
-          <strong>Marketplace</strong>
-          <Link to="/catalog">Browse all</Link>
-          <Link to="/#categories">Categories</Link>
-          <Link to="/#products">Featured products</Link>
-          <Link to="/#professional-services">Digital services</Link>
-        </div>
-        <div>
-          <strong>For sellers</strong>
-          <Link to="/seller/apply">Open your store</Link>
-          <Link to="/seller">Seller dashboard</Link>
-          <Link to="/seller-policy">Seller policy</Link>
-          <Link to="/support">Seller support</Link>
-        </div>
-        <div>
-          <strong>Buyer support</strong>
-          <Link to="/buyer-protection">Buyer protection</Link>
-          <Link to="/refund-policy">Refund policy</Link>
-          <Link to="/support">Support center</Link>
-          <Link to="/contact">Contact</Link>
-        </div>
-        <div>
-          <strong>Company & legal</strong>
-          <Link to="/about">About Ysello</Link>
-          <Link to="/blog">Guides</Link>
-          <Link to="/terms">Terms</Link>
-          <Link to="/privacy">Privacy</Link>
-          <Link to="/prohibited-products">Prohibited products</Link>
-          <Link to="/copyright">Copyright</Link>
+          <span>
+            <ShieldCheck aria-hidden="true" /> Protected checkout
+          </span>
         </div>
       </div>
 
-      <div className="market-footer-bottom">
+      <section className="g2-footer-entities">
+        <div>
+          <strong>Ysello marketplace</strong>
+          <span>Digital goods, creative resources and expert services.</span>
+        </div>
+        <div>
+          <strong>Buyer-first commerce</strong>
+          <span>Clear seller, delivery, price and product information.</span>
+        </div>
+        <div>
+          <strong>Seller tools</strong>
+          <span>Upload once and publish across every marketplace surface.</span>
+        </div>
+      </section>
+
+      <div className="market-footer-bottom g2-footer-bottom">
         <span>© 2026 ysello.com. All rights reserved.</span>
         <span>
-          <Store aria-hidden="true" /> Verified sellers ·{" "}
-          <ShieldCheck aria-hidden="true" /> Protected checkout
+          <Clock3 aria-hidden="true" /> Always-on marketplace ·{" "}
+          <LifeBuoy aria-hidden="true" /> Order-linked support
         </span>
       </div>
     </footer>

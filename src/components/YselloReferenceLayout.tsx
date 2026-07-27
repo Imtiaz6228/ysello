@@ -81,10 +81,17 @@ export function YselloReferenceHeader() {
         </form>
         <div className="ys-ref-desktop-actions">
           <Link to={accountPath}>{user ? "Account" : "Sign In"}</Link>
-          <Link className="ys-ref-primary-button" to={user ? accountPath : "/register"}>
+          <Link
+            className="ys-ref-primary-button"
+            to={user ? accountPath : "/register"}
+          >
             {user ? "Dashboard" : "Get Started"}
           </Link>
-          <Link className="ys-ref-cart-button" to="/cart" aria-label={`Cart with ${count} items`}>
+          <Link
+            className="ys-ref-cart-button"
+            to="/cart"
+            aria-label={`Cart with ${count} items`}
+          >
             <ShoppingBag aria-hidden="true" />
             {count ? <b>{count}</b> : null}
           </Link>
@@ -155,7 +162,10 @@ export function YselloReferenceHeader() {
             <Link to="/cart">
               Cart <span>{count}</span>
             </Link>
-            <Link className="ys-ref-primary-button" to={user ? accountPath : "/register"}>
+            <Link
+              className="ys-ref-primary-button"
+              to={user ? accountPath : "/register"}
+            >
               {user ? "Dashboard" : "Get Started"}
             </Link>
           </nav>
@@ -239,11 +249,19 @@ type ProductCardProps = {
 
 function productTone(product: CatalogProduct) {
   const key = `${product.category} ${product.title}`.toLowerCase();
-  if (key.includes("social") || key.includes("instagram") || key.includes("tiktok"))
+  if (
+    key.includes("social") ||
+    key.includes("instagram") ||
+    key.includes("tiktok")
+  )
     return "social";
   if (key.includes("game") || key.includes("steam") || key.includes("valorant"))
     return "gaming";
-  if (key.includes("ai") || key.includes("chatgpt") || key.includes("midjourney"))
+  if (
+    key.includes("ai") ||
+    key.includes("chatgpt") ||
+    key.includes("midjourney")
+  )
     return "ai";
   if (key.includes("stream") || key.includes("netflix")) return "streaming";
   return "digital";
@@ -263,18 +281,51 @@ export function YselloReferenceProductCard({
     product.type === "SERVICE" || (product.stockCount ?? 0) > 0;
   const ProductIcon =
     product.type === "SERVICE" ? BriefcaseBusiness : PackageOpen;
+  const platform =
+    typeof product.facts?.platform === "string"
+      ? product.facts.platform
+      : product.type === "SERVICE"
+        ? "Seller service"
+        : "Digital download";
+  const region =
+    typeof product.facts?.region === "string" ? product.facts.region : "GLOBAL";
+  const originalPrice =
+    product.originalPriceCents &&
+    product.originalPriceCents > product.priceCents
+      ? product.originalPriceCents
+      : null;
+  const discount = originalPrice
+    ? Math.round((1 - product.priceCents / originalPrice) * 100)
+    : 0;
 
   return (
-    <article className={`ys-ref-product-card ${layout} tone-${productTone(product)}`}>
-      <div className="ys-ref-product-media">
-        {product.imageUrl ? (
-          <img src={product.imageUrl} alt="" loading="lazy" />
-        ) : (
-          <span className="ys-ref-product-symbol" aria-hidden="true">
-            {product.icon || <ProductIcon />}
-          </span>
-        )}
-        <Link to={`/categories/${product.categorySlug}`}>{categoryLabel}</Link>
+    <article
+      className={`ys-ref-product-card g2-product-card ${layout} tone-${productTone(product)}`}
+    >
+      <span className="g2-card-offer">
+        <BadgeCheck aria-hidden="true" /> Verified seller · {product.seller}
+      </span>
+      <div className="ys-ref-product-media g2-product-media">
+        <Link
+          className="g2-product-image-link"
+          to={`/products/${product.slug}`}
+          aria-label={`View ${product.title}`}
+        >
+          {product.imageUrl ? (
+            <img src={product.imageUrl} alt={product.title} loading="lazy" />
+          ) : (
+            <span className="ys-ref-product-symbol" aria-hidden="true">
+              <i>{product.icon || <ProductIcon />}</i>
+              <small>{categoryLabel}</small>
+            </span>
+          )}
+        </Link>
+        <Link
+          className="g2-product-badge"
+          to={`/categories/${product.categorySlug}`}
+        >
+          {product.badge || categoryLabel}
+        </Link>
         <button
           type="button"
           className={saved ? "saved" : ""}
@@ -285,27 +336,39 @@ export function YselloReferenceProductCard({
           <Heart fill={saved ? "currentColor" : "none"} aria-hidden="true" />
         </button>
       </div>
-      <div className="ys-ref-product-copy">
+      <div className="ys-ref-product-copy g2-product-copy">
         <Link className="ys-ref-product-title" to={`/products/${product.slug}`}>
           {product.title}
         </Link>
-        <p>{product.description}</p>
-        <div className="ys-ref-product-price-row">
-          <strong>{formatMoney(product.priceCents)}</strong>
+        <p className="g2-product-description">{product.description}</p>
+        <div className="g2-product-facts">
           <span>
-            <BadgeCheck aria-hidden="true" /> Verified
+            <Zap aria-hidden="true" /> {platform}
           </span>
+          <span>{product.type === "SERVICE" ? "SERVICE" : region}</span>
         </div>
-        <div className="ys-ref-product-meta">
+        <div className="ys-ref-product-meta g2-product-meta">
           <span>
             <Star fill="currentColor" aria-hidden="true" />{" "}
             {product.rating || "New"} <small>({product.reviews})</small>
           </span>
+          <span>{product.delivery || "Delivery shown at checkout"}</span>
+        </div>
+        <div className="ys-ref-product-price-row g2-product-price-row">
+          <div>
+            <strong>{formatMoney(product.priceCents)}</strong>
+            {originalPrice ? <small>{formatMoney(originalPrice)}</small> : null}
+          </div>
+          {discount ? <b>-{discount}%</b> : null}
+        </div>
+        <div className="g2-product-stock">
           <span>
-            <Zap aria-hidden="true" /> {product.delivery || "Instant"}
+            {product.type === "SERVICE"
+              ? "Service availability shown before checkout"
+              : `${product.stockCount ?? 0} available`}
           </span>
         </div>
-        <div className="ys-ref-product-card-actions">
+        <div className="ys-ref-product-card-actions g2-product-actions">
           <Link to={`/products/${product.slug}`}>View details</Link>
           {onBuy ? (
             <button
@@ -313,6 +376,7 @@ export function YselloReferenceProductCard({
               disabled={!canPurchase}
               onClick={() => onBuy(product)}
             >
+              <ShoppingBag aria-hidden="true" />
               {canPurchase ? "Add to cart" : "Unavailable"}
             </button>
           ) : null}

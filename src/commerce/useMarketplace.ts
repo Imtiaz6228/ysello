@@ -165,6 +165,12 @@ function mapProduct(
       product.salePriceCents && product.salePriceCents > 0
         ? Math.min(product.priceCents, product.salePriceCents)
         : product.priceCents,
+    originalPriceCents:
+      product.salePriceCents &&
+      product.salePriceCents > 0 &&
+      product.salePriceCents < product.priceCents
+        ? product.priceCents
+        : undefined,
     priceCnyCents: product.priceCnyCents,
     priceRubCents: product.priceRubCents,
     afterSalesServiceHours: product.afterSalesServiceHours,

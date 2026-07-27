@@ -1,7 +1,6 @@
 import {
   ArrowRight,
   BadgeCheck,
-  BookOpen,
   Bot,
   Boxes,
   BriefcaseBusiness,
@@ -10,15 +9,14 @@ import {
   Code2,
   CreditCard,
   Download,
-  FileStack,
+  Gift,
   Headphones,
   Layers3,
+  Mail,
   Palette,
-  Search,
   ShieldCheck,
-  ShoppingBag,
+  ShoppingCart,
   Sparkles,
-  Star,
   Store,
   Video,
   Zap,
@@ -30,17 +28,16 @@ import { useCart } from "../commerce/CartContext";
 import {
   useMarketplaceCategories,
   useMarketplaceProducts,
-  useMarketplaceReviews,
-  useMarketplaceStores,
 } from "../commerce/useMarketplace";
 import { MarketFooter, MarketHeader } from "../components/MarketHeader";
-import { MarketplaceProductCard } from "../components/MarketplaceProductCard";
 import { Seo } from "../components/Seo";
+import { YselloReferenceProductCard } from "../components/YselloReferenceLayout";
 import {
   marketplaceTaxonomy,
   type MarketplaceTaxonomyItem,
 } from "../data/marketplaceTaxonomy";
 import type { CatalogProduct } from "../data/catalog";
+import { useLocale } from "../i18n/LocaleContext";
 
 const categoryIcons: Record<string, LucideIcon> = {
   "ai-tools-workflows": Bot,
@@ -49,72 +46,57 @@ const categoryIcons: Record<string, LucideIcon> = {
   "website-themes-plugins": Code2,
   "video-streaming-assets": Video,
   "business-marketing-kits": BriefcaseBusiness,
-  "learning-resources-guides": BookOpen,
+  "learning-resources-guides": Layers3,
   "professional-digital-services": Sparkles,
 };
 
-const trustItems = [
-  {
-    title: "Protected payments",
-    text: "Secure checkout with order-linked confirmation.",
-    icon: CreditCard,
-    tone: "blue",
-  },
-  {
-    title: "Verified sellers",
-    text: "Public listings come from approved sellers.",
-    icon: BadgeCheck,
-    tone: "purple",
-  },
-  {
-    title: "Digital delivery",
-    text: "Delivery terms are shown before you buy.",
-    icon: Download,
-    tone: "orange",
-  },
-  {
-    title: "Buyer protection",
-    text: "Eligible orders include dispute assistance.",
-    icon: ShieldCheck,
-    tone: "emerald",
-  },
-  {
-    title: "Responsive support",
-    text: "Get help with the relevant order attached.",
-    icon: Headphones,
-    tone: "blue",
-  },
-];
+const categoryArt: Record<string, string> = {
+  "ai-tools-workflows": "/category-art/ai-productivity.webp",
+  "design-creative-assets": "/category-art/design-creative.webp",
+  "software-productivity": "/category-art/software.webp",
+  "website-themes-plugins": "/category-art/social-media.webp",
+  "video-streaming-assets": "/category-art/design-creative.webp",
+  "business-marketing-kits": "/category-art/business.webp",
+  "learning-resources-guides": "/category-art/courses.webp",
+  "professional-digital-services": "/marketplace-assets/seller-growth.webp",
+};
 
 const serviceHighlights = [
-  "Brand identity design",
-  "Website setup and customization",
+  "Brand identity",
+  "Website setup",
   "AI workflow setup",
-  "Video editing and motion graphics",
+  "Video editing",
   "Presentation design",
-  "SEO and content support",
+  "SEO & content",
+];
+
+const budgetOptions = [
+  { max: 10, label: "UP TO", value: "$10" },
+  { max: 25, label: "UP TO", value: "$25" },
+  { max: 50, label: "UP TO", value: "$50" },
+  { max: 100, label: "UP TO", value: "$100" },
 ];
 
 const faqs = [
   {
     question: "How are digital products delivered?",
     answer:
-      "Each listing shows its delivery method before checkout. Instant downloads appear in the buyer dashboard after confirmed payment; seller-delivered work stays connected to the order.",
+      "Every listing shows its delivery method before checkout. Instant downloads appear in your buyer dashboard after confirmed payment, while seller-delivered work remains connected to the order.",
   },
   {
-    question: "How does Ysello verify sellers?",
+    question: "How does Ysello verify marketplace sellers?",
     answer:
-      "Only seller profiles that have completed marketplace verification can publish public listings. Verification status is shown from the marketplace record, not added as a decorative badge.",
+      "Public products can only be published by approved seller profiles. The storefront displays the seller and listing information supplied by the live marketplace record.",
   },
   {
-    question: "What products are prohibited?",
+    question: "What can sellers upload?",
     answer:
-      "Accounts, credentials, passwords, session cookies, recovery access, unauthorized keys, fake engagement and other abusive or unlawful products are not allowed.",
+      "Ysello supports legitimate digital downloads and well-scoped professional services. Accounts, credentials, unauthorized keys, fake engagement and other prohibited products are not allowed.",
   },
   {
-    question: "When can I request support or a refund?",
+    question: "Where do I get help with an order?",
     answer:
-      "Open the relevant order in your dashboard to contact support. Eligibility depends on the listing, delivery state and the refund policy shown before purchase.",
+      "Open the order in your dashboard to contact support with the relevant product and delivery details already attached.",
   },
 ];
 
@@ -145,22 +127,19 @@ function categoryCount(
 }
 
 function SectionHeading({
-  eyebrow,
   title,
   text,
   href,
-  action = "View all",
+  action = "Discover all",
 }: {
-  eyebrow: string;
   title: string;
   text: string;
   href?: string;
   action?: string;
 }) {
   return (
-    <div className="market-section-heading">
+    <div className="market-section-heading g2-section-heading">
       <div>
-        <span>{eyebrow}</span>
         <h2>{title}</h2>
         <p>{text}</p>
       </div>
@@ -173,32 +152,30 @@ function SectionHeading({
   );
 }
 
-function ProductGrid({
+function ProductRail({
   products,
   emptyTitle,
-  emptyText,
   onBuy,
 }: {
   products: CatalogProduct[];
   emptyTitle: string;
-  emptyText: string;
   onBuy: (product: CatalogProduct) => void;
 }) {
   if (!products.length) {
     return (
-      <div className="market-data-empty">
-        <FileStack aria-hidden="true" />
+      <div className="g2-empty-rail">
+        <Layers3 aria-hidden="true" />
         <strong>{emptyTitle}</strong>
-        <p>{emptyText}</p>
-        <Link to="/catalog">Browse the full marketplace</Link>
+        <span>Approved listings will appear here automatically.</span>
+        <Link to="/catalog">Browse marketplace</Link>
       </div>
     );
   }
 
   return (
-    <div className="market-product-grid marketplace-list ys-home-product-identity">
+    <div className="market-product-grid marketplace-list ys-home-product-identity g2-product-rail">
       {products.map((product) => (
-        <MarketplaceProductCard
+        <YselloReferenceProductCard
           key={product.id}
           product={product}
           onBuy={onBuy}
@@ -208,14 +185,44 @@ function ProductGrid({
   );
 }
 
+function HeroProduct({
+  product,
+  index,
+}: {
+  product?: CatalogProduct;
+  index: number;
+}) {
+  if (!product) {
+    return (
+      <Link className={`g2-hero-tile tile-${index + 1}`} to="/catalog">
+        <span>MARKETPLACE PICK</span>
+        <strong>Discover digital products</strong>
+      </Link>
+    );
+  }
+
+  return (
+    <Link
+      className={`g2-hero-tile tile-${index + 1}`}
+      to={`/products/${product.slug}`}
+    >
+      {product.imageUrl ? (
+        <img src={product.imageUrl} alt="" />
+      ) : (
+        <i aria-hidden="true">{product.icon}</i>
+      )}
+      <span>{index === 0 ? "BESTSELLER" : product.badge}</span>
+      <strong>{product.title}</strong>
+    </Link>
+  );
+}
+
 export function MarketplaceHomePage() {
   const navigate = useNavigate();
   const { add } = useCart();
+  const { formatMoney } = useLocale();
   const products = useMarketplaceProducts();
   const categories = useMarketplaceCategories();
-  const stores = useMarketplaceStores();
-  const reviews = useMarketplaceReviews();
-  const [query, setQuery] = useState("");
   const [email, setEmail] = useState("");
   const [newsletterState, setNewsletterState] = useState<
     "idle" | "error" | "success"
@@ -237,12 +244,7 @@ export function MarketplaceHomePage() {
             b.rating - a.rating ||
             b.reviews - a.reviews,
         )
-        .slice(0, 8),
-    [products],
-  );
-
-  const services = useMemo(
-    () => products.filter((product) => product.type === "SERVICE").slice(0, 8),
+        .slice(0, 12),
     [products],
   );
 
@@ -254,18 +256,28 @@ export function MarketplaceHomePage() {
             String(a.publishedAt ?? a.id),
           ),
         )
-        .slice(0, 8),
+        .slice(0, 12),
     [products],
   );
 
-  function submitSearch(event: FormEvent) {
-    event.preventDefault();
-    const value = query.trim();
-    navigate(`/catalog${value ? `?q=${encodeURIComponent(value)}` : ""}`);
-  }
+  const services = useMemo(
+    () => products.filter((product) => product.type === "SERVICE").slice(0, 12),
+    [products],
+  );
+
+  const bundleProducts = bestSellers.slice(0, 3);
+  const bundleTotal = bundleProducts.reduce(
+    (total, product) => total + product.priceCents,
+    0,
+  );
 
   function buy(product: CatalogProduct) {
     add(product);
+    navigate("/cart");
+  }
+
+  function buyBundle() {
+    bundleProducts.forEach((product) => add(product));
     navigate("/cart");
   }
 
@@ -279,9 +291,9 @@ export function MarketplaceHomePage() {
   }
 
   return (
-    <main className="market-home-page">
+    <main className="market-home-page g2-home-page">
       <Seo
-        title="Ysello — Verified digital goods and professional services"
+        title="Ysello — Digital products and expert services"
         description="Discover licensed software, creative assets, AI workflows, business resources and expert digital services from verified sellers."
         canonicalPath="/"
         schema={[
@@ -307,99 +319,39 @@ export function MarketplaceHomePage() {
       />
       <MarketHeader />
 
-      <section className="market-home-hero pro-market-hero">
-        <div className="market-hero-copy">
-          <span className="market-eyebrow">
-            <BadgeCheck aria-hidden="true" />
-            Verified digital goods. Instant access.
+      <section className="market-home-hero pro-market-hero g2-home-hero">
+        <div className="g2-hero-intro">
+          <span>
+            <Zap aria-hidden="true" /> YSELLO BESTSELLERS
           </span>
-          <h1>Tools, assets and services to move your ideas forward.</h1>
+          <h1>Digital products for every big idea.</h1>
           <p>
-            Discover licensed software, creative assets, AI workflows, business
-            resources and expert digital services from verified sellers.
+            Shop verified tools, creative assets and expert services with clear
+            delivery and seller details.
           </p>
-          <form className="market-hero-search" onSubmit={submitSearch}>
-            <Search aria-hidden="true" />
-            <input
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              aria-label="Search templates, tools, assets and services"
-              placeholder="Search templates, tools, assets and services"
-            />
-            <button type="submit">
-              Search <ArrowRight aria-hidden="true" />
-            </button>
-          </form>
-          <div className="market-hero-actions">
-            <Link className="market-primary-action" to="/catalog">
-              Explore Marketplace <ArrowRight aria-hidden="true" />
+          <div>
+            <Link to="/catalog">
+              Explore marketplace <ArrowRight aria-hidden="true" />
             </Link>
-            <Link className="market-secondary-action" to="/seller/apply">
-              Start Selling
-            </Link>
+            <Link to="/seller/apply">Start selling</Link>
           </div>
-          <small className="market-hero-note">
-            <ShieldCheck aria-hidden="true" /> Protected checkout · Clear
-            delivery terms · Order-linked support
-          </small>
         </div>
-        <div className="market-hero-visual">
-          <img
-            src="/marketplace-assets/hero-marketplace.webp"
-            alt="A curated collection of digital product and service cards in the Ysello marketplace"
-          />
-          <div className="market-featured-deal">
-            <span>FEATURED THIS WEEK</span>
-            <strong>Build smarter. Launch faster.</strong>
-            <p>Save on selected AI, design and business toolkits.</p>
-            <div>
-              <b>UP TO 35% OFF</b>
-              <Link to="/catalog?sort=popular">
-                Shop the deal <ArrowRight aria-hidden="true" />
-              </Link>
-            </div>
-          </div>
-          <span className="market-visual-badge visual-badge-one">
-            <ShieldCheck aria-hidden="true" />
-            Protected checkout
-          </span>
-          <span className="market-visual-badge visual-badge-two">
-            <Zap aria-hidden="true" />
-            Delivery shown upfront
-          </span>
-          <span className="market-visual-badge visual-badge-three">
-            <BadgeCheck aria-hidden="true" />
-            Verified seller
-          </span>
+        <div className="g2-hero-tiles" aria-label="Featured marketplace items">
+          {[0, 1, 2, 3].map((index) => (
+            <HeroProduct
+              key={bestSellers[index]?.id ?? index}
+              product={bestSellers[index]}
+              index={index}
+            />
+          ))}
         </div>
       </section>
 
       <section
-        className="market-trust-grid"
-        aria-label="Why buyers choose Ysello"
+        className="market-home-section g2-category-dock-section"
+        id="categories"
       >
-        {trustItems.map(({ title, text, icon: Icon, tone }) => (
-          <article className={`tone-${tone}`} key={title}>
-            <span>
-              <Icon aria-hidden="true" />
-            </span>
-            <div>
-              <strong>{title}</strong>
-              <small>{text}</small>
-            </div>
-          </article>
-        ))}
-      </section>
-
-      <section className="market-home-section" id="categories">
-        <SectionHeading
-          eyebrow="One clear taxonomy"
-          title="Popular categories"
-          text="Explore legitimate digital goods and well-scoped professional services."
-          href="/catalog"
-          action="View all categories"
-        />
-        <div className="market-category-grid lux-quick-categories lux-main-category-row homepage-category-icons">
+        <div className="market-category-grid lux-quick-categories lux-main-category-row homepage-category-icons g2-category-dock">
           {marketplaceTaxonomy.map((category) => {
             const Icon = categoryIcons[category.slug] ?? Layers3;
             const count = categoryCount(category, categories);
@@ -414,30 +366,25 @@ export function MarketplaceHomePage() {
                 <span>
                   <Icon aria-hidden="true" />
                 </span>
-                <div>
-                  <strong>{category.name}</strong>
-                  <p>{category.description}</p>
-                  <small>
-                    {count
-                      ? `${count.toLocaleString()} published listing${count === 1 ? "" : "s"}`
-                      : "No published listings yet"}
-                  </small>
-                </div>
-                <ArrowRight aria-hidden="true" />
+                <strong>{category.name}</strong>
+                <small>
+                  {count
+                    ? `${count.toLocaleString()} live`
+                    : "Explore department"}
+                </small>
               </Link>
             );
           })}
         </div>
+
         <div
-          className="market-subcategory-preview lux-subcategory-preview-grid"
+          className="market-subcategory-preview lux-subcategory-preview-grid g2-subcategory-preview"
           aria-label={`${focusedCategory.name} specialties`}
         >
           <strong>{focusedCategory.name}</strong>
           {focusedCategory.subcategories.slice(0, 8).map((subcategory) => (
             <Link key={subcategory.slug} to={`/categories/${subcategory.slug}`}>
-              <span>{subcategory.name}</span>
-              <small>{subcategory.description}</small>
-              <ArrowRight aria-hidden="true" />
+              {subcategory.name}
             </Link>
           ))}
           <Link to={`/categories/${focusedCategory.slug}`}>
@@ -446,363 +393,254 @@ export function MarketplaceHomePage() {
         </div>
       </section>
 
+      <section className="market-home-section g2-home-section" id="products">
+        <SectionHeading
+          title="Bestsellers"
+          text="The marketplace products buyers are choosing right now."
+          href="/catalog?sort=popular"
+        />
+        <ProductRail
+          products={bestSellers.slice(0, 6)}
+          emptyTitle="No bestselling products yet."
+          onBuy={buy}
+        />
+      </section>
+
+      {bundleProducts.length === 3 ? (
+        <section className="market-home-section g2-home-section g2-bundle-section">
+          <SectionHeading
+            title="Better together"
+            text="A ready-made bundle assembled from current marketplace favorites."
+          />
+          <div className="g2-bundle">
+            <div className="g2-bundle-items">
+              {bundleProducts.map((product, index) => (
+                <div key={product.id} className="g2-bundle-item">
+                  {index ? <b aria-hidden="true">+</b> : null}
+                  <Link to={`/products/${product.slug}`}>
+                    <span>
+                      {product.imageUrl ? (
+                        <img src={product.imageUrl} alt="" />
+                      ) : (
+                        <i>{product.icon}</i>
+                      )}
+                    </span>
+                    <div>
+                      <small>{product.seller}</small>
+                      <strong>{product.title}</strong>
+                      <em>{formatMoney(product.priceCents)}</em>
+                    </div>
+                  </Link>
+                </div>
+              ))}
+            </div>
+            <aside>
+              <span>3-product bundle</span>
+              <strong>{formatMoney(bundleTotal)}</strong>
+              <small>Individual product prices combined</small>
+              <button type="button" onClick={buyBundle}>
+                <ShoppingCart aria-hidden="true" /> Add bundle to cart
+              </button>
+              <Link to="/cart">Bundle details</Link>
+            </aside>
+          </div>
+        </section>
+      ) : null}
+
+      <section className="market-home-section g2-home-section">
+        <SectionHeading
+          title="What’s your budget?"
+          text="Start with a price point and see what fits."
+        />
+        <div className="g2-budget-grid">
+          {budgetOptions.map((option, index) => (
+            <Link
+              key={option.max}
+              className={`budget-${index + 1}`}
+              to={`/catalog?max=${option.max}&sort=price_asc`}
+            >
+              <span>{option.label}</span>
+              <strong>{option.value}</strong>
+              <ArrowRight aria-hidden="true" />
+            </Link>
+          ))}
+        </div>
+      </section>
+
+      <section className="market-home-section g2-home-section">
+        <SectionHeading
+          title="Pick a category"
+          text="Jump into a curated department."
+          href="/catalog"
+          action="View all categories"
+        />
+        <div className="g2-category-art-grid">
+          {marketplaceTaxonomy.slice(0, 4).map((category) => (
+            <Link key={category.slug} to={`/categories/${category.slug}`}>
+              <span>
+                <img src={categoryArt[category.slug]} alt="" loading="lazy" />
+              </span>
+              <strong>{category.name}</strong>
+              <small>
+                {category.subcategories.map((item) => item.name).join(" · ")}
+              </small>
+            </Link>
+          ))}
+        </div>
+      </section>
+
+      <section className="market-home-section g2-home-section">
+        <SectionHeading
+          title="New on Ysello"
+          text="Recently published digital products and services."
+          href="/catalog?sort=newest"
+        />
+        <ProductRail
+          products={newArrivals.slice(0, 6)}
+          emptyTitle="No new products yet."
+          onBuy={buy}
+        />
+      </section>
+
       <section
-        className="market-home-section market-tinted-section"
+        className="market-home-section g2-home-section"
         id="professional-services"
       >
         <SectionHeading
-          eyebrow="Expert delivery"
-          title="Featured professional services"
-          text="Hire specialists through a protected order with scope, delivery time and price visible before checkout."
+          title="Professional services"
+          text="Book verified specialists with scope, price and delivery visible upfront."
           href="/catalog?kind=SERVICE"
-          action="Browse services"
+          action="Discover all services"
         />
-        <div
-          className="market-service-chips"
-          aria-label="Popular service types"
-        >
+        <div className="market-service-chips g2-service-chips">
           {serviceHighlights.map((service) => (
             <span key={service}>
               <Check aria-hidden="true" /> {service}
             </span>
           ))}
         </div>
-        <ProductGrid
-          products={services}
-          emptyTitle="No verified services are published yet."
-          emptyText="This section updates automatically when approved professional services become available."
+        <ProductRail
+          products={services.slice(0, 6)}
+          emptyTitle="No services are published yet."
           onBuy={buy}
         />
       </section>
 
-      <section
-        className="market-home-section"
-        id="products"
-        data-section="products"
-      >
-        <SectionHeading
-          eyebrow="Buyer favorites"
-          title="Best-selling products"
-          text="Ranked from published marketplace sales and verified buyer activity."
-          href="/catalog?sort=popular"
-          action="Explore products"
-        />
-        <ProductGrid
-          products={bestSellers}
-          emptyTitle="No published products are available yet."
-          emptyText="Approved products will appear here automatically. No demonstration listings are shown."
-          onBuy={buy}
-        />
-      </section>
-
-      <section
-        className="market-home-section market-how-section"
-        id="how-it-works"
-      >
-        <SectionHeading
-          eyebrow="A clear buying flow"
-          title="How Ysello works"
-          text="From discovery to delivery, every important detail stays connected to your order."
-        />
-        <div className="market-step-grid">
-          {[
-            {
-              number: "01",
-              title: "Browse verified products",
-              text: "Compare licensing, delivery, seller details and availability.",
-              icon: Search,
-            },
-            {
-              number: "02",
-              title: "Pay through protected checkout",
-              text: "Confirm the product and use the payment options available to you.",
-              icon: CreditCard,
-            },
-            {
-              number: "03",
-              title: "Receive your order",
-              text: "Access the download or follow seller delivery in your dashboard.",
-              icon: Download,
-            },
-          ].map(({ number, title, text, icon: Icon }) => (
-            <article key={number}>
-              <span>{number}</span>
-              <i>
-                <Icon aria-hidden="true" />
-              </i>
-              <strong>{title}</strong>
-              <p>{text}</p>
-            </article>
-          ))}
-        </div>
-      </section>
-
-      <section className="market-protection-feature">
-        <div className="market-protection-visual">
-          <img
-            src="/marketplace-assets/buyer-protection.webp"
-            alt="A secure digital checkout and delivery workspace"
-            loading="lazy"
-          />
-        </div>
+      <section className="g2-seller-promo">
         <div>
-          <span className="market-eyebrow">
-            <ShieldCheck aria-hidden="true" /> Buyer protection
+          <span>
+            <Store aria-hidden="true" /> BUILT FOR DIGITAL SELLERS
           </span>
-          <h2>Clear support when a digital order needs attention.</h2>
+          <h2>Upload once. Sell across the whole marketplace.</h2>
           <p>
-            Ysello keeps the listing, checkout confirmation, delivery record and
-            support conversation tied to the same order.
+            New products automatically inherit the same image-led card,
+            category, search and catalog layout.
           </p>
-          <ul>
-            {[
-              "Secure checkout confirmation",
-              "Delivery status and order record",
-              "Dispute assistance for eligible orders",
-              "Refund eligibility explained in policy",
-              "Public listings from verified sellers",
-            ].map((item) => (
-              <li key={item}>
-                <Check aria-hidden="true" /> {item}
-              </li>
-            ))}
-          </ul>
-          <Link to="/buyer-protection">
-            Read the buyer-protection policy <ArrowRight aria-hidden="true" />
-          </Link>
-        </div>
-      </section>
-
-      <section className="market-home-section" id="sellers">
-        <SectionHeading
-          eyebrow="Verified storefronts"
-          title="Popular stores"
-          text="Store details below come directly from verified seller profiles."
-          href="/catalog"
-          action="Browse marketplace"
-        />
-        {stores.length ? (
-          <div className="market-store-grid">
-            {stores.slice(0, 4).map((store) => (
-              <article key={store.slug}>
-                <div className="market-store-cover">
-                  {store.logoUrl ? (
-                    <img src={store.logoUrl} alt={`${store.name} logo`} />
-                  ) : (
-                    <span>{store.mark}</span>
-                  )}
-                </div>
-                <span>
-                  <BadgeCheck aria-hidden="true" /> Verified seller
-                </span>
-                <h3>{store.name}</h3>
-                <p>{store.about}</p>
-                <dl>
-                  <div>
-                    <dt>Rating</dt>
-                    <dd>
-                      {store.rating ? (
-                        <>
-                          <Star fill="currentColor" aria-hidden="true" />{" "}
-                          {store.rating.toFixed(1)}
-                        </>
-                      ) : (
-                        "New"
-                      )}
-                    </dd>
-                  </div>
-                  <div>
-                    <dt>Completed sales</dt>
-                    <dd>{store.sales.toLocaleString()}</dd>
-                  </div>
-                </dl>
-                <Link to={`/stores/${store.slug}`}>
-                  Visit Store <ArrowRight aria-hidden="true" />
-                </Link>
-              </article>
-            ))}
-          </div>
-        ) : (
-          <div className="market-data-empty">
-            <Store aria-hidden="true" />
-            <strong>No verified storefronts are available yet.</strong>
-            <p>Stores appear here only after marketplace verification.</p>
-            <Link to="/seller/apply">Apply to become a seller</Link>
-          </div>
-        )}
-      </section>
-
-      <section className="market-home-section market-tinted-section">
-        <SectionHeading
-          eyebrow="Recently published"
-          title="New arrivals"
-          text="The newest approved listings, ordered by their publication record."
-          href="/catalog?sort=newest"
-          action="See all new arrivals"
-        />
-        <ProductGrid
-          products={newArrivals}
-          emptyTitle="No new arrivals are available."
-          emptyText="Newly approved products will appear here automatically."
-          onBuy={buy}
-        />
-      </section>
-
-      <section className="market-seller-feature">
-        <div>
-          <span className="market-eyebrow">
-            <Store aria-hidden="true" /> Sell on Ysello
-          </span>
-          <h2>Open a professional digital storefront.</h2>
-          <p>
-            Publish legitimate products and services, manage delivery, respond
-            to buyers and track real orders from one seller workspace.
-          </p>
-          <div className="market-seller-benefits">
-            <span>
-              <Check aria-hidden="true" /> Transparent marketplace policy
-            </span>
-            <span>
-              <Check aria-hidden="true" /> Clear listing moderation
-            </span>
-            <span>
-              <Check aria-hidden="true" /> Order-linked buyer messaging
-            </span>
-            <span>
-              <Check aria-hidden="true" /> Payout status in your dashboard
-            </span>
-          </div>
-          <Link className="market-primary-action" to="/seller/apply">
-            Open Your Store <ArrowRight aria-hidden="true" />
+          <Link to="/seller/apply">
+            Open your store <ArrowRight aria-hidden="true" />
           </Link>
         </div>
         <img
           src="/marketplace-assets/seller-growth.webp"
-          alt="A clean seller workspace for managing digital products and orders"
+          alt=""
           loading="lazy"
         />
       </section>
 
-      <section className="market-home-section">
-        <SectionHeading
-          eyebrow="Verified purchases only"
-          title="What buyers are saying"
-          text="Feedback appears only when it is tied to an eligible completed purchase."
-        />
-        {reviews.length ? (
-          <div className="market-review-grid">
-            {reviews.slice(0, 4).map((review) => (
-              <article key={review.id}>
-                <div>
-                  <span>{review.initials}</span>
-                  <div>
-                    <strong>{review.buyerName}</strong>
-                    <small>
-                      <BadgeCheck aria-hidden="true" /> Verified purchase
-                    </small>
-                  </div>
-                  <time dateTime={review.createdAt}>{review.date}</time>
-                </div>
-                <p>“{review.body}”</p>
-                <footer>
-                  <span aria-label={`${review.rating} out of 5 stars`}>
-                    {Array.from({ length: review.rating }).map((_, index) => (
-                      <Star
-                        key={index}
-                        fill="currentColor"
-                        aria-hidden="true"
-                      />
-                    ))}
-                  </span>
-                  <Link to={`/products/${review.productSlug}`}>
-                    {review.productName}
-                  </Link>
-                </footer>
-              </article>
-            ))}
-          </div>
-        ) : (
-          <div className="market-data-empty">
-            <Star aria-hidden="true" />
-            <strong>No verified buyer feedback is available yet.</strong>
-            <p>Reviews appear only after an eligible completed purchase.</p>
-            <Link to="/catalog">Explore published listings</Link>
-          </div>
-        )}
+      <section className="g2-newsletter" id="newsletter">
+        <div>
+          <Mail aria-hidden="true" />
+          <span>
+            <strong>Join the Ysello newsletter</strong>
+            <small>New releases, seller stories and marketplace updates.</small>
+          </span>
+        </div>
+        <form onSubmit={subscribe}>
+          <input
+            value={email}
+            onChange={(event) => {
+              setEmail(event.target.value);
+              if (newsletterState !== "idle") setNewsletterState("idle");
+            }}
+            type="email"
+            aria-label="Email address"
+            placeholder="Enter your email"
+          />
+          <button type="submit">Subscribe</button>
+        </form>
+        <p
+          className={newsletterState}
+          role={newsletterState === "error" ? "alert" : "status"}
+        >
+          {newsletterState === "error"
+            ? "Enter a valid email address."
+            : newsletterState === "success"
+              ? "You’re on the list."
+              : ""}
+        </p>
       </section>
 
-      <section className="market-home-section market-faq-section">
+      <section className="market-home-section g2-home-section g2-faq">
         <SectionHeading
-          eyebrow="Helpful answers"
           title="Frequently asked questions"
-          text="The essentials for buying and selling legitimate digital products."
-          href="/support"
-          action="Visit support"
+          text="The essentials before you buy or sell."
         />
-        <div className="market-faq-list">
-          {faqs.map(({ question, answer }) => (
-            <details key={question}>
+        <div>
+          {faqs.map((item) => (
+            <details key={item.question}>
               <summary>
-                {question} <ChevronDown aria-hidden="true" />
+                {item.question} <ChevronDown aria-hidden="true" />
               </summary>
-              <p>{answer}</p>
+              <p>{item.answer}</p>
             </details>
           ))}
         </div>
       </section>
 
-      <section className="market-newsletter">
-        <div>
-          <span>
-            {newsletterState === "success" ? (
-              <Check aria-hidden="true" />
-            ) : (
-              <ShoppingBag aria-hidden="true" />
-            )}
-          </span>
-          <div>
-            <strong>
-              {newsletterState === "success"
-                ? "You’re on the list."
-                : "Useful marketplace updates, not inbox noise."}
-            </strong>
-            <small>
-              {newsletterState === "success"
-                ? "Your email was validated for marketplace updates."
-                : "Hear about newly published resources and practical buyer guides."}
-            </small>
-          </div>
-        </div>
-        <form onSubmit={subscribe} noValidate>
-          <label htmlFor="market-newsletter-email">Email address</label>
-          <div>
-            <input
-              id="market-newsletter-email"
-              type="email"
-              value={email}
-              onChange={(event) => {
-                setEmail(event.target.value);
-                setNewsletterState("idle");
-              }}
-              aria-invalid={newsletterState === "error"}
-              aria-describedby="market-newsletter-status"
-              placeholder="you@example.com"
-            />
-            <button type="submit">Subscribe</button>
-          </div>
-          <small
-            id="market-newsletter-status"
-            className={newsletterState === "error" ? "error" : ""}
-            role="status"
-          >
-            {newsletterState === "error"
-              ? "Enter a valid email address."
-              : newsletterState === "success"
-                ? "Subscription confirmed."
-                : "You can unsubscribe at any time."}
-          </small>
-        </form>
+      <section className="g2-trust-row" aria-label="Marketplace assurances">
+        <span>
+          <CreditCard aria-hidden="true" />
+          <strong>Protected payments</strong>
+          <small>Secure marketplace checkout</small>
+        </span>
+        <span>
+          <BadgeCheck aria-hidden="true" />
+          <strong>Verified sellers</strong>
+          <small>Approved public storefronts</small>
+        </span>
+        <span>
+          <Download aria-hidden="true" />
+          <strong>Clear delivery</strong>
+          <small>Terms shown before purchase</small>
+        </span>
+        <span>
+          <ShieldCheck aria-hidden="true" />
+          <strong>Buyer protection</strong>
+          <small>Support linked to your order</small>
+        </span>
+        <span>
+          <Headphones aria-hidden="true" />
+          <strong>Real support</strong>
+          <small>Help when you need it</small>
+        </span>
       </section>
+
+      <a
+        className="g2-newsletter-tab"
+        href="#newsletter"
+        aria-label="Newsletter"
+      >
+        <Gift aria-hidden="true" />
+        <span>Marketplace news & new releases</span>
+      </a>
+      <button
+        className="g2-scroll-top"
+        type="button"
+        aria-label="Back to top"
+        onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+      >
+        <ArrowRight aria-hidden="true" />
+      </button>
 
       <MarketFooter />
     </main>

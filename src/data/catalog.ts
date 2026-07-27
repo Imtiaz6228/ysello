@@ -26,6 +26,7 @@ export type CatalogProduct = {
   seller: string;
   sellerSlug: string;
   priceCents: number;
+  originalPriceCents?: number;
   priceCnyCents?: number;
   priceRubCents?: number;
   afterSalesServiceHours?: number;

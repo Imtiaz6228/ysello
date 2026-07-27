@@ -28,12 +28,7 @@ import { Seo } from "../components/Seo";
 import type { CatalogCategory, CatalogProduct } from "../data/catalog";
 import { marketplaceTaxonomy } from "../data/marketplaceTaxonomy";
 
-type SortMode =
-  | "popular"
-  | "rating"
-  | "price_asc"
-  | "price_desc"
-  | "newest";
+type SortMode = "popular" | "rating" | "price_asc" | "price_desc" | "newest";
 type ViewMode = "grid" | "list";
 type ProductKind = "all" | "DOWNLOAD" | "SERVICE";
 type PriceBand = "all" | "under_25" | "25_50" | "over_50";
@@ -59,8 +54,7 @@ function sortProducts(products: CatalogProduct[], sort: SortMode) {
   return [...products].sort((a, b) => {
     if (sort === "price_asc") return a.priceCents - b.priceCents;
     if (sort === "price_desc") return b.priceCents - a.priceCents;
-    if (sort === "rating")
-      return b.rating - a.rating || b.reviews - a.reviews;
+    if (sort === "rating") return b.rating - a.rating || b.reviews - a.reviews;
     if (sort === "newest")
       return a.badge === "New"
         ? -1
@@ -97,7 +91,7 @@ export function CatalogPage() {
   const [sort, setSort] = useState<SortMode>(
     (searchParams.get("sort") as SortMode) ?? "popular",
   );
-  const [view, setView] = useState<ViewMode>("grid");
+  const [view, setView] = useState<ViewMode>("list");
   const [stockOnly, setStockOnly] = useState(false);
   const [kind, setKind] = useState<ProductKind>(
     (searchParams.get("kind") as ProductKind) ?? "all",
@@ -106,6 +100,11 @@ export function CatalogPage() {
   const [minimumRating, setMinimumRating] = useState("all");
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
   const [visibleCount, setVisibleCount] = useState(24);
+  const requestedMaxPrice = Number(searchParams.get("max"));
+  const maxPrice =
+    Number.isFinite(requestedMaxPrice) && requestedMaxPrice > 0
+      ? requestedMaxPrice
+      : 0;
 
   const rootCategories = useMemo(
     () => categories.filter((item) => !item.parentSlug && !item.parentId),
@@ -137,6 +136,7 @@ export function CatalogPage() {
               product.priceCents >= 2500 &&
               product.priceCents <= 5000) ||
             (priceBand === "over_50" && product.priceCents > 5000)) &&
+          (!maxPrice || product.priceCents <= maxPrice * 100) &&
           (minimumRating === "all" ||
             product.rating >= Number(minimumRating)) &&
           (!normalizedQuery ||
@@ -151,6 +151,7 @@ export function CatalogPage() {
     categories,
     category,
     kind,
+    maxPrice,
     minimumRating,
     priceBand,
     products,
@@ -159,15 +160,19 @@ export function CatalogPage() {
     stockOnly,
   ]);
 
-  useEffect(() => setVisibleCount(24), [
-    category,
-    kind,
-    minimumRating,
-    priceBand,
-    query,
-    sort,
-    stockOnly,
-  ]);
+  useEffect(
+    () => setVisibleCount(24),
+    [
+      category,
+      kind,
+      maxPrice,
+      minimumRating,
+      priceBand,
+      query,
+      sort,
+      stockOnly,
+    ],
+  );
 
   const visibleProducts = filteredProducts.slice(0, visibleCount);
 
@@ -210,6 +215,7 @@ export function CatalogPage() {
     stockOnly,
     kind !== "all",
     priceBand !== "all",
+    maxPrice > 0,
     minimumRating !== "all",
   ].filter(Boolean).length;
 
@@ -407,8 +413,8 @@ export function CatalogPage() {
                       "Any rating"
                     ) : (
                       <>
-                        <Star fill="currentColor" aria-hidden="true" /> {value} &
-                        up
+                        <Star fill="currentColor" aria-hidden="true" /> {value}{" "}
+                        & up
                       </>
                     )}
                   </span>
@@ -444,6 +450,11 @@ export function CatalogPage() {
                 {priceBand !== "all" ? (
                   <button type="button" onClick={() => setPriceBand("all")}>
                     Price filter ×
+                  </button>
+                ) : null}
+                {maxPrice ? (
+                  <button type="button" onClick={() => updateParam("max", "")}>
+                    Up to ${maxPrice} ×
                   </button>
                 ) : null}
                 {stockOnly ? (

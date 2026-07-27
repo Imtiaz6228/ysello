@@ -54,7 +54,7 @@ export function CategoryPage() {
   const [subFilter, setSubFilter] = useState("all");
   const [kind, setKind] = useState<"all" | "DOWNLOAD" | "SERVICE">("all");
   const [sort, setSort] = useState<SortMode>("popular");
-  const [view, setView] = useState<ViewMode>("grid");
+  const [view, setView] = useState<ViewMode>("list");
   const [priceBand, setPriceBand] = useState<
     "all" | "under_25" | "25_50" | "over_50"
   >("all");
