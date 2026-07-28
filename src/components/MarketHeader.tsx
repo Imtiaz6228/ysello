@@ -1,26 +1,23 @@
 import {
   ArrowRight,
   BadgeCheck,
-  Bot,
-  Boxes,
-  BriefcaseBusiness,
   ChevronDown,
   Clock3,
-  Code2,
+  Gamepad2,
+  Gift,
   Grid2X2,
   Heart,
   LifeBuoy,
   Menu,
   MonitorDown,
-  PackageSearch,
-  Palette,
+  RefreshCw,
   Search,
   ShieldCheck,
   ShoppingCart,
-  Sparkles,
   Store,
+  Tags,
   UserRound,
-  Video,
+  UsersRound,
   X,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
@@ -37,25 +34,21 @@ import { useLocale } from "../i18n/LocaleContext";
 import { LocaleSwitcher } from "./LocaleSwitcher";
 
 const categoryIcons: Record<string, LucideIcon> = {
-  "ai-tools-workflows": Bot,
-  "design-creative-assets": Palette,
-  "software-productivity": MonitorDown,
-  "website-themes-plugins": Code2,
-  "video-streaming-assets": Video,
-  "business-marketing-kits": BriefcaseBusiness,
-  "learning-resources-guides": Boxes,
-  "professional-digital-services": Sparkles,
+  gaming: Gamepad2,
+  software: MonitorDown,
+  subscriptions: RefreshCw,
+  "gift-cards": Gift,
+  "social-media": UsersRound,
+  outlet: Tags,
 };
 
 const departmentLabels: Record<string, string> = {
-  "ai-tools-workflows": "AI tools",
-  "design-creative-assets": "Creative",
-  "software-productivity": "Software",
-  "website-themes-plugins": "Web assets",
-  "video-streaming-assets": "Video",
-  "business-marketing-kits": "Business",
-  "learning-resources-guides": "Learning",
-  "professional-digital-services": "Services",
+  gaming: "Gaming",
+  software: "Software",
+  subscriptions: "Subscriptions",
+  "gift-cards": "Gift cards",
+  "social-media": "Social media",
+  outlet: "OUTLET",
 };
 
 function DepartmentIcon({ category }: { category: MarketplaceTaxonomyItem }) {
@@ -70,10 +63,6 @@ function MegaMenu({
   category: MarketplaceTaxonomyItem;
   onClose: () => void;
 }) {
-  const companionDepartments = marketplaceTaxonomy
-    .filter((item) => item.slug !== category.slug)
-    .slice(0, 5);
-
   return (
     <section
       id="market-category-menu"
@@ -94,61 +83,22 @@ function MegaMenu({
           </Link>
         </div>
 
-        <div className="g2-mega-column">
-          <strong>Featured categories</strong>
-          {category.subcategories.map((subcategory) => (
-            <Link
-              key={subcategory.slug}
-              to={`/categories/${subcategory.slug}`}
-              onClick={onClose}
-            >
-              <span>{subcategory.name}</span>
-              <small>{subcategory.description}</small>
-            </Link>
-          ))}
-        </div>
-
-        <div className="g2-mega-column">
-          <strong>Shop by format</strong>
-          <Link to={`/categories/${category.slug}`} onClick={onClose}>
-            All digital products
-          </Link>
-          <Link
-            to={`/catalog?category=${category.slug}&kind=DOWNLOAD`}
-            onClick={onClose}
-          >
-            Instant downloads
-          </Link>
-          <Link
-            to={`/catalog?category=${category.slug}&kind=SERVICE`}
-            onClick={onClose}
-          >
-            Professional services
-          </Link>
-          <Link
-            to={`/catalog?category=${category.slug}&sort=popular`}
-            onClick={onClose}
-          >
-            Bestselling now
-          </Link>
-          <Link
-            to={`/catalog?category=${category.slug}&sort=newest`}
-            onClick={onClose}
-          >
-            New releases
-          </Link>
-        </div>
-
-        <div className="g2-mega-column">
-          <strong>More departments</strong>
-          {companionDepartments.map((item) => (
-            <Link
-              key={item.slug}
-              to={`/categories/${item.slug}`}
-              onClick={onClose}
-            >
-              {item.name}
-            </Link>
+        <div className="g2-mega-catalog-grid">
+          {category.subcategories.slice(0, 8).map((group) => (
+            <section key={group.slug}>
+              <Link to={`/categories/${group.slug}`} onClick={onClose}>
+                {group.name}
+              </Link>
+              {group.children?.slice(0, 6).map((item) => (
+                <Link
+                  key={item.slug}
+                  to={`/categories/${item.slug}`}
+                  onClick={onClose}
+                >
+                  {item.name}
+                </Link>
+              ))}
+            </section>
           ))}
         </div>
 
@@ -180,6 +130,7 @@ export function MarketHeader() {
   const [activeMega, setActiveMega] = useState<string | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [mobileCategory, setMobileCategory] = useState<string | null>(null);
+  const [mobileGroup, setMobileGroup] = useState<string | null>(null);
   const [promoVisible, setPromoVisible] = useState(true);
   const menuButtonRef = useRef<HTMLButtonElement>(null);
   const drawerRef = useRef<HTMLElement>(null);
@@ -198,6 +149,7 @@ export function MarketHeader() {
     setActiveMega(null);
     setMenuOpen(false);
     setMobileCategory(null);
+    setMobileGroup(null);
   }, [location.hash, location.pathname, location.search]);
 
   useEffect(() => {
@@ -245,7 +197,7 @@ export function MarketHeader() {
   }
 
   function toggleMega(slug: string) {
-    setActiveMega((current) => (current === slug ? null : slug));
+    setActiveMega(slug);
   }
 
   return (
@@ -357,7 +309,7 @@ export function MarketHeader() {
           className="market-department-bar g2-department-bar"
           aria-label="Marketplace departments"
         >
-          {marketplaceTaxonomy.slice(0, 6).map((category, index) => (
+          {marketplaceTaxonomy.slice(0, 6).map((category) => (
             <button
               key={category.slug}
               type="button"
@@ -370,7 +322,7 @@ export function MarketHeader() {
             >
               <DepartmentIcon category={category} />
               <span>{departmentLabels[category.slug] ?? category.name}</span>
-              {index === 2 ? <b>HOT</b> : null}
+              {category.slug === "software" ? <b>HOT</b> : null}
             </button>
           ))}
           <Link className="g2-department-cta" to="/seller/apply">
@@ -405,51 +357,40 @@ export function MarketHeader() {
             aria-label="Mobile navigation"
           >
             <header>
-              <Link className="market-wordmark" to="/">
-                <img src="/ysello-mark.svg" alt="" width="42" height="42" />
-                <span>
-                  <strong>ysello</strong>
-                  <small>digital marketplace</small>
-                </span>
-              </Link>
               <button
+                className="g2-drawer-close"
                 type="button"
                 aria-label="Close navigation menu"
                 onClick={() => setMenuOpen(false)}
               >
                 <X aria-hidden="true" />
               </button>
+              <Link className="market-wordmark" to="/">
+                <img src="/ysello-mark.svg" alt="" width="42" height="42" />
+                <span>
+                  <strong>ysello</strong>
+                </span>
+              </Link>
+              <div className="g2-drawer-actions">
+                <LocaleSwitcher compact />
+                <Link to={accountPath} aria-label={user ? "Account" : "Sign in"}>
+                  <UserRound aria-hidden="true" />
+                </Link>
+                <Link
+                  to={user ? "/dashboard" : "/sign-in"}
+                  aria-label="Saved items"
+                >
+                  <Heart aria-hidden="true" />
+                </Link>
+                <Link to="/cart" aria-label={`Cart with ${count} items`}>
+                  <ShoppingCart aria-hidden="true" />
+                  {count ? <b>{count}</b> : null}
+                </Link>
+              </div>
             </header>
 
-            <form className="g2-mobile-search" onSubmit={submitSearch}>
-              <Search aria-hidden="true" />
-              <input
-                autoFocus
-                value={query}
-                onChange={(event) => setQuery(event.target.value)}
-                aria-label="Search marketplace"
-                placeholder="Search the marketplace"
-              />
-              <button type="submit">Search</button>
-            </form>
-
-            <div className="g2-mobile-quick-links">
-              <Link to="/catalog">
-                <PackageSearch aria-hidden="true" /> Marketplace
-              </Link>
-              <Link to="/#products">
-                <Grid2X2 aria-hidden="true" /> Products
-              </Link>
-              <Link to="/cart">
-                <ShoppingCart aria-hidden="true" /> Cart <span>{count}</span>
-              </Link>
-              <Link to={accountPath}>
-                <UserRound aria-hidden="true" /> {user ? "Account" : "Sign in"}
-              </Link>
-            </div>
-
             <section className="g2-mobile-categories">
-              <div>
+              <div className="g2-mobile-category-heading">
                 <strong>
                   <span>{t("categories")}</span>
                 </strong>
@@ -462,27 +403,69 @@ export function MarketHeader() {
                     <button
                       type="button"
                       aria-expanded={expanded}
-                      onClick={() =>
+                      onClick={() => {
                         setMobileCategory(expanded ? null : category.slug)
-                      }
+                        setMobileGroup(null);
+                      }}
                     >
                       <DepartmentIcon category={category} />
                       <span>{category.name}</span>
                       <ChevronDown aria-hidden="true" />
                     </button>
                     {expanded ? (
-                      <div>
-                        <Link to={`/categories/${category.slug}`}>
-                          All {category.name}
+                      <div className="g2-mobile-category-panel">
+                        <Link
+                          className="g2-mobile-view-all"
+                          to={`/categories/${category.slug}`}
+                        >
+                          View all
                         </Link>
-                        {category.subcategories.map((subcategory) => (
-                          <Link
-                            key={subcategory.slug}
-                            to={`/categories/${subcategory.slug}`}
-                          >
-                            {subcategory.name}
-                          </Link>
-                        ))}
+                        {category.subcategories.map((group) => {
+                          const groupExpanded = mobileGroup === group.slug;
+                          return (
+                            <div className="g2-mobile-group" key={group.slug}>
+                              {group.children?.length ? (
+                                <>
+                                  <button
+                                    type="button"
+                                    aria-expanded={groupExpanded}
+                                    onClick={() =>
+                                      setMobileGroup(
+                                        groupExpanded ? null : group.slug,
+                                      )
+                                    }
+                                  >
+                                    <Grid2X2 aria-hidden="true" />
+                                    <span>{group.name}</span>
+                                    <ChevronDown aria-hidden="true" />
+                                  </button>
+                                  {groupExpanded ? (
+                                    <div className="g2-mobile-leaves">
+                                      <Link
+                                        to={`/categories/${group.slug}`}
+                                      >
+                                        All {group.name}
+                                      </Link>
+                                      {group.children.map((item) => (
+                                        <Link
+                                          key={item.slug}
+                                          to={`/categories/${item.slug}`}
+                                        >
+                                          {item.name}
+                                        </Link>
+                                      ))}
+                                    </div>
+                                  ) : null}
+                                </>
+                              ) : (
+                                <Link to={`/categories/${group.slug}`}>
+                                  <Grid2X2 aria-hidden="true" />
+                                  <span>{group.name}</span>
+                                </Link>
+                              )}
+                            </div>
+                          );
+                        })}
                       </div>
                     ) : null}
                   </div>

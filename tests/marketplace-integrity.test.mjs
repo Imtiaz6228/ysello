@@ -59,8 +59,8 @@ test("public marketplace presents factual live context and stock-aware purchasin
   assert.match(home, /marketplace-list/);
   assert.match(header, /commerce-global-search/);
   assert.match(header, /<span>\{t\("categories"\)\}<\/span>/);
-  assert.match(header, /PackageSearch aria-hidden="true" \/> Marketplace/);
-  assert.match(header, /Grid2X2 aria-hidden="true" \/> Products/);
+  assert.match(header, /g2-mobile-category-panel/);
+  assert.match(header, /group\.children\.map/);
   assert.match(refresh, /grid-template-columns: repeat\(5,/);
   assert.match(refresh, /aspect-ratio: 16 \/ 10/);
   assert.match(reference, /grid-template-columns: 82px minmax\(0, 1fr\)/);

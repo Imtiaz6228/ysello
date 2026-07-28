@@ -9,6 +9,7 @@ import {
   ShieldCheck,
   SlidersHorizontal,
   Sparkles,
+  X,
   Zap,
 } from "lucide-react";
 import { useMemo, useState } from "react";
@@ -60,6 +61,7 @@ export function CategoryPage() {
   >("all");
   const [minimumRating, setMinimumRating] = useState("all");
   const [availableOnly, setAvailableOnly] = useState(false);
+  const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
 
   const children = useMemo(
     () => categories.filter((item) => item.parentSlug === slug),
@@ -74,6 +76,20 @@ export function CategoryPage() {
         .slice(0, 4),
     [categories, slug],
   );
+  const rootCategory = useMemo(() => {
+    if (!category) return undefined;
+    let current = category;
+    const visited = new Set([current.slug]);
+    while (current.parentSlug && !visited.has(current.parentSlug)) {
+      const parent = categories.find(
+        (item) => item.slug === current.parentSlug,
+      );
+      if (!parent) break;
+      current = parent;
+      visited.add(current.slug);
+    }
+    return current;
+  }, [categories, category]);
   const categoryProducts = useMemo(
     () =>
       products.filter(
@@ -138,6 +154,15 @@ export function CategoryPage() {
     navigate("/cart");
   }
 
+  function resetFilters() {
+    setQuery("");
+    setSubFilter("all");
+    setKind("all");
+    setPriceBand("all");
+    setMinimumRating("all");
+    setAvailableOnly(false);
+  }
+
   if (loading)
     return (
       <main className="ys-ref-page" data-legacy-hook="commerce-page">
@@ -166,6 +191,19 @@ export function CategoryPage() {
       />
       <MarketHeader />
       <div className="ys-ref-category-shell">
+        <Link
+          className="ys-ref-mobile-back"
+          to={
+            rootCategory?.slug === category.slug
+              ? "/catalog"
+              : `/categories/${rootCategory?.slug ?? "gaming"}`
+          }
+        >
+          <ArrowRight aria-hidden="true" /> Back to{" "}
+          {rootCategory?.slug === category.slug
+            ? "Marketplace"
+            : (rootCategory?.name ?? "Marketplace")}
+        </Link>
         <nav className="ys-ref-breadcrumb" aria-label="Breadcrumb">
           <Link to="/">Home</Link>
           <span>/</span>
@@ -180,6 +218,10 @@ export function CategoryPage() {
               <Sparkles aria-hidden="true" /> Curated digital department
             </span>
             <h1>{category.name}</h1>
+            <span className="ys-ref-mobile-count">
+              {categoryProducts.length} item
+              {categoryProducts.length === 1 ? "" : "s"}
+            </span>
             <p>{category.description}</p>
             <label>
               <Search aria-hidden="true" />
@@ -254,20 +296,35 @@ export function CategoryPage() {
         </section>
 
         <div className="ys-category-market-layout">
-          <aside className="ys-category-filter-panel">
+          {mobileFiltersOpen ? (
+            <button
+              className="ys-mobile-filter-scrim"
+              type="button"
+              aria-label="Close filters"
+              onClick={() => setMobileFiltersOpen(false)}
+            />
+          ) : null}
+          <aside
+            className={`ys-category-filter-panel ${
+              mobileFiltersOpen ? "mobile-open" : ""
+            }`}
+          >
             <header>
               <strong>Filter products</strong>
               <button
+                className="ys-filter-clear"
                 type="button"
-                onClick={() => {
-                  setSubFilter("all");
-                  setKind("all");
-                  setPriceBand("all");
-                  setMinimumRating("all");
-                  setAvailableOnly(false);
-                }}
+                onClick={resetFilters}
               >
                 Clear all
+              </button>
+              <button
+                className="ys-mobile-filter-close"
+                type="button"
+                aria-label="Close filters"
+                onClick={() => setMobileFiltersOpen(false)}
+              >
+                <X aria-hidden="true" />
               </button>
             </header>
 
@@ -380,6 +437,13 @@ export function CategoryPage() {
                 <small>Support stays linked to eligible orders.</small>
               </span>
             </div>
+            <button
+              className="ys-mobile-filter-done"
+              type="button"
+              onClick={() => setMobileFiltersOpen(false)}
+            >
+              Show {filteredProducts.length} products
+            </button>
           </aside>
 
           <section className="ys-ref-category-products">
@@ -480,19 +544,41 @@ export function CategoryPage() {
                 <span>Try another specialty or a broader search.</span>
                 <button
                   type="button"
-                  onClick={() => {
-                    setQuery("");
-                    setSubFilter("all");
-                    setKind("all");
-                    setPriceBand("all");
-                    setMinimumRating("all");
-                    setAvailableOnly(false);
-                  }}
+                  onClick={resetFilters}
                 >
                   Reset filters
                 </button>
               </div>
             ) : null}
+          </section>
+        </div>
+
+        <div className="ys-mobile-filter-bar">
+          <div>
+            <strong>Category:</strong>
+            <span>
+              {subFilter === "all"
+                ? category.name
+                : children.find((item) => item.slug === subFilter)?.name ??
+                  category.name}
+              {subFilter !== "all" ? (
+                <button
+                  type="button"
+                  aria-label="Clear category filter"
+                  onClick={() => setSubFilter("all")}
+                >
+                  <X aria-hidden="true" />
+                </button>
+              ) : null}
+            </span>
+          </div>
+          <section>
+            <button type="button" onClick={resetFilters}>
+              <X aria-hidden="true" /> Clear all
+            </button>
+            <button type="button" onClick={() => setMobileFiltersOpen(true)}>
+              <SlidersHorizontal aria-hidden="true" /> Edit
+            </button>
           </section>
         </div>
 

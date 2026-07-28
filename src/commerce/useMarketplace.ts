@@ -2,36 +2,16 @@ import { useEffect, useMemo, useState } from "react";
 import { apiRequest, mediaUrl } from "../api/client";
 import {
   catalogCategories,
+  catalogProducts,
   type CatalogCategory,
   type CatalogProduct,
 } from "../data/catalog";
+import { g2aDemoProducts } from "../data/g2aDemoCatalog";
 import { useLocale } from "../i18n/LocaleContext";
-import { marketplaceTaxonomy } from "../data/marketplaceTaxonomy";
-
-const taxonomyCategories: CatalogCategory[] = marketplaceTaxonomy.flatMap(
-  (category, categoryIndex) => [
-    {
-      id: `taxonomy-${category.slug}`,
-      slug: category.slug,
-      name: category.name,
-      description: category.description,
-      icon: category.icon,
-      sortOrder: (categoryIndex + 1) * 100,
-      productCount: 0,
-      isFeatured: true,
-    },
-    ...category.subcategories.map((subcategory, subcategoryIndex) => ({
-      id: `taxonomy-${subcategory.slug}`,
-      slug: subcategory.slug,
-      parentSlug: category.slug,
-      name: subcategory.name,
-      description: subcategory.description,
-      icon: category.icon,
-      sortOrder: (categoryIndex + 1) * 100 + subcategoryIndex + 1,
-      productCount: 0,
-    })),
-  ],
-);
+import {
+  marketplaceTaxonomy,
+  type MarketplaceTaxonomyNode,
+} from "../data/marketplaceTaxonomy";
 
 type ApiCategory = {
   id: string;
@@ -122,6 +102,86 @@ function iconForSlug(slug: string, index = 0) {
     catalogCategories.find((category) => category.slug === slug)?.icon ??
     ["◉", "f", "𝕏", "☯", "✈", "♪", "G", "◎", "✉"][index % 9]
   );
+}
+
+const localProducts = [
+  ...new Map(
+    [...g2aDemoProducts, ...catalogProducts].map((product) => [
+      product.slug,
+      product,
+    ]),
+  ).values(),
+];
+
+function flattenTaxonomyBranch(
+  nodes: MarketplaceTaxonomyNode[],
+  parentSlug: string,
+  rootIcon: string,
+  rootOrder: number,
+  depth = 1,
+): CatalogCategory[] {
+  return nodes.flatMap((node, index) => {
+    const sortOrder = rootOrder + depth * 10 + index;
+    return [
+      {
+        id: `taxonomy-${node.slug}`,
+        slug: node.slug,
+        parentSlug,
+        name: node.name,
+        description: node.description,
+        icon: rootIcon,
+        sortOrder,
+        depth,
+        productCount: localProducts.filter(
+          (product) => product.categorySlug === node.slug,
+        ).length,
+      },
+      ...(node.children
+        ? flattenTaxonomyBranch(
+            node.children,
+            node.slug,
+            rootIcon,
+            sortOrder,
+            depth + 1,
+          )
+        : []),
+    ];
+  });
+}
+
+const taxonomyCategories: CatalogCategory[] = marketplaceTaxonomy.flatMap(
+  (category, categoryIndex) => {
+    const rootOrder = (categoryIndex + 1) * 1000;
+    return [
+      {
+        id: `taxonomy-${category.slug}`,
+        slug: category.slug,
+        name: category.name,
+        description: category.description,
+        icon: category.icon,
+        sortOrder: rootOrder,
+        productCount: localProducts.filter(
+          (product) => product.categorySlug === category.slug,
+        ).length,
+        isFeatured: true,
+        depth: 0,
+      },
+      ...flattenTaxonomyBranch(
+        category.subcategories,
+        category.slug,
+        category.icon,
+        rootOrder,
+      ),
+    ];
+  },
+);
+
+function mergeWithLocalProducts(remoteProducts: CatalogProduct[]) {
+  const merged = new Map<string, CatalogProduct>();
+  [...remoteProducts, ...localProducts].forEach((product) => {
+    if (!merged.has(product.slug)) merged.set(product.slug, product);
+  });
+  return [...merged.values()];
 }
 
 function badgeFor(product: ApiProduct) {
@@ -264,19 +324,19 @@ function mapCategories(categories: ApiCategory[]): CatalogCategory[] {
 
 export function useMarketplaceProducts() {
   const { locale } = useLocale();
-  const [products, setProducts] = useState<CatalogProduct[]>([]);
+  const [products, setProducts] =
+    useState<CatalogProduct[]>(localProducts);
   useEffect(() => {
     void apiRequest<{ products: ApiProduct[] }>(
       "/api/marketplace/products?take=96",
     )
-      .then((data) =>
-        setProducts(
-          data.products.map((product, index) =>
+      .then((data) => {
+        const remoteProducts = data.products.map((product, index) =>
             mapProduct(product, index, locale),
-          ),
-        ),
-      )
-      .catch(() => setProducts([]));
+        );
+        setProducts(mergeWithLocalProducts(remoteProducts));
+      })
+      .catch(() => undefined);
   }, [locale]);
   return products;
 }
@@ -299,15 +359,27 @@ export function useMarketplaceCategories() {
 
 export function useMarketplaceProduct(slug?: string) {
   const { locale } = useLocale();
-  const [product, setProduct] = useState<CatalogProduct | undefined>();
-  const [loading, setLoading] = useState(Boolean(slug));
+  const localProduct = localProducts.find((item) => item.slug === slug);
+  const [product, setProduct] = useState<CatalogProduct | undefined>(
+    localProduct,
+  );
+  const [loading, setLoading] = useState(Boolean(slug && !localProduct));
   useEffect(() => {
-    if (!slug) return;
+    if (!slug) {
+      setProduct(undefined);
+      setLoading(false);
+      return;
+    }
+    const fallback = localProducts.find((item) => item.slug === slug);
+    setProduct(fallback);
+    setLoading(!fallback);
     void apiRequest<{ product: ApiProduct }>(
       `/api/marketplace/products/${encodeURIComponent(slug)}`,
     )
       .then((data) => setProduct(mapProduct(data.product, 0, locale)))
-      .catch(() => setProduct(undefined))
+      .catch(() => {
+        if (!fallback) setProduct(undefined);
+      })
       .finally(() => setLoading(false));
   }, [locale, slug]);
   return { product, loading };

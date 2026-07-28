@@ -1,24 +1,22 @@
 import {
   ArrowRight,
   BadgeCheck,
-  Bot,
-  Boxes,
-  BriefcaseBusiness,
   Check,
   ChevronDown,
-  Code2,
   CreditCard,
   Download,
+  Gamepad2,
   Gift,
   Headphones,
   Layers3,
   Mail,
-  Palette,
+  MonitorDown,
+  RefreshCw,
   ShieldCheck,
   ShoppingCart,
-  Sparkles,
   Store,
-  Video,
+  Tags,
+  UsersRound,
   Zap,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
@@ -34,6 +32,7 @@ import { MarketFooter, MarketHeader } from "../components/MarketHeader";
 import { Seo } from "../components/Seo";
 import { YselloReferenceProductCard } from "../components/YselloReferenceLayout";
 import {
+  flattenedTaxonomyNodes,
   marketplaceTaxonomy,
   type MarketplaceTaxonomyItem,
 } from "../data/marketplaceTaxonomy";
@@ -41,25 +40,21 @@ import type { CatalogProduct } from "../data/catalog";
 import { useLocale } from "../i18n/LocaleContext";
 
 const categoryIcons: Record<string, LucideIcon> = {
-  "ai-tools-workflows": Bot,
-  "design-creative-assets": Palette,
-  "software-productivity": Boxes,
-  "website-themes-plugins": Code2,
-  "video-streaming-assets": Video,
-  "business-marketing-kits": BriefcaseBusiness,
-  "learning-resources-guides": Layers3,
-  "professional-digital-services": Sparkles,
+  gaming: Gamepad2,
+  software: MonitorDown,
+  subscriptions: RefreshCw,
+  "gift-cards": Gift,
+  "social-media": UsersRound,
+  outlet: Tags,
 };
 
 const categoryArt: Record<string, string> = {
-  "ai-tools-workflows": "/editorial/abstract-ai.webp",
-  "design-creative-assets": "/editorial/color-shapes.webp",
-  "software-productivity": "/editorial/creator-studio.webp",
-  "website-themes-plugins": "/editorial/gaming-workspace.webp",
-  "video-streaming-assets": "/editorial/creator-studio.webp",
-  "business-marketing-kits": "/category-art/business.webp",
-  "learning-resources-guides": "/category-art/courses.webp",
-  "professional-digital-services": "/marketplace-assets/seller-growth.webp",
+  gaming: "/marketplace-assets/hero-marketplace.webp",
+  software: "/editorial/creator-studio.webp",
+  subscriptions: "/marketplace-assets/buyer-protection.webp",
+  "gift-cards": "/category-art/business.webp",
+  "social-media": "/editorial/color-shapes.webp",
+  outlet: "/marketplace-assets/seller-growth.webp",
 };
 
 const serviceHighlights = [
@@ -116,7 +111,7 @@ function categoryCount(
 ) {
   const acceptedSlugs = new Set([
     taxonomy.slug,
-    ...taxonomy.subcategories.map((item) => item.slug),
+    ...flattenedTaxonomyNodes(taxonomy).map((item) => item.slug),
   ]);
   return categories
     .filter(
@@ -262,17 +257,12 @@ export function MarketplaceHomePage() {
           (product) =>
             categoryMatches(
               product.categorySlug,
-              "design-creative-assets",
+              "creative-software",
               categories,
             ) ||
             categoryMatches(
               product.categorySlug,
-              "website-themes-plugins",
-              categories,
-            ) ||
-            categoryMatches(
-              product.categorySlug,
-              "video-streaming-assets",
+              "social-media",
               categories,
             ),
         ),
@@ -288,17 +278,17 @@ export function MarketplaceHomePage() {
           (product) =>
             categoryMatches(
               product.categorySlug,
-              "software-productivity",
+              "software",
               categories,
             ) ||
             categoryMatches(
               product.categorySlug,
-              "business-marketing-kits",
+              "subscriptions",
               categories,
             ) ||
             categoryMatches(
               product.categorySlug,
-              "learning-resources-guides",
+              "gift-cards",
               categories,
             ),
         ),
@@ -306,6 +296,18 @@ export function MarketplaceHomePage() {
       ),
     [categories, newArrivals, products],
   );
+
+  const mobileHighlights = useMemo(() => {
+    const preferredSlugs = [
+      "halo-infinite-campaign-pc",
+      "steam-wallet-20",
+      "razer-gold-10",
+    ];
+    const preferred = preferredSlugs
+      .map((slug) => products.find((product) => product.slug === slug))
+      .filter((product): product is CatalogProduct => Boolean(product));
+    return mergeProductPicks(preferred, bestSellers, 3);
+  }, [bestSellers, products]);
 
   const bundleProducts = bestSellers.slice(0, 3);
   const bundleTotal = bundleProducts.reduce(
@@ -360,6 +362,39 @@ export function MarketplaceHomePage() {
         ]}
       />
       <MarketHeader />
+
+      <section
+        className="g2-mobile-feature-stack"
+        aria-label="Marketplace bestsellers"
+      >
+        {mobileHighlights.map((product) => {
+          const platform =
+            typeof product.facts?.platform === "string"
+              ? product.facts.platform
+              : product.type === "SERVICE"
+                ? "Seller service"
+                : "Digital product";
+          const region =
+            typeof product.facts?.region === "string"
+              ? product.facts.region
+              : "GLOBAL";
+          return (
+            <Link key={product.id} to={`/products/${product.slug}`}>
+              {product.imageUrl ? (
+                <img src={product.imageUrl} alt="" loading="eager" />
+              ) : null}
+              <span>
+                <b>{product.badge || "Bestseller"}</b>
+                <strong>{product.title}</strong>
+                <small>
+                  {platform} · {product.type === "SERVICE" ? "Service" : "Key"}{" "}
+                  · {region}
+                </small>
+              </span>
+            </Link>
+          );
+        })}
+      </section>
 
       <section
         className="market-home-hero pro-market-hero g2-home-hero"
@@ -568,7 +603,7 @@ export function MarketplaceHomePage() {
         <SectionHeading
           title="Creative studio picks"
           text="Design systems, web assets, motion packs and creator resources."
-          href="/categories/design-creative-assets"
+          href="/categories/creative-software"
         />
         <ProductRail
           products={creativePicks.slice(0, 6)}
@@ -581,7 +616,7 @@ export function MarketplaceHomePage() {
         <SectionHeading
           title="Tools for work and business"
           text="Productivity systems, commercial templates and specialist learning resources."
-          href="/categories/software-productivity"
+          href="/categories/software"
         />
         <ProductRail
           products={workPicks.slice(0, 6)}

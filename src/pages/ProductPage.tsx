@@ -172,16 +172,35 @@ export function ProductPage() {
         <div className="product-gallery">
           <div className={`product-detail-art product-art-${artMode}`}>
             {artMode === "cover" ? (
-              <div className="product-art-information product-icon-preview">
-                <PackageCheck />
-                <small>{product.category}</small>
-                <strong>{product.title}</strong>
-                <span>
-                  {product.type === "SERVICE"
-                    ? "Seller-delivered service"
-                    : "Protected digital delivery"}
-                </span>
-              </div>
+              product.imageUrl ? (
+                <div className="product-detail-cover">
+                  <img
+                    src={product.imageUrl}
+                    alt={product.title}
+                    loading="eager"
+                  />
+                  <div>
+                    <small>{product.category}</small>
+                    <strong>{product.title}</strong>
+                    <span>
+                      {product.type === "SERVICE"
+                        ? "Seller-delivered service"
+                        : "Protected digital delivery"}
+                    </span>
+                  </div>
+                </div>
+              ) : (
+                <div className="product-art-information product-icon-preview">
+                  <PackageCheck />
+                  <small>{product.category}</small>
+                  <strong>{product.title}</strong>
+                  <span>
+                    {product.type === "SERVICE"
+                      ? "Seller-delivered service"
+                      : "Protected digital delivery"}
+                  </span>
+                </div>
+              )
             ) : artMode === "contents" ? (
               <div className="product-art-information">
                 <PackageCheck />
