@@ -1,7 +1,7 @@
 import fs from "node:fs/promises";
-import path from "node:path";
 import { Router, type Request } from "express";
 import {
+  OrderStatus,
   Prisma,
   ProductStatus,
   ProductType,
@@ -28,6 +28,7 @@ import {
 } from "../services/dispute.service.js";
 import { getSellerFinanceSummary } from "../services/finance.service.js";
 import { randomToken, sha256 } from "../lib/crypto.js";
+import { readStoredFileData } from "../lib/stored-file.js";
 import { sellerApplicationSchema } from "../schemas/seller.schemas.js";
 import {
   getSellerApplicationForUser,
@@ -507,7 +508,18 @@ sellerRouter.get(
       orderBy: { updatedAt: "desc" },
       include: {
         category: { include: { parent: { include: { parent: true } } } },
-        files: { where: { isActive: true } },
+        files: {
+          where: { isActive: true },
+          select: {
+            id: true,
+            displayName: true,
+            mimeType: true,
+            sizeBytes: true,
+            version: true,
+            isActive: true,
+            createdAt: true,
+          },
+        },
         inventoryItems: {
           select: {
             id: true,
@@ -1024,7 +1036,7 @@ sellerRouter.post(
     const existing = await prisma.product.findFirst({
       where: { id, sellerId: req.auth!.id },
       include: {
-        files: { where: { isActive: true } },
+        files: { where: { isActive: true }, select: { id: true } },
         inventoryItems: { where: { isActive: true, orderItemId: null } },
       },
     });
@@ -1116,6 +1128,7 @@ sellerRouter.post(
       where: { productId: id },
       _max: { version: true },
     });
+    const fileData = await fs.readFile(req.file.path);
     const file = await prisma.productFile.create({
       data: {
         productId: id,
@@ -1123,7 +1136,18 @@ sellerRouter.post(
         storagePath: req.file.path,
         mimeType: req.file.mimetype,
         sizeBytes: req.file.size,
+        data: fileData,
         version: (latest._max.version ?? 0) + 1,
+      },
+      select: {
+        id: true,
+        productId: true,
+        displayName: true,
+        mimeType: true,
+        sizeBytes: true,
+        version: true,
+        isActive: true,
+        createdAt: true,
       },
     });
     if (product.buyersGetUpdates) {
@@ -1162,7 +1186,12 @@ sellerRouter.get(
     const id = z.string().uuid().parse(req.params.id);
     const file = await prisma.productFile.findFirst({
       where: { id, product: { sellerId: req.auth!.id } },
-      select: { storagePath: true, displayName: true },
+      select: {
+        storagePath: true,
+        data: true,
+        displayName: true,
+        mimeType: true,
+      },
     });
     if (!file)
       throw new ApiError(
@@ -1170,7 +1199,10 @@ sellerRouter.get(
         "Uploaded product file not found.",
         "PRODUCT_FILE_NOT_FOUND",
       );
-    res.download(path.resolve(file.storagePath), file.displayName);
+    const data = await readStoredFileData(file);
+    res.attachment(file.displayName);
+    res.type(file.mimeType);
+    res.send(data);
   }),
 );
 
@@ -1271,6 +1303,134 @@ sellerRouter.get(
       },
     });
     res.json({ items });
+  }),
+);
+
+sellerRouter.post(
+  "/orders/:id/deliver",
+  requireSeller,
+  asyncHandler(async (req, res) => {
+    const orderId = z.string().uuid().parse(req.params.id);
+    const input = z
+      .object({ message: z.string().trim().min(10).max(4000) })
+      .parse(req.body);
+    const deliveredAt = new Date();
+
+    const result = await prisma.$transaction(async (tx) => {
+      const order = await tx.order.findFirst({
+        where: {
+          id: orderId,
+          paidAt: { not: null },
+          status: {
+            notIn: [OrderStatus.CANCELLED, OrderStatus.REFUNDED],
+          },
+          items: {
+            some: {
+              sellerId: req.auth!.id,
+              product: { type: ProductType.SERVICE },
+            },
+          },
+        },
+        select: {
+          status: true,
+          items: {
+            where: {
+              sellerId: req.auth!.id,
+              product: { type: ProductType.SERVICE },
+            },
+            select: {
+              id: true,
+              deliveredAt: true,
+              productName: true,
+            },
+          },
+        },
+      });
+      if (!order) {
+        throw new ApiError(
+          404,
+          "Paid service order not found.",
+          "SERVICE_ORDER_NOT_FOUND",
+        );
+      }
+
+      const itemIds = order.items
+        .filter((item) => !item.deliveredAt)
+        .map((item) => item.id);
+      if (!itemIds.length) {
+        return {
+          alreadyDelivered: true,
+          deliveredCount: 0,
+          status: order.status,
+        };
+      }
+
+      const delivered = await tx.orderItem.updateMany({
+        where: {
+          id: { in: itemIds },
+          sellerId: req.auth!.id,
+          deliveredAt: null,
+        },
+        data: {
+          deliveredAt,
+          deliveryMessage: input.message,
+        },
+      });
+      if (!delivered.count) {
+        return {
+          alreadyDelivered: true,
+          deliveredCount: 0,
+          status: order.status,
+        };
+      }
+
+      const productNames = [
+        ...new Set(
+          order.items
+            .filter((item) => itemIds.includes(item.id))
+            .map((item) => item.productName),
+        ),
+      ];
+      await tx.orderMessage.create({
+        data: {
+          orderId,
+          authorId: req.auth!.id,
+          body: `Seller marked ${productNames.join(", ")} as delivered. ${input.message}`,
+        },
+      });
+
+      const remainingItems = await tx.orderItem.count({
+        where: { orderId, deliveredAt: null },
+      });
+      let status = order.status;
+      if (
+        remainingItems === 0 &&
+        (order.status === OrderStatus.PAID ||
+          order.status === OrderStatus.PROCESSING)
+      ) {
+        await tx.order.update({
+          where: { id: orderId },
+          data: {
+            status: OrderStatus.DELIVERED,
+            completedAt: deliveredAt,
+          },
+        });
+        status = OrderStatus.DELIVERED;
+      }
+
+      return {
+        alreadyDelivered: false,
+        deliveredCount: delivered.count,
+        status,
+      };
+    });
+
+    res.status(result.alreadyDelivered ? 200 : 201).json({
+      ...result,
+      message: result.alreadyDelivered
+        ? "This service has already been marked as delivered."
+        : `${result.deliveredCount} service item${result.deliveredCount === 1 ? "" : "s"} marked as delivered.`,
+    });
   }),
 );
 

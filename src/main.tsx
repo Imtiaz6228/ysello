@@ -29,6 +29,7 @@ import "./ysello-reference-redesign.css";
 import "./marketplace-unified.css";
 import "./g2a-inspired.css";
 import "./wallet-platform-polish.css";
+import "./commerce-complete.css";
 import { LocaleProvider } from "./i18n/LocaleContext";
 import { AppErrorBoundary } from "./components/AppErrorBoundary";
 

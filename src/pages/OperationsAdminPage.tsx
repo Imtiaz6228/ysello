@@ -944,6 +944,12 @@ export function OperationsAdminPage() {
             <X />
           </button>
         </div>
+        <div className="panel-mobile-sidebar-tools">
+          <LocaleSwitcher compact />
+          <Link to="/sign-out">
+            <LogOut size={16} /> Sign out
+          </Link>
+        </div>
         <label className="admin-menu-search">
           <Search />
           <input
@@ -1164,6 +1170,13 @@ export function OperationsAdminPage() {
               ) : null}
             </button>
             <LocaleSwitcher />
+            <Link
+              className="panel-topbar-signout"
+              to="/sign-out"
+              aria-label="Sign out"
+            >
+              <LogOut size={16} /> Sign out
+            </Link>
             <button
               type="button"
               className="admin-refresh-button"

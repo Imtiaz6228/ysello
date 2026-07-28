@@ -46,17 +46,9 @@ export function CheckoutPage() {
   const { user, setUser } = useAuth();
   const { items, subtotalCents, clear } = useCart();
   const navigate = useNavigate();
-  const [methods, setMethods] = useState<Method[]>([
-    { id: "CRYPTO", label: "Crypto checkout", available: true, kind: "crypto" },
-    {
-      id: "MANUAL",
-      label: "Manual staff approval",
-      available: true,
-      kind: "manual",
-    },
-  ]);
+  const [methods, setMethods] = useState<Method[]>([]);
   const [balanceCents, setBalanceCents] = useState(user?.balanceCents ?? 0);
-  const [method, setMethod] = useState<MethodId>("CRYPTO");
+  const [method, setMethod] = useState<MethodId>("WALLET");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
@@ -223,10 +215,23 @@ export function CheckoutPage() {
             })}
           </div>
           <div className="checkout-approval-note">
-            <ShieldCheck size={16} /> Crypto checkout creates a timed invoice
-            with address, network, amount, and payment detection. Wallet
-            payments deliver instantly from approved deposit balance.
+            <ShieldCheck size={16} /> Approved top-ups become wallet balance.
+            Wallet checkout is instant and creates delivery records, seller
+            earnings, and a protected order workspace in one transaction.
           </div>
+          {balanceCents < subtotalCents ? (
+            <div className="checkout-topup-callout">
+              <WalletCards />
+              <div>
+                <strong>Add funds before checkout</strong>
+                <small>
+                  You need {formatMoney(subtotalCents - balanceCents)} more in
+                  approved balance.
+                </small>
+              </div>
+              <Link to="/dashboard#wallet">Top up account</Link>
+            </div>
+          ) : null}
           {error ? <div className="notice error">{error}</div> : null}
         </section>
         <aside className="checkout-summary">

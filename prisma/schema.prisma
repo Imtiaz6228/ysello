@@ -455,6 +455,7 @@ model ProductFile {
   storagePath String
   mimeType    String
   sizeBytes   Int
+  data        Bytes?
   version     Int      @default(1)
   isActive    Boolean  @default(true)
   createdAt   DateTime @default(now())
@@ -534,14 +535,16 @@ model Order {
 }
 
 model OrderItem {
-  id             String @id @default(uuid())
-  orderId        String
-  productId      String
-  sellerId       String
-  productName    String
-  quantity       Int    @default(1)
-  unitPriceCents Int
-  totalCents     Int
+  id              String    @id @default(uuid())
+  orderId         String
+  productId       String
+  sellerId        String
+  productName     String
+  quantity        Int       @default(1)
+  unitPriceCents  Int
+  totalCents      Int
+  deliveredAt     DateTime?
+  deliveryMessage String?
 
   order          Order                  @relation(fields: [orderId], references: [id], onDelete: Cascade)
   product        Product                @relation(fields: [productId], references: [id], onDelete: Restrict)
@@ -821,24 +824,26 @@ model PublicUpload {
 // ===== Ysello marketplace support models =====
 
 model TopupRequest {
-  id               String      @id @default(uuid())
-  userId           String
-  amountCents      Int
-  method           TopupMethod
-  status           TopupStatus @default(PENDING)
-  depositAddress   String
-  reference        String      @unique
-  txHash           String?     @unique
-  screenshotPath   String?
-  screenshotUrl    String?
-  proofSubmittedAt DateTime?
-  networkVerified  Boolean     @default(false)
-  adminNotes       String?
-  approvedById     String?
-  approvedAt       DateTime?
-  expiresAt        DateTime
-  createdAt        DateTime    @default(now())
-  updatedAt        DateTime    @updatedAt
+  id                 String      @id @default(uuid())
+  userId             String
+  amountCents        Int
+  method             TopupMethod
+  status             TopupStatus @default(PENDING)
+  depositAddress     String
+  reference          String      @unique
+  txHash             String?     @unique
+  screenshotPath     String?
+  screenshotUrl      String?
+  screenshotData     Bytes?
+  screenshotMimeType String?
+  proofSubmittedAt   DateTime?
+  networkVerified    Boolean     @default(false)
+  adminNotes         String?
+  approvedById       String?
+  approvedAt         DateTime?
+  expiresAt          DateTime
+  createdAt          DateTime    @default(now())
+  updatedAt          DateTime    @updatedAt
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 

@@ -8,6 +8,7 @@ import {
   Gamepad2,
   Gift,
   Headphones,
+  Eye,
   Layers3,
   Mail,
   MonitorDown,
@@ -27,6 +28,8 @@ import { categoryMatches } from "../commerce/catalogHierarchy";
 import {
   useMarketplaceCategories,
   useMarketplaceProducts,
+  useMarketplaceStores,
+  type FeaturedStore,
 } from "../commerce/useMarketplace";
 import { MarketFooter, MarketHeader } from "../components/MarketHeader";
 import { Seo } from "../components/Seo";
@@ -193,11 +196,135 @@ function ProductRail({
   );
 }
 
+function storeFallbacks(products: CatalogProduct[]): FeaturedStore[] {
+  const stores = new Map<string, FeaturedStore>();
+  products.forEach((product) => {
+    const slug =
+      product.sellerSlug ||
+      product.seller
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-|-$/g, "");
+    if (!slug || stores.has(slug)) return;
+    stores.set(slug, {
+      name: product.seller,
+      slug,
+      about:
+        "Verified digital products with clear delivery terms and order-linked buyer support.",
+      rating: product.rating,
+      sales: salesNumber(product),
+      joined: "2026",
+      mark: product.seller
+        .split(/\s+/)
+        .map((word) => word[0])
+        .join("")
+        .slice(0, 2)
+        .toUpperCase(),
+    });
+  });
+  return [...stores.values()];
+}
+
+function TopStoreCard({ store }: { store: FeaturedStore }) {
+  return (
+    <article className="reference-store-card">
+      <div className="reference-store-profile">
+        <span className="reference-store-logo">
+          {store.logoUrl ? (
+            <img
+              src={store.logoUrl}
+              alt={`${store.name} logo`}
+              loading="lazy"
+              decoding="async"
+              width="96"
+              height="96"
+            />
+          ) : (
+            <b>{store.mark}</b>
+          )}
+        </span>
+        <div>
+          <h3>
+            <Link to={`/stores/${store.slug}`}>{store.name}</Link>
+            <span>
+              <BadgeCheck aria-hidden="true" /> VERIFIED
+            </span>
+          </h3>
+          <p>{store.about}</p>
+        </div>
+      </div>
+      <Link className="reference-store-visit" to={`/stores/${store.slug}`}>
+        Visit Store <ArrowRight aria-hidden="true" />
+      </Link>
+    </article>
+  );
+}
+
+function FeaturedProductCard({
+  product,
+  onBuy,
+}: {
+  product: CatalogProduct;
+  onBuy: (product: CatalogProduct) => void;
+}) {
+  const { formatProductMoney } = useLocale();
+  const canPurchase =
+    product.type === "SERVICE" || (product.stockCount ?? 0) > 0;
+  const stockLabel =
+    product.type === "SERVICE"
+      ? "Available"
+      : `${Math.max(0, product.stockCount ?? 0)} left`;
+
+  return (
+    <article className="reference-featured-product-card">
+      <div className="reference-featured-product-media">
+        <span>{stockLabel}</span>
+        <Link to={`/product/${product.slug}`} aria-label={product.title}>
+          {product.imageUrl ? (
+            <img
+              src={product.imageUrl}
+              alt={product.title}
+              loading="lazy"
+              decoding="async"
+              width="520"
+              height="390"
+            />
+          ) : (
+            <b className="reference-product-fallback">{product.icon}</b>
+          )}
+        </Link>
+      </div>
+      <div className="reference-featured-product-copy">
+        <Link to={`/product/${product.slug}`}>{product.title}</Link>
+        <strong>{formatProductMoney(product)}</strong>
+        <footer>
+          <Link to={`/product/${product.slug}`}>
+            <Eye aria-hidden="true" /> View
+          </Link>
+          <button
+            type="button"
+            disabled={!canPurchase}
+            onClick={() => onBuy(product)}
+            aria-label={
+              canPurchase
+                ? `Add ${product.title} to cart`
+                : `${product.title} is unavailable`
+            }
+          >
+            <ShoppingCart aria-hidden="true" />
+          </button>
+        </footer>
+      </div>
+    </article>
+  );
+}
+
 export function MarketplaceHomePage() {
   const navigate = useNavigate();
   const { add } = useCart();
   const { formatMoney, formatProductMoney, t } = useLocale();
   const products = useMarketplaceProducts();
+  const remoteStores = useMarketplaceStores();
   const categories = useMarketplaceCategories();
   const [email, setEmail] = useState("");
   const [newsletterState, setNewsletterState] = useState<
@@ -302,6 +429,15 @@ export function MarketplaceHomePage() {
     (total, product) => total + product.priceCents,
     0,
   );
+  const featuredStores = useMemo(() => {
+    const merged = new Map<string, FeaturedStore>();
+    [...remoteStores, ...storeFallbacks(products)].forEach((store) => {
+      if (merged.size < 12 && !merged.has(store.slug)) {
+        merged.set(store.slug, store);
+      }
+    });
+    return [...merged.values()];
+  }, [products, remoteStores]);
 
   function buy(product: CatalogProduct) {
     add(product);
@@ -466,17 +602,50 @@ export function MarketplaceHomePage() {
         </div>
       </section>
 
-      <section className="market-home-section g2-home-section" id="products">
+      <section
+        className="market-home-section g2-home-section reference-top-stores"
+        id="top-stores"
+      >
         <SectionHeading
-          title={t("popularNow")}
+          title="Top Stores"
+          text="Shop verified storefronts with clear delivery and protected order support."
+          href="/catalog?sort=popular"
+          action="Browse marketplace"
+        />
+        <div className="reference-store-grid">
+          {featuredStores.slice(0, 12).map((store) => (
+            <TopStoreCard key={store.slug} store={store} />
+          ))}
+        </div>
+      </section>
+
+      <section
+        className="market-home-section g2-home-section reference-featured-products"
+        id="products"
+      >
+        <SectionHeading
+          title="Featured Products"
           text="The marketplace products buyers are choosing right now."
           href="/catalog?sort=popular"
         />
-        <ProductRail
-          products={bestSellers.slice(0, 6)}
-          emptyTitle="No bestselling products yet."
-          onBuy={buy}
-        />
+        {bestSellers.length ? (
+          <div className="reference-featured-product-grid">
+            {bestSellers.slice(0, 10).map((product) => (
+              <FeaturedProductCard
+                key={product.id}
+                product={product}
+                onBuy={buy}
+              />
+            ))}
+          </div>
+        ) : (
+          <div className="g2-empty-rail">
+            <Layers3 aria-hidden="true" />
+            <strong>No featured products yet.</strong>
+            <span>Approved listings will appear here automatically.</span>
+            <Link to="/catalog">Browse marketplace</Link>
+          </div>
+        )}
       </section>
 
       {bundleProducts.length === 3 ? (

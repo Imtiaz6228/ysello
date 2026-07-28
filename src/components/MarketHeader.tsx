@@ -8,6 +8,7 @@ import {
   Grid2X2,
   Heart,
   LifeBuoy,
+  LogOut,
   Menu,
   MonitorDown,
   RefreshCw,
@@ -483,7 +484,43 @@ export function MarketHeader() {
               <Link to="/buyer-protection">{t("protection")}</Link>
               <Link to="/support">{t("support")}</Link>
             </div>
+            {user ? (
+              <section className="g2-mobile-account-panel">
+                <div>
+                  <span>
+                    {user.firstName[0]}
+                    {user.lastName[0]}
+                  </span>
+                  <div>
+                    <small>Signed in as</small>
+                    <strong>
+                      {user.firstName} {user.lastName}
+                    </strong>
+                    <em>{formatMoney(user.balanceCents)} available</em>
+                  </div>
+                </div>
+                <div>
+                  <Link to={accountPath}>
+                    <UserRound aria-hidden="true" /> {t("dashboard")}
+                  </Link>
+                  <Link className="danger" to="/sign-out">
+                    <LogOut aria-hidden="true" /> {t("signOut")}
+                  </Link>
+                </div>
+              </section>
+            ) : (
+              <section className="g2-mobile-account-panel guest">
+                <strong>Marketplace account</strong>
+                <div>
+                  <Link to="/sign-in">{t("signIn")}</Link>
+                  <Link to="/register">{t("register")}</Link>
+                </div>
+              </section>
+            )}
             <div className="market-mobile-locale">
+              <strong>
+                {t("language")} &amp; {t("currency")}
+              </strong>
               <LocaleSwitcher />
             </div>
           </nav>

@@ -5,6 +5,7 @@ import {
   FileArchive,
   FileSpreadsheet,
   MessageCircle,
+  PackageCheck,
   Paperclip,
   RefreshCw,
   Repeat2,
@@ -61,6 +62,8 @@ type OrderDetail = {
     quantity: number;
     unitPriceCents: number;
     totalCents: number;
+    deliveredAt?: string | null;
+    deliveryMessage?: string | null;
     product: {
       name: string;
       slug: string;
@@ -291,6 +294,40 @@ export function OrderDeliveryPage() {
     }
   }
 
+  async function markServiceDelivered() {
+    if (!order) return;
+    const message = window.prompt(
+      "Add the delivery note the buyer will see:",
+      "Your service order is complete. Please review the delivered work in this protected order workspace.",
+    );
+    if (!message) return;
+    if (message.trim().length < 10) {
+      setError("The delivery note must be at least 10 characters.");
+      return;
+    }
+    setActionBusy("deliver");
+    setError("");
+    setSuccess("");
+    try {
+      await apiRequest(`/api/seller/orders/${order.id}/deliver`, {
+        method: "POST",
+        body: { message: message.trim() },
+      });
+      await load();
+      setSuccess(
+        "Delivery recorded. The buyer can now see the completed service and delivery note.",
+      );
+    } catch (caught) {
+      setError(
+        caught instanceof ApiError
+          ? caught.message
+          : "The service delivery could not be recorded.",
+      );
+    } finally {
+      setActionBusy("");
+    }
+  }
+
   async function replaceOrderItem(item: OrderDetail["items"][number]) {
     if (!order) return;
     const requested = window.prompt(
@@ -340,6 +377,16 @@ export function OrderDeliveryPage() {
       dispute.status,
     ),
   );
+  const sellerHasPendingService = Boolean(
+    order &&
+    user?.role === "SELLER" &&
+    order.items.some(
+      (item) =>
+        item.sellerId === user.id &&
+        item.product.type === "SERVICE" &&
+        !item.deliveredAt,
+    ),
+  );
 
   return (
     <main className="commerce-page order-workspace">
@@ -371,7 +418,18 @@ export function OrderDeliveryPage() {
               <strong>#{order.orderNumber}</strong>
               <small>Order record · protected after-sales channel</small>
             </div>
-            {user?.role === "CUSTOMER" && order.canOpenDispute ? (
+            {sellerHasPendingService ? (
+              <button
+                className="secondary-button"
+                disabled={Boolean(actionBusy)}
+                onClick={() => void markServiceDelivered()}
+              >
+                <PackageCheck size={14} />{" "}
+                {actionBusy === "deliver"
+                  ? "Recording delivery…"
+                  : "Mark service delivered"}
+              </button>
+            ) : user?.role === "CUSTOMER" && order.canOpenDispute ? (
               <button
                 className="secondary-button"
                 onClick={() => void openDispute()}
@@ -590,6 +648,14 @@ export function OrderDeliveryPage() {
                 <strong>{item.productName}</strong>
                 {item.product.deliveryNote ? (
                   <small>{item.product.deliveryNote}</small>
+                ) : null}
+                {item.deliveredAt ? (
+                  <small>
+                    Delivered {new Date(item.deliveredAt).toLocaleString()}
+                  </small>
+                ) : null}
+                {item.deliveryMessage ? (
+                  <small>{item.deliveryMessage}</small>
                 ) : null}
               </div>
               {item.downloadGrants.length ? (

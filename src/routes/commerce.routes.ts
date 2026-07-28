@@ -1,4 +1,3 @@
-import path from "node:path";
 import { Router } from "express";
 import {
   DisputeStatus,
@@ -10,6 +9,7 @@ import { z } from "zod";
 import { sha256 } from "../lib/crypto.js";
 import { env } from "../config/env.js";
 import { createZipBuffer } from "../lib/zip.js";
+import { readStoredFileData } from "../lib/stored-file.js";
 import { sendTicketUpdateEmail } from "../lib/email.js";
 import { prisma } from "../lib/prisma.js";
 import { requireAuth, requireVerifiedUser } from "../middleware/auth.js";
@@ -170,6 +170,7 @@ commerceRouter.get(
         "DOWNLOAD_UNAVAILABLE",
       );
     }
+    const fileData = await readStoredFileData(grant.productFile);
     await prisma.$transaction([
       prisma.downloadGrant.update({
         where: { id: grant.id },
@@ -183,10 +184,9 @@ commerceRouter.get(
         },
       }),
     ]);
-    res.download(
-      path.resolve(grant.productFile.storagePath),
-      grant.productFile.displayName,
-    );
+    res.attachment(grant.productFile.displayName);
+    res.type(grant.productFile.mimeType);
+    res.send(fileData);
   }),
 );
 
@@ -314,7 +314,19 @@ commerceRouter.get(
                 afterSalesServiceHours: true,
               },
             },
-            downloadGrants: { include: { productFile: true } },
+            downloadGrants: {
+              include: {
+                productFile: {
+                  select: {
+                    id: true,
+                    displayName: true,
+                    mimeType: true,
+                    sizeBytes: true,
+                    version: true,
+                  },
+                },
+              },
+            },
             inventoryItems: {
               where: { isActive: true, deliveredAt: { not: null } },
               select: {
@@ -365,7 +377,19 @@ commerceRouter.get(
             seller: {
               select: { firstName: true, lastName: true, username: true },
             },
-            downloadGrants: { include: { productFile: true } },
+            downloadGrants: {
+              include: {
+                productFile: {
+                  select: {
+                    id: true,
+                    displayName: true,
+                    mimeType: true,
+                    sizeBytes: true,
+                    version: true,
+                  },
+                },
+              },
+            },
             inventoryItems: {
               where: { isActive: true, deliveredAt: { not: null } },
               select: {
@@ -432,6 +456,7 @@ commerceRouter.get(
         "DOWNLOAD_UNAVAILABLE",
       );
     }
+    const fileData = await readStoredFileData(grant.productFile);
     await prisma.$transaction([
       prisma.downloadGrant.update({
         where: { id },
@@ -445,10 +470,9 @@ commerceRouter.get(
         },
       }),
     ]);
-    res.download(
-      path.resolve(grant.productFile.storagePath),
-      grant.productFile.displayName,
-    );
+    res.attachment(grant.productFile.displayName);
+    res.type(grant.productFile.mimeType);
+    res.send(fileData);
   }),
 );
 
@@ -479,10 +503,12 @@ commerceRouter.get(
     }
 
     const zip = await createZipBuffer(
-      grants.map((grant) => ({
-        name: grant.productFile.displayName,
-        storagePath: grant.productFile.storagePath,
-      })),
+      await Promise.all(
+        grants.map(async (grant) => ({
+          name: grant.productFile.displayName,
+          content: await readStoredFileData(grant.productFile),
+        })),
+      ),
     );
 
     await prisma.$transaction(

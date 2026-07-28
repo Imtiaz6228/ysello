@@ -4,11 +4,32 @@ import {
   TopupStatus,
   WalletBalanceKind,
 } from "@prisma/client";
+import fs from "node:fs/promises";
 import { env } from "../config/env.js";
 import { prisma } from "../lib/prisma.js";
 import { ApiError } from "../middleware/error-handler.js";
 
 const TOPUP_EXPIRY_HOURS = 24;
+
+const topupResponseSelect = {
+  id: true,
+  userId: true,
+  amountCents: true,
+  method: true,
+  status: true,
+  depositAddress: true,
+  reference: true,
+  txHash: true,
+  screenshotUrl: true,
+  proofSubmittedAt: true,
+  networkVerified: true,
+  adminNotes: true,
+  approvedById: true,
+  approvedAt: true,
+  expiresAt: true,
+  createdAt: true,
+  updatedAt: true,
+} as const;
 
 const topupAddressBook: Partial<
   Record<
@@ -155,6 +176,7 @@ export async function submitTopupProof(
   txHash: string,
   screenshotPath?: string,
   screenshotUrl?: string,
+  screenshotMimeType?: string,
 ) {
   const topup = await prisma.topupRequest.findFirst({
     where: { id: topupId, userId },
@@ -195,6 +217,14 @@ export async function submitTopupProof(
   }
 
   const normalizedTxHash = normalizeTxHash(topup.method, txHash);
+  const screenshotData = await fs.readFile(screenshotPath).catch(() => null);
+  if (!screenshotData) {
+    throw new ApiError(
+      400,
+      "The payment screenshot could not be stored. Upload it again.",
+      "TOPUP_SCREENSHOT_INVALID",
+    );
+  }
   try {
     const submitted = await prisma.topupRequest.updateMany({
       where: {
@@ -208,6 +238,8 @@ export async function submitTopupProof(
         txHash: normalizedTxHash,
         screenshotPath,
         screenshotUrl,
+        screenshotData,
+        screenshotMimeType: screenshotMimeType ?? "image/jpeg",
         proofSubmittedAt: new Date(),
         status: TopupStatus.PENDING,
       },
@@ -224,8 +256,14 @@ export async function submitTopupProof(
     });
 
     const verified = await autoVerifyTopup(updated);
+    const {
+      screenshotData: _screenshotData,
+      screenshotPath: _screenshotPath,
+      screenshotMimeType: _screenshotMimeType,
+      ...safeTopup
+    } = verified;
     return {
-      topup: verified,
+      topup: safeTopup,
       autoVerified: verified.status === TopupStatus.VERIFIED,
     };
   } catch (error) {
@@ -322,7 +360,10 @@ export async function approveTopup(
         relatedId: topup.id,
       },
     });
-    return tx.topupRequest.findUniqueOrThrow({ where: { id: topupId } });
+    return tx.topupRequest.findUniqueOrThrow({
+      where: { id: topupId },
+      select: topupResponseSelect,
+    });
   });
 }
 
@@ -356,7 +397,10 @@ export async function rejectTopup(topupId: string, adminNotes?: string) {
         "TOPUP_ALREADY_PROCESSED",
       );
     }
-    return tx.topupRequest.findUniqueOrThrow({ where: { id: topupId } });
+    return tx.topupRequest.findUniqueOrThrow({
+      where: { id: topupId },
+      select: topupResponseSelect,
+    });
   });
 }
 
@@ -373,7 +417,8 @@ export async function getTopupRequests(userId?: string) {
   return prisma.topupRequest.findMany({
     where,
     orderBy: { createdAt: "desc" },
-    include: {
+    select: {
+      ...topupResponseSelect,
       user: {
         select: {
           id: true,

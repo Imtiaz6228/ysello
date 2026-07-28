@@ -165,25 +165,33 @@ export async function reverseSellerEarningsForOrder(orderId: string) {
   await prisma.$transaction(async (tx) => {
     for (const earning of earnings) {
       if (earning.status === "AVAILABLE") {
-        const account = await tx.user.update({
-          where: { id: earning.sellerId },
+        const recovered = await tx.user.updateMany({
+          where: {
+            id: earning.sellerId,
+            sellerBalanceCents: { gte: earning.netCents },
+          },
           data: {
             sellerBalanceCents: { decrement: earning.netCents },
           },
-          select: { sellerBalanceCents: true },
         });
-        await tx.walletTransaction.create({
-          data: {
-            userId: earning.sellerId,
-            type: "REFUND",
-            balanceKind: WalletBalanceKind.SELLER,
-            amountCents: -earning.netCents,
-            balanceAfter: account.sellerBalanceCents,
-            description: "Seller earning reversed after buyer refund",
-            orderId,
-            relatedId: earning.id,
-          },
-        });
+        if (recovered.count === 1) {
+          const account = await tx.user.findUniqueOrThrow({
+            where: { id: earning.sellerId },
+            select: { sellerBalanceCents: true },
+          });
+          await tx.walletTransaction.create({
+            data: {
+              userId: earning.sellerId,
+              type: "REFUND",
+              balanceKind: WalletBalanceKind.SELLER,
+              amountCents: -earning.netCents,
+              balanceAfter: account.sellerBalanceCents,
+              description: "Seller earning reversed after buyer refund",
+              orderId,
+              relatedId: earning.id,
+            },
+          });
+        }
       }
       await (tx as any).sellerEarning.update({
         where: { id: earning.id },

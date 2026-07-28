@@ -106,6 +106,9 @@ type SellerOrder = {
   productName: string;
   totalCents: number;
   quantity: number;
+  deliveredAt?: string | null;
+  deliveryMessage?: string | null;
+  product?: { type: string };
   inventoryItems?: Array<{
     id: string;
     content: string;
@@ -516,6 +519,7 @@ export function SellerStudioPage() {
   );
   const [mediaUploading, setMediaUploading] = useState("");
   const [deliveryOrder, setDeliveryOrder] = useState<SellerOrder | null>(null);
+  const [orderActionId, setOrderActionId] = useState("");
   const [analyticsPeriod, setAnalyticsPeriod] = useState<AnalyticsPeriod>("7d");
   const [selectedProductIds, setSelectedProductIds] = useState<string[]>([]);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
@@ -818,6 +822,43 @@ export function SellerStudioPage() {
       );
     } finally {
       setRefreshing(false);
+    }
+  }
+
+  async function markOrderDelivered(item: SellerOrder) {
+    const deliveryMessage = window.prompt(
+      "Add the delivery note the buyer will see:",
+      "Your service order is complete. Please review the delivered work in this protected order workspace.",
+    );
+    if (!deliveryMessage) return;
+    if (deliveryMessage.trim().length < 10) {
+      showMessage("The delivery note must be at least 10 characters.", "error");
+      return;
+    }
+
+    setOrderActionId(item.order.id);
+    try {
+      const result = await apiRequest<{
+        message: string;
+        status: string;
+      }>(`/api/seller/orders/${item.order.id}/deliver`, {
+        method: "POST",
+        body: { message: deliveryMessage.trim() },
+      });
+      await load();
+      showMessage(
+        result.status === "DELIVERED"
+          ? "Delivery recorded. The buyer can now see the completed order."
+          : result.message,
+        "success",
+      );
+    } catch (error) {
+      showMessage(
+        errorText(error, "The service delivery could not be recorded."),
+        "error",
+      );
+    } finally {
+      setOrderActionId("");
     }
   }
 
@@ -1446,6 +1487,12 @@ export function SellerStudioPage() {
           </div>
           {profile?.isVerified ? <BadgeCheck size={17} /> : null}
         </div>
+        <div className="panel-mobile-sidebar-tools">
+          <LocaleSwitcher compact />
+          <Link to="/sign-out">
+            <LogOut size={16} /> Sign out
+          </Link>
+        </div>
         <nav className="seller-premium-nav">
           {sellerMenuGroups.map((group) => (
             <section key={group.label}>
@@ -1542,6 +1589,13 @@ export function SellerStudioPage() {
               ) : null}
             </button>
             <LocaleSwitcher compact />
+            <Link
+              className="panel-topbar-signout"
+              to="/sign-out"
+              aria-label="Sign out"
+            >
+              <LogOut size={16} /> Sign out
+            </Link>
             <button
               className="seller-create-button"
               onClick={() => setOpen(true)}
@@ -2484,6 +2538,12 @@ export function SellerStudioPage() {
                             · {formatMoney(item.order.refunds[0].amountCents)}
                           </small>
                         ) : null}
+                        {item.deliveredAt ? (
+                          <small className="seller-case-note">
+                            Delivered{" "}
+                            {new Date(item.deliveredAt).toLocaleString()}
+                          </small>
+                        ) : null}
                       </div>
                       <b>{item.order.status.replaceAll("_", " ")}</b>
                     </header>
@@ -2511,6 +2571,21 @@ export function SellerStudioPage() {
                       </span>
                     </div>
                     <footer>
+                      {item.product?.type === "SERVICE" &&
+                      item.order.payment?.status === "PAID" &&
+                      !item.deliveredAt &&
+                      !["CANCELLED", "REFUNDED"].includes(item.order.status) ? (
+                        <button
+                          type="button"
+                          disabled={orderActionId === item.order.id}
+                          onClick={() => void markOrderDelivered(item)}
+                        >
+                          <PackageCheck size={15} />{" "}
+                          {orderActionId === item.order.id
+                            ? "Saving delivery…"
+                            : "Mark delivered"}
+                        </button>
+                      ) : null}
                       {item.inventoryItems?.length ? (
                         <button
                           type="button"

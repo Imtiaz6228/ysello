@@ -152,6 +152,7 @@ walletRouter.post(
         input.txHash,
         req.file.path,
         `/api/wallet/topups/${id}/proof-image`,
+        req.file.mimetype,
       );
       res.status(201).json({
         message: result.autoVerified
@@ -172,29 +173,40 @@ walletRouter.get(
     const id = z.string().uuid().parse(req.params.id);
     const topup = await prisma.topupRequest.findUnique({
       where: { id },
-      select: { userId: true, screenshotPath: true },
+      select: {
+        userId: true,
+        screenshotPath: true,
+        screenshotData: true,
+        screenshotMimeType: true,
+      },
     });
     const staffRoles: Role[] = [Role.SUPER_ADMIN, Role.ADMIN, Role.MODERATOR];
     if (
       !topup ||
-      !topup.screenshotPath ||
+      (!topup.screenshotPath && !topup.screenshotData) ||
       (topup.userId !== req.auth!.id && !staffRoles.includes(req.auth!.role))
     ) {
       throw new ApiError(404, "Payment proof not found.", "PROOF_NOT_FOUND");
     }
 
-    const proofPath = path.resolve(topup.screenshotPath);
+    res.set({
+      "Cache-Control": "private, no-store",
+      "Content-Disposition": "inline",
+      "X-Content-Type-Options": "nosniff",
+    });
+    if (topup.screenshotData) {
+      res.type(topup.screenshotMimeType ?? "image/jpeg");
+      res.send(Buffer.from(topup.screenshotData));
+      return;
+    }
+
+    const proofPath = path.resolve(topup.screenshotPath!);
     const privateRoot = path.resolve(privateUploadRoot);
     if (!proofPath.startsWith(`${privateRoot}${path.sep}`)) {
       throw new ApiError(404, "Payment proof not found.", "PROOF_NOT_FOUND");
     }
     await fs.promises.access(proofPath, fs.constants.R_OK).catch(() => {
       throw new ApiError(404, "Payment proof not found.", "PROOF_NOT_FOUND");
-    });
-    res.set({
-      "Cache-Control": "private, no-store",
-      "Content-Disposition": "inline",
-      "X-Content-Type-Options": "nosniff",
     });
     res.sendFile(proofPath);
   }),

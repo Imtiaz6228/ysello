@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { apiRequest, mediaUrl } from "../api/client";
+import { ApiError, apiRequest, mediaUrl } from "../api/client";
 import {
   catalogCategories,
   catalogProducts,
@@ -185,14 +185,6 @@ const localCategories = [
   ).values(),
 ];
 
-function mergeWithLocalProducts(remoteProducts: CatalogProduct[]) {
-  const merged = new Map<string, CatalogProduct>();
-  [...remoteProducts, ...localProducts].forEach((product) => {
-    if (!merged.has(product.slug)) merged.set(product.slug, product);
-  });
-  return [...merged.values()];
-}
-
 function mergeWithLocalCategories(remoteCategories: CatalogCategory[]) {
   const merged = new Map(
     localCategories.map((category) => [category.slug, category]),
@@ -374,7 +366,10 @@ export function useMarketplaceProducts() {
         const remoteProducts = data.products.map((product, index) =>
           mapProduct(product, index, locale),
         );
-        setProducts(mergeWithLocalProducts(remoteProducts));
+        // A successful API response is authoritative, including an empty
+        // catalog. Local examples are visual fallbacks for static previews
+        // only and must never be mixed into a live, purchasable catalog.
+        setProducts(remoteProducts);
       })
       .catch(() => undefined);
   }, [locale]);
@@ -416,8 +411,12 @@ export function useMarketplaceProduct(slug?: string) {
       `/api/marketplace/products/${encodeURIComponent(slug)}`,
     )
       .then((data) => setProduct(mapProduct(data.product, 0, locale)))
-      .catch(() => {
-        if (!fallback) setProduct(undefined);
+      .catch((error) => {
+        // Remove a preview fallback when the live API explicitly says the
+        // listing does not exist. Network-only previews retain local content.
+        if (!fallback || (error instanceof ApiError && error.status === 404)) {
+          setProduct(undefined);
+        }
       })
       .finally(() => setLoading(false));
   }, [locale, slug]);

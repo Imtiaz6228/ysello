@@ -880,6 +880,12 @@ export function AccountDashboardPage() {
             <BadgeCheck size={12} /> Verified buyer
           </span>
         </div>
+        <div className="panel-mobile-sidebar-tools">
+          <LocaleSwitcher compact />
+          <Link to="/sign-out">
+            <LogOut size={16} /> Sign out
+          </Link>
+        </div>
         <div className="sidebar-nav buyer-grouped-nav">
           {buyerMenuGroups.map((group) => (
             <section key={group.label}>

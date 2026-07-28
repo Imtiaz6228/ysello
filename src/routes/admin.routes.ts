@@ -673,7 +673,17 @@ adminRouter.get(
             sellerProfile: true,
           },
         },
-        files: true,
+        files: {
+          select: {
+            id: true,
+            displayName: true,
+            mimeType: true,
+            sizeBytes: true,
+            version: true,
+            isActive: true,
+            createdAt: true,
+          },
+        },
         inventoryItems: {
           select: { id: true, deliveredAt: true, isActive: true },
         },
@@ -787,7 +797,17 @@ adminRouter.post(
         include: {
           category: { include: { parent: { include: { parent: true } } } },
           seller: { include: { sellerProfile: true } },
-          files: true,
+          files: {
+            select: {
+              id: true,
+              displayName: true,
+              mimeType: true,
+              sizeBytes: true,
+              version: true,
+              isActive: true,
+              createdAt: true,
+            },
+          },
           inventoryItems: {
             select: { id: true, deliveredAt: true, isActive: true },
           },
@@ -828,7 +848,7 @@ adminRouter.patch(
     const productForModeration = await prisma.product.findUnique({
       where: { id },
       include: {
-        files: { where: { isActive: true } },
+        files: { where: { isActive: true }, select: { id: true } },
         inventoryItems: {
           where: { isActive: true, orderItemId: null },
           select: { id: true },

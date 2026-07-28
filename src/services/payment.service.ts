@@ -298,7 +298,7 @@ async function checkoutProducts(items: CheckoutItemInput[]) {
       },
     },
     include: {
-      files: { where: { isActive: true } },
+      files: { where: { isActive: true }, select: { id: true } },
       inventoryItems: {
         where: { isActive: true, orderItemId: null },
         select: { id: true },
@@ -601,40 +601,90 @@ export async function createWalletCheckout(
       balanceCents: updatedBuyer?.balanceCents ?? 0,
     };
   } catch (error) {
-    await prisma
-      .$transaction(async (tx) => {
-        const account = await tx.user.update({
+    // If completion committed but the follow-up read failed, never refund a
+    // paid order. Re-read first, then make the failure/refund transition itself
+    // conditional so it cannot race a payment confirmation.
+    const paymentState = await prisma.payment
+      .findUnique({
+        where: { orderId: order.id },
+        select: { status: true },
+      })
+      .catch(() => null);
+    if (paymentState?.status === PaymentStatus.PAID) {
+      const completedOrder = await prisma.order.findUnique({
+        where: { id: order.id },
+        include: { payment: true, items: true },
+      });
+      const updatedBuyer = await prisma.user.findUnique({
+        where: { id: buyerId },
+        select: { balanceCents: true },
+      });
+      return {
+        order: completedOrder ?? order,
+        balanceCents: updatedBuyer?.balanceCents ?? 0,
+      };
+    }
+
+    const refunded = await prisma.$transaction(async (tx) => {
+      const failed = await tx.payment.updateMany({
+        where: {
+          orderId: order.id,
+          status: {
+            in: [PaymentStatus.PENDING, PaymentStatus.REQUIRES_ACTION],
+          },
+        },
+        data: {
+          status: PaymentStatus.FAILED,
+          failureReason:
+            error instanceof Error ? error.message : "Wallet delivery failed",
+        },
+      });
+      if (failed.count !== 1) return false;
+
+      const account = await tx.user.update({
+        where: { id: buyerId },
+        data: { balanceCents: { increment: subtotalCents } },
+        select: { balanceCents: true },
+      });
+      await tx.walletTransaction.create({
+        data: {
+          userId: buyerId,
+          type: "REFUND",
+          balanceKind: WalletBalanceKind.BUYER,
+          amountCents: subtotalCents,
+          balanceAfter: account.balanceCents,
+          description: `Cancelled wallet purchase ${order.orderNumber}`,
+          reference: order.orderNumber,
+          orderId: order.id,
+          relatedId: order.payment?.id,
+        },
+      });
+      await tx.order.update({
+        where: { id: order.id },
+        data: { status: OrderStatus.CANCELLED },
+      });
+      return true;
+    });
+    if (!refunded) {
+      const current = await prisma.payment.findUnique({
+        where: { orderId: order.id },
+        select: { status: true },
+      });
+      if (current?.status === PaymentStatus.PAID) {
+        const completedOrder = await prisma.order.findUnique({
+          where: { id: order.id },
+          include: { payment: true, items: true },
+        });
+        const updatedBuyer = await prisma.user.findUnique({
           where: { id: buyerId },
-          data: { balanceCents: { increment: subtotalCents } },
           select: { balanceCents: true },
         });
-        await tx.walletTransaction.create({
-          data: {
-            userId: buyerId,
-            type: "REFUND",
-            balanceKind: WalletBalanceKind.BUYER,
-            amountCents: subtotalCents,
-            balanceAfter: account.balanceCents,
-            description: `Cancelled wallet purchase ${order.orderNumber}`,
-            reference: order.orderNumber,
-            orderId: order.id,
-            relatedId: order.payment?.id,
-          },
-        });
-        await tx.payment.update({
-          where: { orderId: order.id },
-          data: {
-            status: PaymentStatus.FAILED,
-            failureReason:
-              error instanceof Error ? error.message : "Wallet delivery failed",
-          },
-        });
-        await tx.order.update({
-          where: { id: order.id },
-          data: { status: OrderStatus.CANCELLED },
-        });
-      })
-      .catch(() => undefined);
+        return {
+          order: completedOrder ?? order,
+          balanceCents: updatedBuyer?.balanceCents ?? 0,
+        };
+      }
+    }
     throw error;
   }
 }
@@ -646,7 +696,14 @@ export async function completePayment(orderId: string, approvedById?: string) {
       payment: true,
       items: {
         include: {
-          product: { include: { files: { where: { isActive: true } } } },
+          product: {
+            include: {
+              files: {
+                where: { isActive: true },
+                select: { id: true, displayName: true },
+              },
+            },
+          },
         },
       },
     },
@@ -661,15 +718,33 @@ export async function completePayment(orderId: string, approvedById?: string) {
     (item) => item.product.type === ProductType.DOWNLOAD,
   );
 
-  await prisma.$transaction(async (tx) => {
-    await tx.payment.update({
-      where: { orderId },
+  const completedNow = await prisma.$transaction(async (tx) => {
+    // Claim this transition atomically. Provider callbacks, buyer polling, and
+    // an admin action can arrive together; only one may create delivery grants,
+    // increment sales, or allocate seller earnings.
+    const claimed = await tx.payment.updateMany({
+      where: {
+        orderId,
+        status: { in: [PaymentStatus.PENDING, PaymentStatus.REQUIRES_ACTION] },
+      },
       data: {
         status: PaymentStatus.PAID,
         approvedById,
-        approvedAt: approvedById ? paidAt : undefined,
+        approvedAt: paidAt,
       },
     });
+    if (claimed.count !== 1) {
+      const current = await tx.payment.findUnique({
+        where: { orderId },
+        select: { status: true },
+      });
+      if (current?.status === PaymentStatus.PAID) return false;
+      throw new ApiError(
+        409,
+        "This payment can no longer be completed.",
+        "PAYMENT_NOT_COMPLETABLE",
+      );
+    }
     await tx.order.update({
       where: { id: orderId },
       data: {
@@ -678,6 +753,19 @@ export async function completePayment(orderId: string, approvedById?: string) {
         completedAt: autoDeliver ? paidAt : undefined,
       },
     });
+    const automaticItemIds = order.items
+      .filter((item) => item.product.type === ProductType.DOWNLOAD)
+      .map((item) => item.id);
+    if (automaticItemIds.length) {
+      await tx.orderItem.updateMany({
+        where: { id: { in: automaticItemIds }, deliveredAt: null },
+        data: {
+          deliveredAt: paidAt,
+          deliveryMessage:
+            "Delivered automatically after payment confirmation.",
+        },
+      });
+    }
     await createSellerEarningsForOrderItems(
       tx,
       order.id,
@@ -718,53 +806,67 @@ export async function completePayment(orderId: string, approvedById?: string) {
           });
         }
 
-        const inventoryRows = await tx.productInventoryItem.findMany({
-          where: {
-            productId: item.productId,
-            isActive: true,
-            orderItemId: null,
-          },
-          orderBy: { createdAt: "asc" },
-          take: item.quantity,
-          select: { id: true },
-        });
-        if (
-          item.product.files.length === 0 &&
-          inventoryRows.length < item.quantity
-        ) {
-          throw new ApiError(
-            409,
-            `${item.productName} no longer has enough available inventory.`,
-            "PRODUCT_OUT_OF_STOCK",
-          );
-        }
-        if (inventoryRows.length) {
-          await tx.productInventoryItem.updateMany({
-            where: { id: { in: inventoryRows.map((row) => row.id) } },
-            data: { orderItemId: item.id, deliveredAt: new Date() },
+        // File products deliver by grant. A product without files delivers
+        // unique inventory rows; claim them with an orderItemId-null guard so
+        // two simultaneous buyers can never receive the same row.
+        if (item.product.files.length === 0) {
+          const inventoryRows = await tx.productInventoryItem.findMany({
+            where: {
+              productId: item.productId,
+              isActive: true,
+              orderItemId: null,
+            },
+            orderBy: { createdAt: "asc" },
+            take: item.quantity,
+            select: { id: true },
           });
+          if (inventoryRows.length < item.quantity) {
+            throw new ApiError(
+              409,
+              `${item.productName} no longer has enough available inventory.`,
+              "PRODUCT_OUT_OF_STOCK",
+            );
+          }
+          const allocated = await tx.productInventoryItem.updateMany({
+            where: {
+              id: { in: inventoryRows.map((row) => row.id) },
+              isActive: true,
+              orderItemId: null,
+            },
+            data: { orderItemId: item.id, deliveredAt: paidAt },
+          });
+          if (allocated.count !== item.quantity) {
+            throw new ApiError(
+              409,
+              `${item.productName} inventory changed during checkout. No funds were captured; try again.`,
+              "PRODUCT_OUT_OF_STOCK",
+            );
+          }
         }
       }
     }
+    return true;
   });
 
-  try {
-    await sendOrderConfirmation(
-      order.buyerEmail,
-      order.buyerName,
-      order.orderNumber,
-      order.invoiceNumber,
-      money(order.totalCents, order.currency),
-      rawLinks.map((link) => ({
-        name: link.name,
-        url: `${env.API_URL}/api/commerce/download/token/${encodeURIComponent(link.token)}`,
-      })),
-    );
-  } catch (error) {
-    console.error(
-      `Order ${order.orderNumber} was paid and delivered, but the confirmation email could not be sent:`,
-      error instanceof Error ? error.message : error,
-    );
+  if (completedNow) {
+    try {
+      await sendOrderConfirmation(
+        order.buyerEmail,
+        order.buyerName,
+        order.orderNumber,
+        order.invoiceNumber,
+        money(order.totalCents, order.currency),
+        rawLinks.map((link) => ({
+          name: link.name,
+          url: `${env.API_URL}/api/commerce/download/token/${encodeURIComponent(link.token)}`,
+        })),
+      );
+    } catch (error) {
+      console.error(
+        `Order ${order.orderNumber} was paid and delivered, but the confirmation email could not be sent:`,
+        error instanceof Error ? error.message : error,
+      );
+    }
   }
 
   return prisma.order.findUnique({
