@@ -406,6 +406,17 @@ function inventoryRows(value: string) {
     .filter(Boolean);
 }
 
+const sellerExchangeRates = { CNY: 7.24, RUB: 91.5 } as const;
+
+function convertedSellerPrices(usdValue: string) {
+  const usd = Number(usdValue);
+  if (!Number.isFinite(usd) || usd <= 0) return { priceCny: "", priceRub: "" };
+  return {
+    priceCny: (usd * sellerExchangeRates.CNY).toFixed(2),
+    priceRub: (usd * sellerExchangeRates.RUB).toFixed(2),
+  };
+}
+
 function showLegacyAdvancedOptions() {
   return false;
 }
@@ -534,6 +545,7 @@ export function SellerStudioPage() {
   const [analyticsPeriod, setAnalyticsPeriod] = useState<AnalyticsPeriod>("7d");
   const [selectedProductIds, setSelectedProductIds] = useState<string[]>([]);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [translatingListing, setTranslatingListing] = useState(false);
 
   const rootCategories = useMemo(
     () => categories.filter((category) => !category.parentId),
@@ -933,6 +945,62 @@ export function SellerStudioPage() {
     }
   }
 
+  async function translateListing() {
+    if (
+      !form.name.trim() ||
+      !form.shortDescription.trim() ||
+      !form.description.trim()
+    ) {
+      showMessage(
+        "Add the English title, short description, and full description first.",
+        "error",
+      );
+      return;
+    }
+    setTranslatingListing(true);
+    try {
+      const seoTitle = `Buy ${form.name.trim()} on Ysello`;
+      const seoDescription = form.shortDescription.trim();
+      const result = await apiRequest<{
+        chinese: Record<string, string>;
+        russian: Record<string, string>;
+      }>("/api/seller/translate-listing", {
+        method: "POST",
+        body: {
+          title: form.name.trim(),
+          shortDescription: form.shortDescription.trim(),
+          description: form.description.trim(),
+          seoTitle,
+          seoDescription,
+        },
+      });
+      setForm((current) => ({
+        ...current,
+        chineseTitle: result.chinese.title,
+        chineseShortDescription: result.chinese.shortDescription,
+        chineseDescription: result.chinese.description,
+        chineseSeoTitle: result.chinese.seoTitle,
+        chineseSeoDescription: result.chinese.seoDescription,
+        russianTitle: result.russian.title,
+        russianShortDescription: result.russian.shortDescription,
+        russianDescription: result.russian.description,
+        russianSeoTitle: result.russian.seoTitle,
+        russianSeoDescription: result.russian.seoDescription,
+      }));
+      showMessage(
+        "English listing translated into Chinese and Russian.",
+        "success",
+      );
+    } catch (error) {
+      showMessage(
+        errorText(error, "Translation could not be completed."),
+        "error",
+      );
+    } finally {
+      setTranslatingListing(false);
+    }
+  }
+
   async function create(event: FormEvent) {
     event.preventDefault();
     if (!selectedCategoryId) {
@@ -1024,7 +1092,10 @@ export function SellerStudioPage() {
     data.append("duration", form.duration.trim());
     data.append("warranty", form.warranty.trim());
     data.append("refundPolicy", form.refundPolicy.trim());
-    data.append("stockQuantity", String(form.stockQuantity));
+    data.append(
+      "stockQuantity",
+      String(inventoryRows(form.inventoryLines).length),
+    );
     data.append("minimumOrder", String(form.minimumOrder));
     data.append("maximumOrder", String(form.maximumOrder));
     data.append("sku", form.sku.trim());
@@ -4321,6 +4392,17 @@ export function SellerStudioPage() {
                     Enter each field in English, Chinese, and Russian together.
                   </small>
                 </div>
+                <button
+                  type="button"
+                  className="seller-translate-button"
+                  disabled={translatingListing}
+                  onClick={() => void translateListing()}
+                >
+                  <Globe2 />
+                  {translatingListing
+                    ? "Translating…"
+                    : "Translate English to Chinese & Russian"}
+                </button>
               </header>
               <section>
                 <h3>
@@ -4470,15 +4552,21 @@ export function SellerStudioPage() {
                       min="0.50"
                       step="0.01"
                       value={form.priceUsd}
-                      onChange={(event) =>
-                        setForm({ ...form, priceUsd: event.target.value })
-                      }
+                      onChange={(event) => {
+                        const priceUsd = event.target.value;
+                        setForm({
+                          ...form,
+                          priceUsd,
+                          ...convertedSellerPrices(priceUsd),
+                        });
+                      }}
                     />
                   </label>
                   <label>
                     <span>Chinese yuan price (¥)</span>
                     <input
                       required
+                      readOnly
                       type="number"
                       min="0.01"
                       step="0.01"
@@ -4492,6 +4580,7 @@ export function SellerStudioPage() {
                     <span>Russian ruble price (₽)</span>
                     <input
                       required
+                      readOnly
                       type="number"
                       min="0.01"
                       step="0.01"
@@ -4595,7 +4684,7 @@ export function SellerStudioPage() {
                 <div>
                   <strong>Product setup and delivery</strong>
                   <small>
-                    Configure the listing type, stock, and fulfillment.
+                    Stock is counted automatically from the inventory rows.
                   </small>
                 </div>
               </header>
@@ -4611,21 +4700,6 @@ export function SellerStudioPage() {
                     <option value="DOWNLOAD">Digital product</option>
                     <option value="SERVICE">Service</option>
                   </select>
-                </label>
-                <label>
-                  <span>Stock quantity</span>
-                  <input
-                    required
-                    type="number"
-                    min={0}
-                    value={form.stockQuantity}
-                    onChange={(event) =>
-                      setForm({
-                        ...form,
-                        stockQuantity: Number(event.target.value),
-                      })
-                    }
-                  />
                 </label>
                 <label>
                   <span>Delivery method</span>

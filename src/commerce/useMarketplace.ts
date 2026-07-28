@@ -360,7 +360,7 @@ export function useMarketplaceProducts() {
   const [products, setProducts] = useState<CatalogProduct[]>(localProducts);
   useEffect(() => {
     void apiRequest<{ products: ApiProduct[] }>(
-      "/api/marketplace/products?take=96",
+      "/api/marketplace/products?take=500&sort=newest",
     )
       .then((data) => {
         const remoteProducts = data.products.map((product, index) =>

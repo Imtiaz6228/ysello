@@ -119,6 +119,19 @@ export function CatalogPage() {
       })),
     [rootCategories],
   );
+  const socialAccountCategories = useMemo(() => {
+    const social = marketplaceTaxonomy.find(
+      (item) => item.slug === "social-media",
+    );
+    return (social?.subcategories ?? []).flatMap((platform) =>
+      (platform.children ?? [])
+        .filter((item) => item.name === "Accounts")
+        .map((item) => ({
+          label: `${platform.name} Accounts`,
+          slug: item.slug,
+        })),
+    );
+  }, []);
 
   const filteredProducts = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
@@ -277,6 +290,24 @@ export function CatalogPage() {
               </button>
             );
           })}
+        </section>
+        <section
+          className="ys-ref-social-account-tabs"
+          aria-label="Social media account categories"
+        >
+          <strong>Social Media Accounts</strong>
+          <div>
+            {socialAccountCategories.map((item) => (
+              <button
+                type="button"
+                key={item.slug}
+                className={category === item.slug ? "active" : ""}
+                onClick={() => setCategory(item.slug)}
+              >
+                {item.label}
+              </button>
+            ))}
+          </div>
         </section>
 
         <button

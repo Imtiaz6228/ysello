@@ -30,6 +30,77 @@
   background: #fafaff;
 }
 
+.seller-translate-button {
+  margin-left: auto;
+  padding: 10px 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 0;
+  border-radius: 12px;
+  color: #fff;
+  background: var(--ys-panel-gradient);
+  font-weight: 800;
+  cursor: pointer;
+  box-shadow: 0 8px 20px rgba(92, 83, 210, 0.2);
+}
+
+.seller-translate-button svg {
+  width: 17px;
+  height: 17px;
+}
+
+.seller-translate-button:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+
+.ys-ref-social-account-tabs {
+  margin: 14px 0 22px;
+  padding: 16px;
+  display: grid;
+  gap: 11px;
+  border: 1px solid var(--ys-panel-line);
+  border-radius: 18px;
+  background: #fff;
+  box-shadow: var(--ys-panel-shadow);
+}
+
+.ys-ref-social-account-tabs > strong {
+  color: var(--ys-panel-ink);
+  font-size: 0.92rem;
+}
+
+.ys-ref-social-account-tabs > div {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+
+.ys-ref-social-account-tabs button,
+.social-account-category-link {
+  padding: 8px 12px;
+  border: 1px solid #dedfee;
+  border-radius: 999px;
+  color: #383d4f;
+  background: #f8f8fc;
+  font-size: 0.78rem;
+  font-weight: 800;
+  white-space: nowrap;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.ys-ref-social-account-tabs button:hover,
+.ys-ref-social-account-tabs button.active,
+.social-account-category-link:hover {
+  border-color: transparent;
+  color: #fff;
+  background: var(--ys-panel-gradient);
+}
+
 .seller-bulk-inventory > header {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto;
@@ -104,6 +175,11 @@
 
   .seller-bulk-inventory {
     padding: 16px;
+  }
+
+  .seller-translate-button {
+    width: 100%;
+    margin: 8px 0 0;
   }
 }
 

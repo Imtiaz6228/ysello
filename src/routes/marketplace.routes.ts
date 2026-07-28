@@ -9,42 +9,12 @@ import { marketplaceTaxonomySlugs } from "../data/marketplaceTaxonomy.js";
 export const marketplaceRouter = Router();
 
 const publicCategorySlugs = [...marketplaceTaxonomySlugs];
-const prohibitedListingPhrases = [
-  "social account",
-  "social-media account",
-  "email account",
-  "gaming account",
-  "game account",
-  "streaming account",
-  "company account",
-  "aged account",
-  "old account",
-  "new account",
-  "login credential",
-  "session cookie",
-  "recovery access",
-  "2fa key",
-  "with followers",
-  "fake engagement",
-  "fake review",
-  "unauthorized license key",
-];
 
 function publicListingPolicyWhere() {
   return {
     category: {
       isActive: true,
-      slug: { in: publicCategorySlugs },
     },
-    NOT: prohibitedListingPhrases.flatMap((phrase) => [
-      { name: { contains: phrase, mode: "insensitive" as const } },
-      {
-        shortDescription: {
-          contains: phrase,
-          mode: "insensitive" as const,
-        },
-      },
-    ]),
   };
 }
 
@@ -101,7 +71,7 @@ marketplaceRouter.get(
         q: z.string().trim().max(100).optional(),
         category: z.string().trim().max(100).optional(),
         seller: z.string().trim().max(100).optional(),
-        take: z.coerce.number().int().min(1).max(96).default(24),
+        take: z.coerce.number().int().min(1).max(500).default(100),
         sort: z
           .enum(["popular", "price_asc", "price_desc", "newest"])
           .default("popular"),
@@ -157,12 +127,11 @@ marketplaceRouter.get(
               sellerProfile: {
                 slug: query.seller,
                 isSuspended: false,
-                isVerified: true,
               },
             }
           : {
               isSuspended: false,
-              sellerProfile: { isSuspended: false, isVerified: true },
+              sellerProfile: { isSuspended: false },
             },
         ...(filters.length ? { AND: filters } : {}),
       },
@@ -194,7 +163,7 @@ marketplaceRouter.get(
         ...publicListingPolicyWhere(),
         seller: {
           isSuspended: false,
-          sellerProfile: { isSuspended: false, isVerified: true },
+          sellerProfile: { isSuspended: false },
         },
       },
       include: {

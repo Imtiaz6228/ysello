@@ -117,3 +117,51 @@ test("seller listing accepts long translations and bulk account inventory", asyn
     /bottom: calc\(104px \+ env\(safe-area-inset-bottom\)\) !important/,
   );
 });
+
+test("approved account products publish and seller tools translate and convert once", async () => {
+  const [marketplace, routes, studio, editor, taxonomy, home, catalog] =
+    await Promise.all([
+      read("src/routes/marketplace.routes.ts"),
+      read("src/routes/seller.routes.ts"),
+      read("src/pages/SellerStudioPage.tsx"),
+      read("src/components/SellerProductEditor.tsx"),
+      read("src/data/marketplaceTaxonomy.ts"),
+      read("src/pages/MarketplaceHomePage.tsx"),
+      read("src/pages/CatalogPage.tsx"),
+    ]);
+
+  assert.doesNotMatch(marketplace, /prohibitedListingPhrases/);
+  assert.match(
+    marketplace,
+    /status: ProductStatus\.APPROVED,[\s\S]{0,900}sellerProfile: \{ isSuspended: false \}/,
+  );
+  assert.match(marketplace, /status: ProductStatus\.APPROVED/);
+  assert.match(routes, /"\/translate-listing"/);
+  assert.match(routes, /translate\.googleapis\.com/);
+  assert.match(routes, /data: \{ stockQuantity \}/);
+  assert.match(studio, /Translate English to Chinese & Russian/);
+  assert.match(studio, /convertedSellerPrices\(priceUsd\)/);
+  assert.match(studio, /inventoryRows\(form\.inventoryLines\)\.length/);
+  assert.doesNotMatch(
+    studio,
+    /<span>Stock quantity<\/span>[\s\S]{0,180}<input/,
+  );
+  assert.match(editor, /Translate English to Chinese & Russian/);
+  assert.match(editor, /convertedSellerPrices\(priceUsd\)/);
+  for (const slug of [
+    "facebook-accounts",
+    "instagram-accounts",
+    "threads-accounts",
+    "x-accounts",
+    "tiktok-accounts",
+    "telegram-accounts",
+    "discord-accounts",
+    "snapchat-accounts",
+    "whatsapp-accounts",
+    "youtube-accounts",
+  ])
+    assert.match(taxonomy, new RegExp(`"${slug}"`));
+  assert.match(home, /homepageFeatured/);
+  assert.match(home, /social-account-category-link/);
+  assert.match(catalog, /Social Media Accounts/);
+});

@@ -124,6 +124,81 @@ const requireSeller = asyncHandler(async (req, _res, next) => {
   next();
 });
 
+const translationFieldsSchema = z.object({
+  title: z.string().max(50_000).default(""),
+  shortDescription: z.string().max(50_000).default(""),
+  description: z.string().max(200_000).default(""),
+  seoTitle: z.string().max(50_000).default(""),
+  seoDescription: z.string().max(50_000).default(""),
+});
+
+async function translateChunk(text: string, target: "zh-CN" | "ru") {
+  if (!text.trim()) return "";
+  const url = new URL("https://translate.googleapis.com/translate_a/single");
+  url.searchParams.set("client", "gtx");
+  url.searchParams.set("sl", "en");
+  url.searchParams.set("tl", target);
+  url.searchParams.set("dt", "t");
+  url.searchParams.set("q", text);
+  const response = await fetch(url, {
+    headers: { "User-Agent": "Ysello Marketplace/1.0" },
+    signal: AbortSignal.timeout(15_000),
+  });
+  if (!response.ok) throw new Error(`Translation returned ${response.status}`);
+  const payload = (await response.json()) as unknown;
+  if (!Array.isArray(payload) || !Array.isArray(payload[0]))
+    throw new Error("Translation response was invalid");
+  return payload[0]
+    .map((part: unknown) =>
+      Array.isArray(part) && typeof part[0] === "string" ? part[0] : "",
+    )
+    .join("");
+}
+
+async function translateText(text: string, target: "zh-CN" | "ru") {
+  const chunks = text.match(/[\s\S]{1,3000}/g) ?? [];
+  const translated: string[] = [];
+  for (const chunk of chunks)
+    translated.push(await translateChunk(chunk, target));
+  return translated.join("");
+}
+
+sellerRouter.post(
+  "/translate-listing",
+  requireSeller,
+  asyncHandler(async (req, res) => {
+    const source = translationFieldsSchema.parse(req.body);
+    if (!Object.values(source).some((value) => value.trim()))
+      throw new ApiError(
+        400,
+        "Add English listing content before translating.",
+        "TRANSLATION_SOURCE_REQUIRED",
+      );
+    try {
+      const translateFor = async (target: "zh-CN" | "ru") =>
+        Object.fromEntries(
+          await Promise.all(
+            Object.entries(source).map(async ([key, value]) => [
+              key,
+              await translateText(value, target),
+            ]),
+          ),
+        );
+      const [chinese, russian] = await Promise.all([
+        translateFor("zh-CN"),
+        translateFor("ru"),
+      ]);
+      res.json({ chinese, russian });
+    } catch {
+      throw new ApiError(
+        502,
+        "Translation is temporarily unavailable. Please try again.",
+        "TRANSLATION_UNAVAILABLE",
+      );
+    }
+  }),
+);
+
 function getSellerDocumentFiles(req: Request) {
   const files = req.files as Record<string, Express.Multer.File[]> | undefined;
   const front = files?.documentFront?.[0];
@@ -582,6 +657,10 @@ sellerRouter.post(
       const product = await prisma.product.create({
         data: {
           ...productData,
+          stockQuantity:
+            input.type === ProductType.DOWNLOAD
+              ? inventoryLines.length
+              : productData.stockQuantity,
           slug: `${base}-i${crypto.randomUUID().replaceAll("-", "").slice(0, 10)}`,
           sellerId: req.auth!.id,
           status,
@@ -1226,12 +1305,21 @@ sellerRouter.post(
         "Add at least one inventory row.",
         "INVENTORY_REQUIRED",
       );
-    await prisma.productInventoryItem.createMany({
-      data: lines.map((content) => ({
-        productId: id,
-        content,
-        source: "MANUAL",
-      })),
+    await prisma.$transaction(async (tx) => {
+      await tx.productInventoryItem.createMany({
+        data: lines.map((content) => ({
+          productId: id,
+          content,
+          source: "MANUAL",
+        })),
+      });
+      const stockQuantity = await tx.productInventoryItem.count({
+        where: { productId: id, isActive: true, orderItemId: null },
+      });
+      await tx.product.update({
+        where: { id },
+        data: { stockQuantity },
+      });
     });
     res.status(201).json({ count: lines.length });
   }),
@@ -1263,12 +1351,21 @@ sellerRouter.post(
           "The inventory file did not contain any rows.",
           "INVENTORY_FILE_EMPTY",
         );
-      await prisma.productInventoryItem.createMany({
-        data: lines.map((content) => ({
-          productId: id,
-          content,
-          source: "FILE",
-        })),
+      await prisma.$transaction(async (tx) => {
+        await tx.productInventoryItem.createMany({
+          data: lines.map((content) => ({
+            productId: id,
+            content,
+            source: "FILE",
+          })),
+        });
+        const stockQuantity = await tx.productInventoryItem.count({
+          where: { productId: id, isActive: true, orderItemId: null },
+        });
+        await tx.product.update({
+          where: { id },
+          data: { stockQuantity },
+        });
       });
       res.status(201).json({ count: lines.length });
     } finally {

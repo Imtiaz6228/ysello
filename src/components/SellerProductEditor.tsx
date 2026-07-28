@@ -2,6 +2,7 @@ import { type FormEvent, useEffect, useMemo, useState } from "react";
 import {
   ArrowLeft,
   FileText,
+  Globe2,
   ImagePlus,
   PackageCheck,
   Save,
@@ -97,6 +98,16 @@ export type SellerEditableProduct = {
 
 const money = (cents?: number | null) =>
   cents == null ? "" : (cents / 100).toFixed(2);
+const sellerExchangeRates = { CNY: 7.24, RUB: 91.5 } as const;
+
+function convertedSellerPrices(usdValue: string) {
+  const usd = Number(usdValue);
+  if (!Number.isFinite(usd) || usd <= 0) return { priceCny: "", priceRub: "" };
+  return {
+    priceCny: (usd * sellerExchangeRates.CNY).toFixed(2),
+    priceRub: (usd * sellerExchangeRates.RUB).toFixed(2),
+  };
+}
 
 export function SellerProductEditor({
   product,
@@ -190,6 +201,7 @@ export function SellerProductEditor({
     product.coverImageUrl ? mediaUrl(product.coverImageUrl) : "",
   );
   const [busy, setBusy] = useState(false);
+  const [translating, setTranslating] = useState(false);
   const [error, setError] = useState("");
   useEffect(() => {
     if (!image) return;
@@ -221,6 +233,58 @@ export function SellerProductEditor({
     selectedCategoryId,
     categories,
   );
+
+  async function translateListing() {
+    if (
+      !form.name.trim() ||
+      !form.shortDescription.trim() ||
+      !form.description.trim()
+    ) {
+      setError(
+        "Add the English title, short description, and full description first.",
+      );
+      return;
+    }
+    setTranslating(true);
+    setError("");
+    try {
+      const result = await apiRequest<{
+        chinese: Record<string, string>;
+        russian: Record<string, string>;
+      }>("/api/seller/translate-listing", {
+        method: "POST",
+        body: {
+          title: form.name.trim(),
+          shortDescription: form.shortDescription.trim(),
+          description: form.description.trim(),
+          seoTitle: form.seoTitle.trim() || `Buy ${form.name.trim()} on Ysello`,
+          seoDescription:
+            form.seoDescription.trim() || form.shortDescription.trim(),
+        },
+      });
+      setForm((current) => ({
+        ...current,
+        chineseTitle: result.chinese.title,
+        chineseShortDescription: result.chinese.shortDescription,
+        chineseDescription: result.chinese.description,
+        chineseSeoTitle: result.chinese.seoTitle,
+        chineseSeoDescription: result.chinese.seoDescription,
+        russianTitle: result.russian.title,
+        russianShortDescription: result.russian.shortDescription,
+        russianDescription: result.russian.description,
+        russianSeoTitle: result.russian.seoTitle,
+        russianSeoDescription: result.russian.seoDescription,
+      }));
+    } catch (requestError) {
+      setError(
+        requestError instanceof ApiError
+          ? requestError.message
+          : "Translation could not be completed.",
+      );
+    } finally {
+      setTranslating(false);
+    }
+  }
 
   async function save(event: FormEvent, submitForReview = false) {
     event.preventDefault();
@@ -331,7 +395,6 @@ export function SellerProductEditor({
           warranty: form.warranty,
           refundPolicy: form.refundPolicy,
           deliveryNote: form.deliveryNote,
-          stockQuantity: Number(form.stockQuantity),
           minimumOrder: Number(form.minimumOrder),
           maximumOrder: Number(form.maximumOrder),
           sku: form.sku,
@@ -553,6 +616,17 @@ export function SellerProductEditor({
                   before moving to the next field.
                 </p>
               </div>
+              <button
+                type="button"
+                className="seller-translate-button"
+                disabled={translating}
+                onClick={() => void translateListing()}
+              >
+                <Globe2 />
+                {translating
+                  ? "Translating…"
+                  : "Translate English to Chinese & Russian"}
+              </button>
             </header>
             <div className="seller-multilingual-sequence">
               <section>
@@ -700,15 +774,21 @@ export function SellerProductEditor({
                       min="0.50"
                       step="0.01"
                       value={form.priceUsd}
-                      onChange={(event) =>
-                        setForm({ ...form, priceUsd: event.target.value })
-                      }
+                      onChange={(event) => {
+                        const priceUsd = event.target.value;
+                        setForm({
+                          ...form,
+                          priceUsd,
+                          ...convertedSellerPrices(priceUsd),
+                        });
+                      }}
                     />
                   </label>
                   <label>
                     <span>Chinese yuan price (¥)</span>
                     <input
                       required
+                      readOnly
                       type="number"
                       min="0.01"
                       step="0.01"
@@ -722,6 +802,7 @@ export function SellerProductEditor({
                     <span>Russian ruble price (₽)</span>
                     <input
                       required
+                      readOnly
                       type="number"
                       min="0.01"
                       step="0.01"
@@ -835,7 +916,6 @@ export function SellerProductEditor({
                   ["salePrice", "Sale price"],
                   ["wholesalePrice", "Wholesale price"],
                   ["discountPercent", "Discount %"],
-                  ["stockQuantity", "Stock quantity"],
                   ["minimumOrder", "Minimum order"],
                   ["maximumOrder", "Maximum order"],
                   ["sku", "SKU"],

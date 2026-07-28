@@ -362,6 +362,10 @@ export function MarketplaceHomePage() {
         .slice(0, 12),
     [products],
   );
+  const homepageFeatured = useMemo(
+    () => mergeProductPicks(newArrivals, bestSellers, 10),
+    [bestSellers, newArrivals],
+  );
 
   const services = useMemo(
     () => products.filter((product) => product.type === "SERVICE").slice(0, 12),
@@ -596,6 +600,27 @@ export function MarketplaceHomePage() {
               {subcategory.name}
             </Link>
           ))}
+          {focusedCategory.slug === "social-media"
+            ? focusedCategory.subcategories
+                .flatMap((platform) =>
+                  (platform.children ?? [])
+                    .filter((item) => item.name === "Accounts")
+                    .map((item) => ({
+                      ...item,
+                      label: `${platform.name} Accounts`,
+                    })),
+                )
+                .slice(0, 10)
+                .map((account) => (
+                  <Link
+                    key={account.slug}
+                    to={`/category/${account.slug}`}
+                    className="social-account-category-link"
+                  >
+                    {account.label}
+                  </Link>
+                ))
+            : null}
           <Link to={`/category/${focusedCategory.slug}`}>
             {t("viewAll")} <ArrowRight aria-hidden="true" />
           </Link>
@@ -628,9 +653,9 @@ export function MarketplaceHomePage() {
           text="The marketplace products buyers are choosing right now."
           href="/catalog?sort=popular"
         />
-        {bestSellers.length ? (
+        {homepageFeatured.length ? (
           <div className="reference-featured-product-grid">
-            {bestSellers.slice(0, 10).map((product) => (
+            {homepageFeatured.map((product) => (
               <FeaturedProductCard
                 key={product.id}
                 product={product}

@@ -396,6 +396,14 @@ export const marketplaceTaxonomy: MarketplaceTaxonomyItem[] = [
     icon: "SOC",
     subcategories: [
       {
+        slug: "facebook-social-products",
+        name: "Facebook",
+        description: "Facebook marketplace products and account inventory.",
+        children: nodes("Facebook products.", [
+          ["facebook-accounts", "Accounts"],
+        ]),
+      },
+      {
         slug: "instagram-creator-tools",
         name: "Instagram",
         description: "Templates and services for original Instagram content.",
@@ -408,6 +416,20 @@ export const marketplaceTaxonomy: MarketplaceTaxonomyItem[] = [
         ]),
       },
       {
+        slug: "threads-social-products",
+        name: "Threads",
+        description: "Threads marketplace products and account inventory.",
+        children: nodes("Threads products.", [
+          ["threads-accounts", "Accounts"],
+        ]),
+      },
+      {
+        slug: "x-social-products",
+        name: "X / Twitter",
+        description: "X marketplace products and account inventory.",
+        children: nodes("X products.", [["x-accounts", "Accounts"]]),
+      },
+      {
         slug: "tiktok-creator-tools",
         name: "TikTok",
         description: "Content planning and production resources for TikTok.",
@@ -416,6 +438,38 @@ export const marketplaceTaxonomy: MarketplaceTaxonomyItem[] = [
           ["tiktok-hook-libraries", "Hook libraries"],
           ["tiktok-storyboards", "Video storyboards"],
           ["tiktok-content-calendars", "Content calendars"],
+        ]),
+      },
+      {
+        slug: "telegram-social-products",
+        name: "Telegram",
+        description: "Telegram marketplace products and account inventory.",
+        children: nodes("Telegram products.", [
+          ["telegram-accounts", "Accounts"],
+        ]),
+      },
+      {
+        slug: "discord-social-products",
+        name: "Discord",
+        description: "Discord marketplace products and account inventory.",
+        children: nodes("Discord products.", [
+          ["discord-accounts", "Accounts"],
+        ]),
+      },
+      {
+        slug: "snapchat-social-products",
+        name: "Snapchat",
+        description: "Snapchat marketplace products and account inventory.",
+        children: nodes("Snapchat products.", [
+          ["snapchat-accounts", "Accounts"],
+        ]),
+      },
+      {
+        slug: "whatsapp-social-products",
+        name: "WhatsApp",
+        description: "WhatsApp marketplace products and account inventory.",
+        children: nodes("WhatsApp products.", [
+          ["whatsapp-accounts", "Accounts"],
         ]),
       },
       {
