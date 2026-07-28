@@ -400,6 +400,7 @@ export const marketplaceTaxonomy: MarketplaceTaxonomyItem[] = [
         name: "Instagram",
         description: "Templates and services for original Instagram content.",
         children: nodes("Creator-safe Instagram resources.", [
+          ["instagram-accounts", "Accounts"],
           ["instagram-reels-templates", "Reels templates"],
           ["instagram-caption-packs", "Caption packs"],
           ["instagram-content-calendars", "Content calendars"],
@@ -411,6 +412,7 @@ export const marketplaceTaxonomy: MarketplaceTaxonomyItem[] = [
         name: "TikTok",
         description: "Content planning and production resources for TikTok.",
         children: nodes("Creator-safe TikTok resources.", [
+          ["tiktok-accounts", "Accounts"],
           ["tiktok-hook-libraries", "Hook libraries"],
           ["tiktok-storyboards", "Video storyboards"],
           ["tiktok-content-calendars", "Content calendars"],
@@ -421,6 +423,7 @@ export const marketplaceTaxonomy: MarketplaceTaxonomyItem[] = [
         name: "YouTube",
         description: "Channel graphics, scripts and production systems.",
         children: nodes("YouTube creator resources.", [
+          ["youtube-accounts", "Accounts"],
           ["youtube-thumbnail-templates", "Thumbnail templates"],
           ["youtube-script-systems", "Script systems"],
           ["youtube-channel-branding", "Channel branding"],
@@ -432,6 +435,7 @@ export const marketplaceTaxonomy: MarketplaceTaxonomyItem[] = [
         name: "Twitch & streaming",
         description: "Broadcast graphics and channel-production resources.",
         children: nodes("Streaming creator resources.", [
+          ["streaming-accounts", "Accounts"],
           ["streaming-overlays", "Streaming overlays"],
           ["stream-alert-packs", "Alert packs"],
           ["stream-channel-branding", "Channel branding"],
@@ -442,6 +446,7 @@ export const marketplaceTaxonomy: MarketplaceTaxonomyItem[] = [
         name: "Community tools",
         description: "Legitimate resources for owned online communities.",
         children: nodes("Community planning and moderation resources.", [
+          ["community-accounts", "Accounts"],
           ["discord-server-kits", "Discord server kits"],
           ["telegram-channel-kits", "Telegram channel kits"],
           ["community-moderation-tools", "Moderation systems"],
@@ -452,6 +457,7 @@ export const marketplaceTaxonomy: MarketplaceTaxonomyItem[] = [
         name: "Social marketing",
         description: "Campaign planning and compliant creative systems.",
         children: nodes("Social marketing resources.", [
+          ["social-marketing-accounts", "Accounts"],
           ["facebook-ad-creative", "Facebook ad creative"],
           ["linkedin-content-kits", "LinkedIn content kits"],
           ["x-thread-playbooks", "X thread playbooks"],

@@ -93,3 +93,27 @@ test("reference homepage and mobile account controls match the supplied layouts"
     assert.match(panel, /<LocaleSwitcher compact/);
   }
 });
+
+test("seller listing accepts long translations and bulk account inventory", async () => {
+  const [routes, studio, taxonomy, styles] = await Promise.all([
+    read("src/routes/seller.routes.ts"),
+    read("src/pages/SellerStudioPage.tsx"),
+    read("src/data/marketplaceTaxonomy.ts"),
+    read("src/commerce-complete.css"),
+  ]);
+
+  assert.doesNotMatch(
+    routes,
+    /title: z\.string\(\)\.trim\(\)\.min\(3\)\.max\(160\)/,
+  );
+  assert.match(routes, /title: z\.string\(\)\.trim\(\)\.min\(1\)\.max\(5000\)/);
+  assert.match(studio, /Import TXT or CSV/);
+  assert.match(studio, /accept="\.txt,\.csv,text\/plain,text\/csv"/);
+  assert.match(studio, /\[\.\.\.new Set\(merged\)\]\.join\("\\n"\)/);
+  assert.match(taxonomy, /\["instagram-accounts", "Accounts"\]/);
+  assert.match(taxonomy, /\["community-accounts", "Accounts"\]/);
+  assert.match(
+    styles,
+    /bottom: calc\(104px \+ env\(safe-area-inset-bottom\)\) !important/,
+  );
+});

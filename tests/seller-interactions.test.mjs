@@ -35,7 +35,9 @@ test("new listing flow keeps essentials simple and identity application omits ad
   const studio = await read("src/pages/SellerStudioPage.tsx");
   const application = await read("src/pages/SellerApplicationPage.tsx");
   assert.match(studio, /Multilingual listing and SEO/);
-  assert.match(studio, /<details className="seller-create-advanced">/);
+  assert.match(studio, /Delivery inventory/);
+  assert.match(studio, /Import TXT or CSV/);
+  assert.match(studio, /inventoryRows\(form\.inventoryLines\)\.length/);
   for (const field of [
     "English title",
     "English full description",

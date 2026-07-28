@@ -5827,7 +5827,7 @@ body {
 
   .support-widget-fab {
     right: 14px !important;
-    bottom: 18px !important;
+    bottom: calc(94px + env(safe-area-inset-bottom)) !important;
     width: 48px !important;
     height: 48px !important;
   }

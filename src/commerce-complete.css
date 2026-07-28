@@ -21,6 +21,92 @@
   --ys-panel-shadow: 0 12px 34px rgba(27, 31, 51, 0.08);
 }
 
+.seller-bulk-inventory {
+  padding: 22px;
+  display: grid;
+  gap: 14px;
+  border: 1px solid var(--ys-panel-line);
+  border-radius: 18px;
+  background: #fafaff;
+}
+
+.seller-bulk-inventory > header {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+}
+
+.seller-bulk-inventory > header > svg {
+  width: 42px;
+  height: 42px;
+  padding: 10px;
+  border-radius: 13px;
+  color: #fff;
+  background: var(--ys-panel-gradient);
+}
+
+.seller-bulk-inventory > header strong,
+.seller-bulk-inventory > header small {
+  display: block;
+}
+
+.seller-bulk-inventory > header small,
+.seller-bulk-inventory > div small {
+  color: var(--ys-panel-muted);
+}
+
+.seller-bulk-inventory > header > b {
+  padding: 7px 11px;
+  border-radius: 999px;
+  color: #087f5b;
+  background: #dff8ef;
+  white-space: nowrap;
+}
+
+.seller-bulk-inventory textarea {
+  width: 100%;
+  min-height: 160px;
+  resize: vertical;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+.seller-bulk-inventory > div {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.seller-bulk-inventory input[type="file"] {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+}
+
+@media (max-width: 720px) {
+  .support-widget-fab,
+  .support-fab-polished {
+    right: 14px !important;
+    bottom: calc(104px + env(safe-area-inset-bottom)) !important;
+    left: auto !important;
+  }
+
+  .support-widget-pro {
+    right: 10px !important;
+    bottom: calc(102px + env(safe-area-inset-bottom)) !important;
+    left: 10px !important;
+    width: auto !important;
+    max-height: calc(100dvh - 130px) !important;
+  }
+
+  .seller-bulk-inventory {
+    padding: 16px;
+  }
+}
+
 /* Supplied Top Stores reference: four across on desktop, two across on mobile. */
 .reference-top-stores,
 .reference-featured-products {

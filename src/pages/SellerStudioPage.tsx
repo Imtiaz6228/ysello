@@ -399,6 +399,17 @@ function cents(value: string) {
   return Number.isFinite(parsed) ? Math.round(parsed * 100) : 0;
 }
 
+function inventoryRows(value: string) {
+  return value
+    .split(/\r?\n/)
+    .map((row) => row.trim())
+    .filter(Boolean);
+}
+
+function showLegacyAdvancedOptions() {
+  return false;
+}
+
 function validTab(value: string): value is Tab {
   return sellerTabs.some((item) => item.id === value);
 }
@@ -893,6 +904,35 @@ export function SellerStudioPage() {
     setCoverImage(file);
   }
 
+  async function importInventoryFile(file?: File) {
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      showMessage("Inventory file must be 5 MB or smaller.", "error");
+      return;
+    }
+    try {
+      const text = await file.text();
+      const imported = inventoryRows(text.replace(/^\uFEFF/, ""));
+      if (!imported.length) {
+        showMessage(
+          "The selected file does not contain inventory rows.",
+          "error",
+        );
+        return;
+      }
+      setForm((current) => {
+        const merged = [...inventoryRows(current.inventoryLines), ...imported];
+        return { ...current, inventoryLines: [...new Set(merged)].join("\n") };
+      });
+      showMessage(
+        `${imported.length} inventory row${imported.length === 1 ? "" : "s"} imported.`,
+        "success",
+      );
+    } catch {
+      showMessage("The inventory file could not be read.", "error");
+    }
+  }
+
   async function create(event: FormEvent) {
     event.preventDefault();
     if (!selectedCategoryId) {
@@ -925,15 +965,15 @@ export function SellerStudioPage() {
       return;
     }
     if (
-      form.name.trim().length < 3 ||
-      form.shortDescription.trim().length < 10 ||
-      form.description.trim().length < 30 ||
-      form.chineseTitle.trim().length < 3 ||
-      form.chineseShortDescription.trim().length < 10 ||
-      form.chineseDescription.trim().length < 30 ||
-      form.russianTitle.trim().length < 3 ||
-      form.russianShortDescription.trim().length < 10 ||
-      form.russianDescription.trim().length < 30
+      !form.name.trim() ||
+      !form.shortDescription.trim() ||
+      !form.description.trim() ||
+      !form.chineseTitle.trim() ||
+      !form.chineseShortDescription.trim() ||
+      !form.chineseDescription.trim() ||
+      !form.russianTitle.trim() ||
+      !form.russianShortDescription.trim() ||
+      !form.russianDescription.trim()
     ) {
       showMessage(
         "Complete the English, Chinese, and Russian titles and descriptions before submitting.",
@@ -4291,7 +4331,6 @@ export function SellerStudioPage() {
                     <span>English title</span>
                     <input
                       required
-                      minLength={3}
                       value={form.name}
                       onChange={(event) =>
                         setForm({ ...form, name: event.target.value })
@@ -4303,7 +4342,6 @@ export function SellerStudioPage() {
                     <span>中文标题</span>
                     <input
                       required
-                      minLength={3}
                       value={form.chineseTitle}
                       onChange={(event) =>
                         setForm({ ...form, chineseTitle: event.target.value })
@@ -4315,7 +4353,6 @@ export function SellerStudioPage() {
                     <span>Русское название</span>
                     <input
                       required
-                      minLength={3}
                       value={form.russianTitle}
                       onChange={(event) =>
                         setForm({ ...form, russianTitle: event.target.value })
@@ -4334,8 +4371,6 @@ export function SellerStudioPage() {
                     <span>English short description</span>
                     <textarea
                       required
-                      minLength={10}
-                      maxLength={240}
                       rows={3}
                       value={form.shortDescription}
                       onChange={(event) =>
@@ -4350,8 +4385,6 @@ export function SellerStudioPage() {
                     <span>中文简短描述</span>
                     <textarea
                       required
-                      minLength={10}
-                      maxLength={240}
                       rows={3}
                       value={form.chineseShortDescription}
                       onChange={(event) =>
@@ -4366,8 +4399,6 @@ export function SellerStudioPage() {
                     <span>Краткое описание</span>
                     <textarea
                       required
-                      minLength={10}
-                      maxLength={240}
                       rows={3}
                       value={form.russianShortDescription}
                       onChange={(event) =>
@@ -4389,7 +4420,6 @@ export function SellerStudioPage() {
                     <span>English full description</span>
                     <textarea
                       required
-                      minLength={30}
                       rows={6}
                       value={form.description}
                       onChange={(event) =>
@@ -4401,7 +4431,6 @@ export function SellerStudioPage() {
                     <span>中文完整描述</span>
                     <textarea
                       required
-                      minLength={30}
                       rows={6}
                       value={form.chineseDescription}
                       onChange={(event) =>
@@ -4416,7 +4445,6 @@ export function SellerStudioPage() {
                     <span>Полное описание</span>
                     <textarea
                       required
-                      minLength={30}
                       rows={6}
                       value={form.russianDescription}
                       onChange={(event) =>
@@ -4483,7 +4511,6 @@ export function SellerStudioPage() {
                   <label>
                     <span>English SEO title</span>
                     <input
-                      maxLength={70}
                       value={form.name}
                       readOnly
                       aria-describedby="seo-title-generated-note"
@@ -4492,7 +4519,6 @@ export function SellerStudioPage() {
                   <label>
                     <span>中文 SEO 标题</span>
                     <input
-                      maxLength={70}
                       value={form.chineseSeoTitle}
                       onChange={(event) =>
                         setForm({
@@ -4506,7 +4532,6 @@ export function SellerStudioPage() {
                   <label>
                     <span>Русский SEO-заголовок</span>
                     <input
-                      maxLength={70}
                       value={form.russianSeoTitle}
                       onChange={(event) =>
                         setForm({
@@ -4536,7 +4561,6 @@ export function SellerStudioPage() {
                   <label>
                     <span>中文 SEO 描述</span>
                     <textarea
-                      maxLength={170}
                       rows={3}
                       value={form.chineseSeoDescription}
                       onChange={(event) =>
@@ -4551,7 +4575,6 @@ export function SellerStudioPage() {
                   <label>
                     <span>Русское метаописание</span>
                     <textarea
-                      maxLength={170}
                       rows={3}
                       value={form.russianSeoDescription}
                       onChange={(event) =>
@@ -4621,246 +4644,293 @@ export function SellerStudioPage() {
                 </label>
               </div>
             </section>
-            <details className="seller-create-advanced">
-              <summary>
-                <SlidersHorizontal />
-                <span>
-                  <strong>Advanced options</strong>
+            <section className="seller-bulk-inventory">
+              <header>
+                <Layers3 />
+                <div>
+                  <strong>Delivery inventory</strong>
                   <small>
-                    Optional pricing, inventory, SEO, and searchable details
+                    Paste one account, code, or deliverable per row, or import a
+                    TXT/CSV file.
                   </small>
-                </span>
-                <ChevronDown />
-              </summary>
-              <div className="seller-create-advanced-body">
-                <section>
-                  <h3>Pricing and inventory</h3>
-                  <div className="form-grid three">
-                    <label>
-                      <span>Sale price</span>
-                      <input
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        value={form.salePrice}
-                        onChange={(event) =>
-                          setForm({ ...form, salePrice: event.target.value })
-                        }
-                      />
-                    </label>
-                    <label>
-                      <span>Wholesale price</span>
-                      <input
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        value={form.wholesalePrice}
-                        onChange={(event) =>
-                          setForm({
-                            ...form,
-                            wholesalePrice: event.target.value,
-                          })
-                        }
-                      />
-                    </label>
-                    <label>
-                      <span>Discount %</span>
-                      <input
-                        type="number"
-                        min={0}
-                        max={100}
-                        value={form.discountPercent}
-                        onChange={(event) =>
-                          setForm({
-                            ...form,
-                            discountPercent: Number(event.target.value),
-                          })
-                        }
-                      />
-                    </label>
-                    <label>
-                      <span>SKU</span>
-                      <input
-                        value={form.sku}
-                        onChange={(event) =>
-                          setForm({ ...form, sku: event.target.value })
-                        }
-                      />
-                    </label>
-                    <label>
-                      <span>Min / max order</span>
-                      <span className="seller-inline-inputs">
+                </div>
+                <b>{inventoryRows(form.inventoryLines).length} rows</b>
+              </header>
+              <textarea
+                rows={8}
+                value={form.inventoryLines}
+                onChange={(event) =>
+                  setForm({ ...form, inventoryLines: event.target.value })
+                }
+                placeholder={
+                  "account@email.com | password\ncode-or-deliverable-2\ncode-or-deliverable-3"
+                }
+              />
+              <div>
+                <label className="secondary-button">
+                  <FileUp /> Import TXT or CSV
+                  <input
+                    type="file"
+                    accept=".txt,.csv,text/plain,text/csv"
+                    onChange={(event) => {
+                      void importInventoryFile(event.target.files?.[0]);
+                      event.currentTarget.value = "";
+                    }}
+                  />
+                </label>
+                <small>
+                  Empty rows are ignored and duplicate rows are removed during
+                  file import.
+                </small>
+              </div>
+            </section>
+            {showLegacyAdvancedOptions() ? (
+              <details className="seller-create-advanced">
+                <summary>
+                  <SlidersHorizontal />
+                  <span>
+                    <strong>Advanced options</strong>
+                    <small>
+                      Optional pricing, inventory, SEO, and searchable details
+                    </small>
+                  </span>
+                  <ChevronDown />
+                </summary>
+                <div className="seller-create-advanced-body">
+                  <section>
+                    <h3>Pricing and inventory</h3>
+                    <div className="form-grid three">
+                      <label>
+                        <span>Sale price</span>
                         <input
                           type="number"
-                          min={1}
-                          value={form.minimumOrder}
+                          min="0"
+                          step="0.01"
+                          value={form.salePrice}
                           onChange={(event) =>
-                            setForm({
-                              ...form,
-                              minimumOrder: Number(event.target.value),
-                            })
-                          }
-                        />
-                        <input
-                          type="number"
-                          min={1}
-                          value={form.maximumOrder}
-                          onChange={(event) =>
-                            setForm({
-                              ...form,
-                              maximumOrder: Number(event.target.value),
-                            })
-                          }
-                        />
-                      </span>
-                    </label>
-                    <label>
-                      <span>Tags</span>
-                      <input
-                        value={form.tags}
-                        onChange={(event) =>
-                          setForm({ ...form, tags: event.target.value })
-                        }
-                        placeholder="popular, instant, premium"
-                      />
-                    </label>
-                    <label>
-                      <span>After-sales hours</span>
-                      <input
-                        type="number"
-                        min={12}
-                        max={8760}
-                        value={form.afterSalesServiceHours}
-                        onChange={(event) =>
-                          setForm({
-                            ...form,
-                            afterSalesServiceHours: Number(event.target.value),
-                          })
-                        }
-                      />
-                    </label>
-                  </div>
-                </section>
-                <section>
-                  <h3>Searchable specifications</h3>
-                  <div className="form-grid three">
-                    {(
-                      [
-                        ["brand", "Brand"],
-                        ["platform", "Platform"],
-                        ["region", "Region"],
-                        ["country", "Country"],
-                        ["server", "Server"],
-                        ["language", "Language"],
-                        ["productKind", "Product type"],
-                        ["condition", "Condition"],
-                        ["stockType", "Stock type"],
-                        ["duration", "Duration"],
-                        ["warranty", "Warranty"],
-                      ] as const
-                    ).map(([key, label]) => (
-                      <label key={key}>
-                        <span>{label}</span>
-                        <input
-                          value={form[key]}
-                          onChange={(event) =>
-                            setForm({ ...form, [key]: event.target.value })
+                            setForm({ ...form, salePrice: event.target.value })
                           }
                         />
                       </label>
-                    ))}
-                  </div>
-                </section>
-                <section>
-                  <h3>Fulfillment</h3>
-                  <div className="seller-option-toggles">
+                      <label>
+                        <span>Wholesale price</span>
+                        <input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          value={form.wholesalePrice}
+                          onChange={(event) =>
+                            setForm({
+                              ...form,
+                              wholesalePrice: event.target.value,
+                            })
+                          }
+                        />
+                      </label>
+                      <label>
+                        <span>Discount %</span>
+                        <input
+                          type="number"
+                          min={0}
+                          max={100}
+                          value={form.discountPercent}
+                          onChange={(event) =>
+                            setForm({
+                              ...form,
+                              discountPercent: Number(event.target.value),
+                            })
+                          }
+                        />
+                      </label>
+                      <label>
+                        <span>SKU</span>
+                        <input
+                          value={form.sku}
+                          onChange={(event) =>
+                            setForm({ ...form, sku: event.target.value })
+                          }
+                        />
+                      </label>
+                      <label>
+                        <span>Min / max order</span>
+                        <span className="seller-inline-inputs">
+                          <input
+                            type="number"
+                            min={1}
+                            value={form.minimumOrder}
+                            onChange={(event) =>
+                              setForm({
+                                ...form,
+                                minimumOrder: Number(event.target.value),
+                              })
+                            }
+                          />
+                          <input
+                            type="number"
+                            min={1}
+                            value={form.maximumOrder}
+                            onChange={(event) =>
+                              setForm({
+                                ...form,
+                                maximumOrder: Number(event.target.value),
+                              })
+                            }
+                          />
+                        </span>
+                      </label>
+                      <label>
+                        <span>Tags</span>
+                        <input
+                          value={form.tags}
+                          onChange={(event) =>
+                            setForm({ ...form, tags: event.target.value })
+                          }
+                          placeholder="popular, instant, premium"
+                        />
+                      </label>
+                      <label>
+                        <span>After-sales hours</span>
+                        <input
+                          type="number"
+                          min={12}
+                          max={8760}
+                          value={form.afterSalesServiceHours}
+                          onChange={(event) =>
+                            setForm({
+                              ...form,
+                              afterSalesServiceHours: Number(
+                                event.target.value,
+                              ),
+                            })
+                          }
+                        />
+                      </label>
+                    </div>
+                  </section>
+                  <section>
+                    <h3>Searchable specifications</h3>
+                    <div className="form-grid three">
+                      {(
+                        [
+                          ["brand", "Brand"],
+                          ["platform", "Platform"],
+                          ["region", "Region"],
+                          ["country", "Country"],
+                          ["server", "Server"],
+                          ["language", "Language"],
+                          ["productKind", "Product type"],
+                          ["condition", "Condition"],
+                          ["stockType", "Stock type"],
+                          ["duration", "Duration"],
+                          ["warranty", "Warranty"],
+                        ] as const
+                      ).map(([key, label]) => (
+                        <label key={key}>
+                          <span>{label}</span>
+                          <input
+                            value={form[key]}
+                            onChange={(event) =>
+                              setForm({ ...form, [key]: event.target.value })
+                            }
+                          />
+                        </label>
+                      ))}
+                    </div>
+                  </section>
+                  <section>
+                    <h3>Fulfillment</h3>
+                    <div className="seller-option-toggles">
+                      <label>
+                        <input
+                          type="checkbox"
+                          checked={form.instantDelivery}
+                          onChange={(event) =>
+                            setForm({
+                              ...form,
+                              instantDelivery: event.target.checked,
+                            })
+                          }
+                        />{" "}
+                        Instant delivery
+                      </label>
+                      <label>
+                        <input
+                          type="checkbox"
+                          checked={form.manualDelivery}
+                          onChange={(event) =>
+                            setForm({
+                              ...form,
+                              manualDelivery: event.target.checked,
+                            })
+                          }
+                        />{" "}
+                        Manual delivery
+                      </label>
+                      <label>
+                        <input
+                          type="checkbox"
+                          checked={form.digitalDownload}
+                          onChange={(event) =>
+                            setForm({
+                              ...form,
+                              digitalDownload: event.target.checked,
+                            })
+                          }
+                        />{" "}
+                        Digital download
+                      </label>
+                      <label>
+                        <input
+                          type="checkbox"
+                          checked={form.couponSupport}
+                          onChange={(event) =>
+                            setForm({
+                              ...form,
+                              couponSupport: event.target.checked,
+                            })
+                          }
+                        />{" "}
+                        Coupons supported
+                      </label>
+                    </div>
                     <label>
-                      <input
-                        type="checkbox"
-                        checked={form.instantDelivery}
+                      <span>Buyer delivery note</span>
+                      <textarea
+                        rows={3}
+                        value={form.deliveryNote}
+                        onChange={(event) =>
+                          setForm({ ...form, deliveryNote: event.target.value })
+                        }
+                      />
+                    </label>
+                    <label>
+                      <span>Refund policy</span>
+                      <textarea
+                        rows={3}
+                        value={form.refundPolicy}
+                        onChange={(event) =>
+                          setForm({ ...form, refundPolicy: event.target.value })
+                        }
+                      />
+                    </label>
+                    <label>
+                      <span>Digital inventory rows</span>
+                      <textarea
+                        rows={5}
+                        placeholder="One license, code, or deliverable per line. You can also add these later."
+                        value={form.inventoryLines}
                         onChange={(event) =>
                           setForm({
                             ...form,
-                            instantDelivery: event.target.checked,
+                            inventoryLines: event.target.value,
                           })
                         }
-                      />{" "}
-                      Instant delivery
+                      />
                     </label>
-                    <label>
-                      <input
-                        type="checkbox"
-                        checked={form.manualDelivery}
-                        onChange={(event) =>
-                          setForm({
-                            ...form,
-                            manualDelivery: event.target.checked,
-                          })
-                        }
-                      />{" "}
-                      Manual delivery
-                    </label>
-                    <label>
-                      <input
-                        type="checkbox"
-                        checked={form.digitalDownload}
-                        onChange={(event) =>
-                          setForm({
-                            ...form,
-                            digitalDownload: event.target.checked,
-                          })
-                        }
-                      />{" "}
-                      Digital download
-                    </label>
-                    <label>
-                      <input
-                        type="checkbox"
-                        checked={form.couponSupport}
-                        onChange={(event) =>
-                          setForm({
-                            ...form,
-                            couponSupport: event.target.checked,
-                          })
-                        }
-                      />{" "}
-                      Coupons supported
-                    </label>
-                  </div>
-                  <label>
-                    <span>Buyer delivery note</span>
-                    <textarea
-                      rows={3}
-                      value={form.deliveryNote}
-                      onChange={(event) =>
-                        setForm({ ...form, deliveryNote: event.target.value })
-                      }
-                    />
-                  </label>
-                  <label>
-                    <span>Refund policy</span>
-                    <textarea
-                      rows={3}
-                      value={form.refundPolicy}
-                      onChange={(event) =>
-                        setForm({ ...form, refundPolicy: event.target.value })
-                      }
-                    />
-                  </label>
-                  <label>
-                    <span>Digital inventory rows</span>
-                    <textarea
-                      rows={5}
-                      placeholder="One license, code, or deliverable per line. You can also add these later."
-                      value={form.inventoryLines}
-                      onChange={(event) =>
-                        setForm({ ...form, inventoryLines: event.target.value })
-                      }
-                    />
-                  </label>
-                </section>
-              </div>
-            </details>
+                  </section>
+                </div>
+              </details>
+            ) : null}
             <button
               className="primary-button seller-submit-product"
               disabled={busy}

@@ -190,11 +190,11 @@ const jsonObject = z.preprocess((value) => {
 }, z.record(z.unknown()));
 
 const localizedProductCopySchema = z.object({
-  title: z.string().trim().min(3).max(160),
-  shortDescription: z.string().trim().min(10).max(240),
-  description: z.string().trim().min(30).max(20000),
-  seoTitle: z.string().trim().min(3).max(70),
-  seoDescription: z.string().trim().min(30).max(170),
+  title: z.string().trim().min(1).max(5000),
+  shortDescription: z.string().trim().min(1).max(10000),
+  description: z.string().trim().min(1).max(500000),
+  seoTitle: z.string().trim().min(1).max(5000),
+  seoDescription: z.string().trim().min(1).max(10000),
 });
 
 const productTranslationsSchema = z.preprocess(
@@ -215,9 +215,9 @@ const productTranslationsSchema = z.preprocess(
 
 const productSchema = z.object({
   categoryId: z.string().uuid(),
-  name: z.string().trim().min(3).max(160),
-  shortDescription: z.string().trim().min(10).max(240),
-  description: z.string().trim().min(30).max(20000),
+  name: z.string().trim().min(1).max(5000),
+  shortDescription: z.string().trim().min(1).max(10000),
+  description: z.string().trim().min(1).max(500000),
   type: z.nativeEnum(ProductType).default(ProductType.DOWNLOAD),
   priceCents: optionalCents,
   priceUsdCents: optionalCents,
@@ -252,11 +252,11 @@ const productSchema = z.object({
   ),
   seoTitle: z.preprocess(
     emptyToUndefined,
-    z.string().trim().max(70).optional(),
+    z.string().trim().max(5000).optional(),
   ),
   seoDescription: z.preprocess(
     emptyToUndefined,
-    z.string().trim().max(170).optional(),
+    z.string().trim().max(10000).optional(),
   ),
   galleryUrls: stringList.default([]),
   videoUrl: z.preprocess(emptyToNull, z.string().url().nullable().optional()),

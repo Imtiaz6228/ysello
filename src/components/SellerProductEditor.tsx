@@ -232,15 +232,15 @@ export function SellerProductEditor({
         "The marketplace category could not be connected. Refresh the seller center and try again.",
       );
     if (
-      form.name.trim().length < 3 ||
-      form.shortDescription.trim().length < 10 ||
-      form.description.trim().length < 30 ||
-      form.chineseTitle.trim().length < 3 ||
-      form.chineseShortDescription.trim().length < 10 ||
-      form.chineseDescription.trim().length < 30 ||
-      form.russianTitle.trim().length < 3 ||
-      form.russianShortDescription.trim().length < 10 ||
-      form.russianDescription.trim().length < 30
+      !form.name.trim() ||
+      !form.shortDescription.trim() ||
+      !form.description.trim() ||
+      !form.chineseTitle.trim() ||
+      !form.chineseShortDescription.trim() ||
+      !form.chineseDescription.trim() ||
+      !form.russianTitle.trim() ||
+      !form.russianShortDescription.trim() ||
+      !form.russianDescription.trim()
     )
       return setError(
         "Complete the English, Chinese, and Russian titles and descriptions.",
@@ -741,7 +741,6 @@ export function SellerProductEditor({
                   <label>
                     <span>English SEO title</span>
                     <input
-                      maxLength={70}
                       value={form.seoTitle}
                       onChange={(event) =>
                         setForm({ ...form, seoTitle: event.target.value })
@@ -751,7 +750,6 @@ export function SellerProductEditor({
                   <label>
                     <span>中文 SEO 标题</span>
                     <input
-                      maxLength={70}
                       value={form.chineseSeoTitle}
                       onChange={(event) =>
                         setForm({
@@ -764,7 +762,6 @@ export function SellerProductEditor({
                   <label>
                     <span>Русский SEO-заголовок</span>
                     <input
-                      maxLength={70}
                       value={form.russianSeoTitle}
                       onChange={(event) =>
                         setForm({
@@ -784,7 +781,6 @@ export function SellerProductEditor({
                   <label>
                     <span>English meta description</span>
                     <textarea
-                      maxLength={170}
                       rows={3}
                       value={form.seoDescription}
                       onChange={(event) =>
@@ -798,7 +794,6 @@ export function SellerProductEditor({
                   <label>
                     <span>中文 SEO 描述</span>
                     <textarea
-                      maxLength={170}
                       rows={3}
                       value={form.chineseSeoDescription}
                       onChange={(event) =>
@@ -812,7 +807,6 @@ export function SellerProductEditor({
                   <label>
                     <span>Русское метаописание</span>
                     <textarea
-                      maxLength={170}
                       rows={3}
                       value={form.russianSeoDescription}
                       onChange={(event) =>
