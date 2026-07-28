@@ -96,6 +96,13 @@ FROZEN_HOLD_HOURS=72
 
 `COOKIE_DOMAIN` must remain blank. Keep `APP_URL=https://ysello.com`, `API_URL=https://api.ysello.com`, and `CORS_ORIGIN=https://ysello.com,https://www.ysello.com`. These values are required for browser authentication after the custom-domain move.
 
+`API_URL` is the browser-reachable HTTPS origin of this API. Do not set it to a
+PostgreSQL/TCP proxy URL, a `*.railway.internal` hostname, or a URL copied from
+`DATABASE_URL`. If an invalid private or TCP value reaches the container, the
+production environment loader now replaces it with Railway's
+`RAILWAY_PUBLIC_DOMAIN`; when no Railway public domain is available, it safely falls back to
+`https://api.ysello.com`.
+
 Railway injects its own `PORT`; you do not need to create that variable. Before every release, `prisma migrate deploy` applies committed migrations to PostgreSQL. A failed migration stops the release before the new API starts.
 
 The Railway pre-deploy step also checks for the known failed

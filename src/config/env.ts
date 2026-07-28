@@ -12,13 +12,53 @@ export const TRUSTED_APP_ORIGINS = [
 
 const emptyToUndefined = (value: unknown) => (value === "" ? undefined : value);
 
+function railwayPublicOrigin() {
+  const raw = process.env.RAILWAY_PUBLIC_DOMAIN?.trim();
+  if (!raw) return undefined;
+
+  const candidate = /^[a-z][a-z\d+.-]*:\/\//i.test(raw)
+    ? raw
+    : `https://${raw}`;
+
+  try {
+    const url = new URL(candidate);
+    if (!["http:", "https:"].includes(url.protocol)) return undefined;
+    if (
+      url.username ||
+      url.password ||
+      url.pathname !== "/" ||
+      url.search ||
+      url.hash
+    ) {
+      return undefined;
+    }
+
+    url.protocol = "https:";
+    return url.origin;
+  } catch {
+    return undefined;
+  }
+}
+
+function productionPublicFallback(canonicalOrigin: string) {
+  return railwayPublicOrigin() ?? canonicalOrigin;
+}
+
 export function normalizeDeploymentPublicUrl(
   value: unknown,
   canonicalOrigin: string,
 ) {
-  if (typeof value !== "string") return value;
+  if (typeof value !== "string") {
+    return process.env.NODE_ENV === "production"
+      ? productionPublicFallback(canonicalOrigin)
+      : value;
+  }
+
   const raw = value.trim();
-  if (!raw || process.env.NODE_ENV !== "production") return raw;
+  if (process.env.NODE_ENV !== "production") return raw;
+
+  const fallback = productionPublicFallback(canonicalOrigin);
+  if (!raw) return fallback;
 
   const candidate = /^[a-z][a-z\d+.-]*:\/\//i.test(raw)
     ? raw
@@ -33,13 +73,16 @@ export function normalizeDeploymentPublicUrl(
       url.hostname.endsWith(".internal") ||
       url.hostname.endsWith(".local");
 
-    if (isPrivateHost) return canonicalOrigin;
+    if (!["http:", "https:"].includes(url.protocol) || isPrivateHost) {
+      return fallback;
+    }
+
     if (url.protocol === "http:") url.protocol = "https:";
     return url.pathname === "/" && !url.search && !url.hash
       ? url.origin
       : url.toString().replace(/\/$/, "");
   } catch {
-    return raw;
+    return fallback;
   }
 }
 
