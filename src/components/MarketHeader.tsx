@@ -63,6 +63,7 @@ function MegaMenu({
   category: MarketplaceTaxonomyItem;
   onClose: () => void;
 }) {
+  const { t } = useLocale();
   return (
     <section
       id="market-category-menu"
@@ -74,7 +75,7 @@ function MegaMenu({
           <span className={`g2-mega-icon tone-${category.accent}`}>
             <DepartmentIcon category={category} />
           </span>
-          <p>Explore department</p>
+          <p>{t("exploreDepartment")}</p>
           <h2>{category.name}</h2>
           <span>{category.description}</span>
           <Link to={`/category/${category.slug}`} onClick={onClose}>
@@ -122,7 +123,7 @@ function MegaMenu({
 export function MarketHeader() {
   const { user } = useAuth();
   const { count } = useCart();
-  const { t } = useLocale();
+  const { formatMoney, t } = useLocale();
   const navigate = useNavigate();
   const location = useLocation();
   const [query, setQuery] = useState("");
@@ -206,10 +207,10 @@ export function MarketHeader() {
         <div className="g2-campaign-banner">
           <p>
             <b>Ysello</b>
-            <strong>Editor’s picks</strong>
-            <span>Fresh digital tools, assets and services</span>
+            <strong>{t("campaignLabel")}</strong>
+            <span>{t("campaignText")}</span>
           </p>
-          <Link to="/catalog?sort=popular">Explore bestsellers</Link>
+          <Link to="/catalog?sort=popular">{t("campaignCta")}</Link>
           <button
             type="button"
             aria-label="Close promotion"
@@ -242,7 +243,7 @@ export function MarketHeader() {
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               aria-label="Search digital tools, assets and services"
-              placeholder="What are you looking for?"
+              placeholder={t("whatLooking")}
             />
             <label>
               <span className="sr-only">Search category</span>
@@ -251,7 +252,7 @@ export function MarketHeader() {
                 onChange={(event) => setSelectedCategory(event.target.value)}
                 aria-label="Search category"
               >
-                <option value="all">All categories</option>
+                <option value="all">{t("allCategories")}</option>
                 {marketplaceTaxonomy.map((category) => (
                   <option key={category.slug} value={category.slug}>
                     {category.name}
@@ -272,8 +273,12 @@ export function MarketHeader() {
             <Link className="market-sign-in" to={accountPath}>
               <UserRound aria-hidden="true" />
               <span>
-                <small>{user ? "Welcome back" : "Sign in"}</small>
-                <strong>{user ? "My account" : "Register"}</strong>
+                <small>
+                  {user
+                    ? `${t("availableBalance")}: ${formatMoney(user.balanceCents)}`
+                    : t("signIn")}
+                </small>
+                <strong>{user ? t("account") : t("register")}</strong>
               </span>
             </Link>
             <Link
@@ -322,11 +327,10 @@ export function MarketHeader() {
             >
               <DepartmentIcon category={category} />
               <span>{departmentLabels[category.slug] ?? category.name}</span>
-              {category.slug === "software" ? <b>HOT</b> : null}
             </button>
           ))}
           <Link className="g2-department-cta" to="/seller/apply">
-            <Store aria-hidden="true" /> Start selling
+            <Store aria-hidden="true" /> {t("startSelling")}
           </Link>
         </nav>
 
@@ -373,7 +377,10 @@ export function MarketHeader() {
               </Link>
               <div className="g2-drawer-actions">
                 <LocaleSwitcher compact />
-                <Link to={accountPath} aria-label={user ? "Account" : "Sign in"}>
+                <Link
+                  to={accountPath}
+                  aria-label={user ? "Account" : "Sign in"}
+                >
                   <UserRound aria-hidden="true" />
                 </Link>
                 <Link
@@ -394,7 +401,7 @@ export function MarketHeader() {
                 <strong>
                   <span>{t("categories")}</span>
                 </strong>
-                <Link to="/catalog">View all</Link>
+                <Link to="/catalog">{t("viewAll")}</Link>
               </div>
               {marketplaceTaxonomy.map((category) => {
                 const expanded = mobileCategory === category.slug;
@@ -404,7 +411,7 @@ export function MarketHeader() {
                       type="button"
                       aria-expanded={expanded}
                       onClick={() => {
-                        setMobileCategory(expanded ? null : category.slug)
+                        setMobileCategory(expanded ? null : category.slug);
                         setMobileGroup(null);
                       }}
                     >
@@ -418,7 +425,7 @@ export function MarketHeader() {
                           className="g2-mobile-view-all"
                           to={`/category/${category.slug}`}
                         >
-                          View all
+                          {t("viewAll")}
                         </Link>
                         {category.subcategories.map((group) => {
                           const groupExpanded = mobileGroup === group.slug;
@@ -441,9 +448,7 @@ export function MarketHeader() {
                                   </button>
                                   {groupExpanded ? (
                                     <div className="g2-mobile-leaves">
-                                      <Link
-                                        to={`/category/${group.slug}`}
-                                      >
+                                      <Link to={`/category/${group.slug}`}>
                                         All {group.name}
                                       </Link>
                                       {group.children.map((item) => (
@@ -474,9 +479,9 @@ export function MarketHeader() {
             </section>
 
             <div className="g2-mobile-secondary-links">
-              <Link to="/seller/apply">Start selling</Link>
-              <Link to="/buyer-protection">Buyer protection</Link>
-              <Link to="/support">Support center</Link>
+              <Link to="/seller/apply">{t("startSelling")}</Link>
+              <Link to="/buyer-protection">{t("protection")}</Link>
+              <Link to="/support">{t("support")}</Link>
             </div>
             <div className="market-mobile-locale">
               <LocaleSwitcher />
@@ -489,6 +494,7 @@ export function MarketHeader() {
 }
 
 export function MarketFooter() {
+  const { t } = useLocale();
   return (
     <footer className="market-site-footer g2-site-footer">
       <div className="g2-payment-row">
@@ -505,7 +511,7 @@ export function MarketFooter() {
         <div>
           <strong>About</strong>
           <Link to="/about">Company</Link>
-          <Link to="/catalog">Marketplace</Link>
+          <Link to="/catalog">{t("products")}</Link>
           <Link to="/buyer-protection">Marketplace security</Link>
           <Link to="/contact">Contact</Link>
         </div>
@@ -513,14 +519,14 @@ export function MarketFooter() {
           <strong>For buyers</strong>
           <Link to="/support">Buyer support</Link>
           <Link to="/catalog">How to buy</Link>
-          <Link to="/buyer-protection">Buyer protection</Link>
-          <Link to="/blog">Marketplace guides</Link>
+          <Link to="/buyer-protection">{t("protection")}</Link>
+          <Link to="/blog">{t("blog")}</Link>
         </div>
         <div>
           <strong>For sellers</strong>
           <Link to="/support">Seller support</Link>
           <Link to="/seller/apply">How to sell</Link>
-          <Link to="/seller">Seller dashboard</Link>
+          <Link to="/seller">{t("dashboard")}</Link>
           <Link to="/seller-policy">Seller policy</Link>
         </div>
         <div>
@@ -532,9 +538,9 @@ export function MarketFooter() {
         </div>
         <div>
           <strong>Discover</strong>
-          <Link to="/blog">News and guides</Link>
-          <Link to="/catalog?sort=newest">New releases</Link>
-          <Link to="/catalog?sort=popular">Bestsellers</Link>
+          <Link to="/blog">{t("blog")}</Link>
+          <Link to="/catalog?sort=newest">{t("releases")}</Link>
+          <Link to="/catalog?sort=popular">{t("popularNow")}</Link>
           <Link to="/#categories">Category map</Link>
         </div>
         <div className="g2-footer-brand">
@@ -553,7 +559,7 @@ export function MarketFooter() {
             <BadgeCheck aria-hidden="true" /> Verified listings
           </span>
           <span>
-            <ShieldCheck aria-hidden="true" /> Protected checkout
+            <ShieldCheck aria-hidden="true" /> {t("protectedCheckout")}
           </span>
         </div>
       </div>

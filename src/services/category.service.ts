@@ -760,13 +760,7 @@ function taxonomyRows(
     return [
       row,
       ...(node.children
-        ? taxonomyRows(
-            node.children,
-            node.slug,
-            icon,
-            baseOrder,
-            sequence,
-          )
+        ? taxonomyRows(node.children, node.slug, icon, baseOrder, sequence)
         : []),
     ];
   });

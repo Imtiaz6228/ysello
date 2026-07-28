@@ -26,6 +26,7 @@ import {
   FileUp,
   FolderKanban,
   Gift,
+  Globe2,
   Grid3X3,
   Home,
   ImageIcon,
@@ -347,6 +348,11 @@ const initialForm = {
   chineseDescription: "",
   chineseSeoTitle: "",
   chineseSeoDescription: "",
+  russianTitle: "",
+  russianShortDescription: "",
+  russianDescription: "",
+  russianSeoTitle: "",
+  russianSeoDescription: "",
   type: "DOWNLOAD",
   priceUsd: "",
   priceCny: "",
@@ -880,16 +886,29 @@ export function SellerStudioPage() {
     if (
       form.name.trim().length < 3 ||
       form.shortDescription.trim().length < 10 ||
-      form.description.trim().length < 30
+      form.description.trim().length < 30 ||
+      form.chineseTitle.trim().length < 3 ||
+      form.chineseShortDescription.trim().length < 10 ||
+      form.chineseDescription.trim().length < 30 ||
+      form.russianTitle.trim().length < 3 ||
+      form.russianShortDescription.trim().length < 10 ||
+      form.russianDescription.trim().length < 30
     ) {
       showMessage(
-        "Complete the title, short description, and full description before submitting.",
+        "Complete the English, Chinese, and Russian titles and descriptions before submitting.",
         "error",
       );
       return;
     }
     if (cents(form.priceUsd) < 50) {
       showMessage("Set a USD price of at least $0.50.", "error");
+      return;
+    }
+    if (cents(form.priceCny) < 1 || cents(form.priceRub) < 1) {
+      showMessage(
+        "Set the Chinese yuan and Russian ruble prices before submitting.",
+        "error",
+      );
       return;
     }
 
@@ -902,10 +921,8 @@ export function SellerStudioPage() {
     data.append("description", form.description.trim());
     data.append("type", form.type);
     data.append("priceUsdCents", String(cents(form.priceUsd)));
-    if (form.priceCny)
-      data.append("priceCnyCents", String(cents(form.priceCny)));
-    if (form.priceRub)
-      data.append("priceRubCents", String(cents(form.priceRub)));
+    data.append("priceCnyCents", String(cents(form.priceCny)));
+    data.append("priceRubCents", String(cents(form.priceRub)));
     data.append("currency", "USD");
     data.append("deliveryNote", form.deliveryNote.trim());
     data.append("afterSalesServiceHours", String(form.afterSalesServiceHours));
@@ -956,10 +973,29 @@ export function SellerStudioPage() {
       .filter(Boolean)
       .join(" ")
       .slice(0, 70);
-    const seoDescription = `${form.shortDescription.trim()} Compare delivery, seller details and buyer protection on Ysello.`.slice(
-      0,
-      170,
-    );
+    const seoDescription =
+      `${form.shortDescription.trim()} Compare delivery, seller details and buyer protection on Ysello.`.slice(
+        0,
+        170,
+      );
+    const chineseSeoTitle =
+      form.chineseSeoTitle.trim() ||
+      `在 Ysello 购买 ${form.chineseTitle.trim()}`.slice(0, 70);
+    const chineseSeoDescription =
+      form.chineseSeoDescription.trim() ||
+      `${form.chineseShortDescription.trim()} 在 Ysello 比较交付方式、卖家信息与买家保障。`.slice(
+        0,
+        170,
+      );
+    const russianSeoTitle =
+      form.russianSeoTitle.trim() ||
+      `Купить ${form.russianTitle.trim()} на Ysello`.slice(0, 70);
+    const russianSeoDescription =
+      form.russianSeoDescription.trim() ||
+      `${form.russianShortDescription.trim()} Сравните условия доставки, продавца и защиту покупателя на Ysello.`.slice(
+        0,
+        170,
+      );
     data.append(
       "translations",
       JSON.stringify({
@@ -974,8 +1010,15 @@ export function SellerStudioPage() {
           title: form.chineseTitle.trim(),
           shortDescription: form.chineseShortDescription.trim(),
           description: form.chineseDescription.trim(),
-          seoTitle: form.chineseSeoTitle.trim(),
-          seoDescription: form.chineseSeoDescription.trim(),
+          seoTitle: chineseSeoTitle,
+          seoDescription: chineseSeoDescription,
+        },
+        ru: {
+          title: form.russianTitle.trim(),
+          shortDescription: form.russianShortDescription.trim(),
+          description: form.russianDescription.trim(),
+          seoTitle: russianSeoTitle,
+          seoDescription: russianSeoDescription,
         },
       }),
     );
@@ -4154,30 +4197,311 @@ export function SellerStudioPage() {
                 </div>
               </section>
             ) : null}
-            <section className="seller-language-panel">
+            <section className="seller-multilingual-sequence seller-create-language-sequence">
               <header>
-                <span>EN</span>
+                <Globe2 />
                 <div>
-                  <strong>English product content</strong>
+                  <strong>Multilingual listing and SEO</strong>
                   <small>
-                    Shown to English-language buyers and used as the default
-                    fallback.
+                    Enter each field in English, Chinese, and Russian together.
                   </small>
                 </div>
               </header>
-              <div className="form-grid two">
-                <label>
-                  <span>Product title</span>
-                  <input
-                    required
-                    minLength={3}
-                    value={form.name}
-                    onChange={(event) =>
-                      setForm({ ...form, name: event.target.value })
-                    }
-                    placeholder="Clear, searchable product title"
-                  />
-                </label>
+              <section>
+                <h3>
+                  <b>1</b> Product titles
+                </h3>
+                <div className="form-grid three">
+                  <label>
+                    <span>English title</span>
+                    <input
+                      required
+                      minLength={3}
+                      value={form.name}
+                      onChange={(event) =>
+                        setForm({ ...form, name: event.target.value })
+                      }
+                      placeholder="Clear, searchable product title"
+                    />
+                  </label>
+                  <label>
+                    <span>中文标题</span>
+                    <input
+                      required
+                      minLength={3}
+                      value={form.chineseTitle}
+                      onChange={(event) =>
+                        setForm({ ...form, chineseTitle: event.target.value })
+                      }
+                      placeholder="中文产品标题"
+                    />
+                  </label>
+                  <label>
+                    <span>Русское название</span>
+                    <input
+                      required
+                      minLength={3}
+                      value={form.russianTitle}
+                      onChange={(event) =>
+                        setForm({ ...form, russianTitle: event.target.value })
+                      }
+                      placeholder="Название товара"
+                    />
+                  </label>
+                </div>
+              </section>
+              <section>
+                <h3>
+                  <b>2</b> Short descriptions
+                </h3>
+                <div className="form-grid three">
+                  <label>
+                    <span>English short description</span>
+                    <textarea
+                      required
+                      minLength={10}
+                      maxLength={240}
+                      rows={3}
+                      value={form.shortDescription}
+                      onChange={(event) =>
+                        setForm({
+                          ...form,
+                          shortDescription: event.target.value,
+                        })
+                      }
+                    />
+                  </label>
+                  <label>
+                    <span>中文简短描述</span>
+                    <textarea
+                      required
+                      minLength={10}
+                      maxLength={240}
+                      rows={3}
+                      value={form.chineseShortDescription}
+                      onChange={(event) =>
+                        setForm({
+                          ...form,
+                          chineseShortDescription: event.target.value,
+                        })
+                      }
+                    />
+                  </label>
+                  <label>
+                    <span>Краткое описание</span>
+                    <textarea
+                      required
+                      minLength={10}
+                      maxLength={240}
+                      rows={3}
+                      value={form.russianShortDescription}
+                      onChange={(event) =>
+                        setForm({
+                          ...form,
+                          russianShortDescription: event.target.value,
+                        })
+                      }
+                    />
+                  </label>
+                </div>
+              </section>
+              <section>
+                <h3>
+                  <b>3</b> Full descriptions
+                </h3>
+                <div className="form-grid three">
+                  <label>
+                    <span>English full description</span>
+                    <textarea
+                      required
+                      minLength={30}
+                      rows={6}
+                      value={form.description}
+                      onChange={(event) =>
+                        setForm({ ...form, description: event.target.value })
+                      }
+                    />
+                  </label>
+                  <label>
+                    <span>中文完整描述</span>
+                    <textarea
+                      required
+                      minLength={30}
+                      rows={6}
+                      value={form.chineseDescription}
+                      onChange={(event) =>
+                        setForm({
+                          ...form,
+                          chineseDescription: event.target.value,
+                        })
+                      }
+                    />
+                  </label>
+                  <label>
+                    <span>Полное описание</span>
+                    <textarea
+                      required
+                      minLength={30}
+                      rows={6}
+                      value={form.russianDescription}
+                      onChange={(event) =>
+                        setForm({
+                          ...form,
+                          russianDescription: event.target.value,
+                        })
+                      }
+                    />
+                  </label>
+                </div>
+              </section>
+              <section>
+                <h3>
+                  <b>4</b> Prices
+                </h3>
+                <div className="form-grid three">
+                  <label>
+                    <span>USD price ($)</span>
+                    <input
+                      required
+                      type="number"
+                      min="0.50"
+                      step="0.01"
+                      value={form.priceUsd}
+                      onChange={(event) =>
+                        setForm({ ...form, priceUsd: event.target.value })
+                      }
+                    />
+                  </label>
+                  <label>
+                    <span>Chinese yuan price (¥)</span>
+                    <input
+                      required
+                      type="number"
+                      min="0.01"
+                      step="0.01"
+                      value={form.priceCny}
+                      onChange={(event) =>
+                        setForm({ ...form, priceCny: event.target.value })
+                      }
+                    />
+                  </label>
+                  <label>
+                    <span>Russian ruble price (₽)</span>
+                    <input
+                      required
+                      type="number"
+                      min="0.01"
+                      step="0.01"
+                      value={form.priceRub}
+                      onChange={(event) =>
+                        setForm({ ...form, priceRub: event.target.value })
+                      }
+                    />
+                  </label>
+                </div>
+              </section>
+              <section>
+                <h3>
+                  <b>5</b> SEO titles
+                </h3>
+                <div className="form-grid three">
+                  <label>
+                    <span>English SEO title</span>
+                    <input
+                      maxLength={70}
+                      value={form.name}
+                      readOnly
+                      aria-describedby="seo-title-generated-note"
+                    />
+                  </label>
+                  <label>
+                    <span>中文 SEO 标题</span>
+                    <input
+                      maxLength={70}
+                      value={form.chineseSeoTitle}
+                      onChange={(event) =>
+                        setForm({
+                          ...form,
+                          chineseSeoTitle: event.target.value,
+                        })
+                      }
+                      placeholder="留空则自动生成"
+                    />
+                  </label>
+                  <label>
+                    <span>Русский SEO-заголовок</span>
+                    <input
+                      maxLength={70}
+                      value={form.russianSeoTitle}
+                      onChange={(event) =>
+                        setForm({
+                          ...form,
+                          russianSeoTitle: event.target.value,
+                        })
+                      }
+                      placeholder="Оставьте пустым для автогенерации"
+                    />
+                  </label>
+                </div>
+                <small id="seo-title-generated-note">
+                  English SEO metadata is generated from the English title and
+                  short description. Empty Chinese or Russian SEO fields are
+                  generated automatically.
+                </small>
+              </section>
+              <section>
+                <h3>
+                  <b>6</b> SEO meta descriptions
+                </h3>
+                <div className="form-grid three">
+                  <label>
+                    <span>English meta description</span>
+                    <textarea rows={3} value={form.shortDescription} readOnly />
+                  </label>
+                  <label>
+                    <span>中文 SEO 描述</span>
+                    <textarea
+                      maxLength={170}
+                      rows={3}
+                      value={form.chineseSeoDescription}
+                      onChange={(event) =>
+                        setForm({
+                          ...form,
+                          chineseSeoDescription: event.target.value,
+                        })
+                      }
+                      placeholder="留空则自动生成"
+                    />
+                  </label>
+                  <label>
+                    <span>Русское метаописание</span>
+                    <textarea
+                      maxLength={170}
+                      rows={3}
+                      value={form.russianSeoDescription}
+                      onChange={(event) =>
+                        setForm({
+                          ...form,
+                          russianSeoDescription: event.target.value,
+                        })
+                      }
+                      placeholder="Оставьте пустым для автогенерации"
+                    />
+                  </label>
+                </div>
+              </section>
+            </section>
+            <section className="seller-create-essentials">
+              <header>
+                <Tag />
+                <div>
+                  <strong>Product setup and delivery</strong>
+                  <small>
+                    Configure the listing type, stock, and fulfillment.
+                  </small>
+                </div>
+              </header>
+              <div className="form-grid three">
                 <label>
                   <span>Product type</span>
                   <select
@@ -4189,103 +4513,6 @@ export function SellerStudioPage() {
                     <option value="DOWNLOAD">Digital product</option>
                     <option value="SERVICE">Service</option>
                   </select>
-                </label>
-              </div>
-              <label>
-                <span>Short description</span>
-                <input
-                  required
-                  minLength={10}
-                  maxLength={240}
-                  value={form.shortDescription}
-                  onChange={(event) =>
-                    setForm({ ...form, shortDescription: event.target.value })
-                  }
-                  placeholder="A clear one-line summary buyers see in the catalog"
-                />
-              </label>
-              <label>
-                <span>Full description</span>
-                <textarea
-                  required
-                  minLength={30}
-                  rows={6}
-                  value={form.description}
-                  onChange={(event) =>
-                    setForm({ ...form, description: event.target.value })
-                  }
-                />
-              </label>
-            </section>
-            <section className="seller-language-panel">
-              <header>
-                <span>中文</span>
-                <div>
-                  <strong>Chinese product content</strong>
-                  <small>
-                    Displayed automatically when the buyer selects Simplified
-                    Chinese.
-                  </small>
-                </div>
-              </header>
-              <label>
-                <span>产品标题</span>
-                <input
-                  value={form.chineseTitle}
-                  onChange={(event) =>
-                    setForm({ ...form, chineseTitle: event.target.value })
-                  }
-                  placeholder="中文产品标题"
-                />
-              </label>
-              <label>
-                <span>简短描述</span>
-                <input
-                  maxLength={240}
-                  value={form.chineseShortDescription}
-                  onChange={(event) =>
-                    setForm({
-                      ...form,
-                      chineseShortDescription: event.target.value,
-                    })
-                  }
-                />
-              </label>
-              <label>
-                <span>完整描述</span>
-                <textarea
-                  rows={5}
-                  value={form.chineseDescription}
-                  onChange={(event) =>
-                    setForm({ ...form, chineseDescription: event.target.value })
-                  }
-                />
-              </label>
-            </section>
-            <section className="seller-create-essentials">
-              <header>
-                <Tag />
-                <div>
-                  <strong>Price and delivery</strong>
-                  <small>
-                    Only the essentials are required. You can edit every other
-                    detail later.
-                  </small>
-                </div>
-              </header>
-              <div className="form-grid three">
-                <label>
-                  <span>Price (USD)</span>
-                  <input
-                    required
-                    type="number"
-                    min="0.50"
-                    step="0.01"
-                    value={form.priceUsd}
-                    onChange={(event) =>
-                      setForm({ ...form, priceUsd: event.target.value })
-                    }
-                  />
                 </label>
                 <label>
                   <span>Stock quantity</span>
@@ -4358,30 +4585,6 @@ export function SellerStudioPage() {
                             ...form,
                             wholesalePrice: event.target.value,
                           })
-                        }
-                      />
-                    </label>
-                    <label>
-                      <span>Price (CNY)</span>
-                      <input
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        value={form.priceCny}
-                        onChange={(event) =>
-                          setForm({ ...form, priceCny: event.target.value })
-                        }
-                      />
-                    </label>
-                    <label>
-                      <span>Price (RUB)</span>
-                      <input
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        value={form.priceRub}
-                        onChange={(event) =>
-                          setForm({ ...form, priceRub: event.target.value })
                         }
                       />
                     </label>
@@ -4491,38 +4694,6 @@ export function SellerStudioPage() {
                         />
                       </label>
                     ))}
-                  </div>
-                </section>
-                <section>
-                  <h3>Chinese SEO</h3>
-                  <div className="form-grid two">
-                    <label>
-                      <span>SEO 标题</span>
-                      <input
-                        maxLength={70}
-                        value={form.chineseSeoTitle}
-                        onChange={(event) =>
-                          setForm({
-                            ...form,
-                            chineseSeoTitle: event.target.value,
-                          })
-                        }
-                      />
-                    </label>
-                    <label>
-                      <span>SEO 描述</span>
-                      <textarea
-                        maxLength={170}
-                        rows={2}
-                        value={form.chineseSeoDescription}
-                        onChange={(event) =>
-                          setForm({
-                            ...form,
-                            chineseSeoDescription: event.target.value,
-                          })
-                        }
-                      />
-                    </label>
                   </div>
                 </section>
                 <section>

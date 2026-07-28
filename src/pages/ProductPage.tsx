@@ -32,7 +32,7 @@ import type { CatalogProduct } from "../data/catalog";
 import { NotFoundPage } from "./NotFoundPage";
 
 export function ProductPage() {
-  const { formatMoney, currency } = useLocale();
+  const { formatProductMoney, currency, t } = useLocale();
   const { slug } = useParams();
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -56,46 +56,50 @@ export function ProductPage() {
         .slice(0, 4),
     [marketplaceProducts, product],
   );
-  const schema = useMemo(
-    () =>
-      product
+  const schema = useMemo(() => {
+    if (!product) return undefined;
+    const localizedOffer =
+      currency === "CNY" && (product.priceCnyCents ?? 0) > 0
+        ? { cents: product.priceCnyCents!, code: "CNY" }
+        : currency === "RUB" && (product.priceRubCents ?? 0) > 0
+          ? { cents: product.priceRubCents!, code: "RUB" }
+          : { cents: product.priceCents, code: "USD" };
+
+    return {
+      "@context": "https://schema.org",
+      "@type": "Product",
+      name: product.title,
+      description: product.description,
+      url: `https://ysello.com/product/${product.slug}`,
+      sku: product.sku || product.id,
+      category: product.category,
+      ...(product.imageUrl ? { image: [product.imageUrl] } : {}),
+      offers: {
+        "@type": "Offer",
+        url: `https://ysello.com/product/${product.slug}`,
+        price: (localizedOffer.cents / 100).toFixed(2),
+        priceCurrency: localizedOffer.code,
+        availability:
+          product.type === "SERVICE" || (product.stockCount ?? 0) > 0
+            ? "https://schema.org/InStock"
+            : "https://schema.org/OutOfStock",
+        seller: {
+          "@type": "Organization",
+          name: product.seller,
+          url: `https://ysello.com/stores/${product.sellerSlug}`,
+        },
+      },
+      ...(product.reviews > 0 && product.rating > 0
         ? {
-            "@context": "https://schema.org",
-            "@type": "Product",
-            name: product.title,
-            description: product.description,
-            url: `https://ysello.com/product/${product.slug}`,
-            sku: product.sku || product.id,
-            category: product.category,
-            ...(product.imageUrl ? { image: [product.imageUrl] } : {}),
-            offers: {
-              "@type": "Offer",
-              url: `https://ysello.com/product/${product.slug}`,
-              price: (product.priceCents / 100).toFixed(2),
-              priceCurrency: "USD",
-              availability:
-                product.type === "SERVICE" || (product.stockCount ?? 0) > 0
-                  ? "https://schema.org/InStock"
-                  : "https://schema.org/OutOfStock",
-              seller: {
-                "@type": "Organization",
-                name: product.seller,
-                url: `https://ysello.com/stores/${product.sellerSlug}`,
-              },
+            aggregateRating: {
+              "@type": "AggregateRating",
+              ratingValue: product.rating,
+              reviewCount: product.reviews,
             },
-            ...(product.reviews > 0 && product.rating > 0
-              ? {
-                  aggregateRating: {
-                    "@type": "AggregateRating",
-                    ratingValue: product.rating,
-                    reviewCount: product.reviews,
-                  },
-                }
-              : {}),
           }
-        : undefined,
-    [product],
-  );
+        : {}),
+    };
+  }, [currency, product]);
 
   if (loading)
     return (
@@ -153,8 +157,8 @@ export function ProductPage() {
   return (
     <main className="commerce-page">
       <Seo
-        title={`Buy ${product.title} online`}
-        description={`${product.description} Compare the offer, delivery details, seller information and buyer protection before checkout.`}
+        title={`${t("buyOnline")} — ${product.title}`}
+        description={`${product.description} ${t("productSeoSuffix")}`}
         canonicalPath={`/product/${product.slug}`}
         image={product.imageUrl ?? undefined}
         imageAlt={product.title}
@@ -195,9 +199,7 @@ export function ProductPage() {
       <div className="breadcrumbs">
         <Link to="/">Home</Link>
         <span aria-hidden="true">/</span>
-        <Link to={`/category/${product.categorySlug}`}>
-          {product.category}
-        </Link>
+        <Link to={`/category/${product.categorySlug}`}>{product.category}</Link>
         <span aria-hidden="true">/</span>
         <span aria-current="page">{product.title}</span>
       </div>
@@ -211,6 +213,9 @@ export function ProductPage() {
                     src={product.imageUrl}
                     alt={product.title}
                     loading="eager"
+                    decoding="async"
+                    width="1200"
+                    height="900"
                   />
                   <div>
                     <small>{product.category}</small>
@@ -254,7 +259,6 @@ export function ProductPage() {
                 </span>
               </div>
             )}
-            <span>{product.badge}</span>
             <small>ORIGINAL DIGITAL WORK</small>
           </div>
           <div
@@ -345,7 +349,7 @@ export function ProductPage() {
         </div>
         <aside className="buy-panel">
           <span>One-time purchase</span>
-          <strong>{formatMoney(product.priceCents)}</strong>
+          <strong>{formatProductMoney(product)}</strong>
           <small>{currency} display · charged from the USD base price</small>
           <div
             className={`product-availability ${available ? "available" : "unavailable"}`}
@@ -401,9 +405,9 @@ export function ProductPage() {
             {added ? <Check /> : <ShoppingBag />}
             {available
               ? added
-                ? "Added to cart"
-                : "Continue to cart"
-              : "Unavailable"}
+                ? t("cart")
+                : t("addToCart")
+              : t("unavailable")}
           </button>
           <Link to="/cart">View cart</Link>
           <ul>
@@ -736,11 +740,11 @@ export function ProductPage() {
       </section>
       <div className="product-mobile-purchase">
         <span>
-          <small>{available ? product.delivery : "Unavailable"}</small>
-          <strong>{formatMoney(product.priceCents)}</strong>
+          <small>{available ? product.delivery : t("unavailable")}</small>
+          <strong>{formatProductMoney(product)}</strong>
         </span>
         <button type="button" disabled={!available} onClick={addToCart}>
-          <ShoppingBag /> {available ? "Continue" : "Unavailable"}
+          <ShoppingBag /> {available ? t("purchase") : t("unavailable")}
         </button>
       </div>
       <MarketFooter />

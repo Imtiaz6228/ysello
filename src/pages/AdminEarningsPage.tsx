@@ -112,7 +112,7 @@ export function AdminEarningsPage() {
       label: r.label,
       orders: r.orders,
       sale_10pct: r.saleCommissionCents,
-      withdraw_3pct: r.withdrawCommissionCents,
+      withdrawal_fee: r.withdrawCommissionCents,
       total_admin: r.totalAdminCents,
       withdraw_count: r.withdrawCount,
       withdraw_volume: r.withdrawVolumeCents,
@@ -123,7 +123,7 @@ export function AdminEarningsPage() {
       "label",
       "orders",
       "sale_10pct",
-      "withdraw_3pct",
+      "withdrawal_fee",
       "total_admin",
       "withdraw_count",
       "withdraw_volume",
@@ -197,7 +197,8 @@ export function AdminEarningsPage() {
             Earnings Analytics
           </h1>
           <p style={{ color: "#a1a1aa" }}>
-            Track commission revenue from sales (10%) and withdrawals (3%)
+            Track the 10% marketplace sale commission and approved seller
+            withdrawals
           </p>
         </div>
         <nav aria-label="Admin earnings navigation">
@@ -301,10 +302,10 @@ export function AdminEarningsPage() {
               <Wallet size={20} color="#10b981" />
               <div style={{ marginTop: "8px" }}>
                 <small style={{ color: "#71717a", fontSize: "12px" }}>
-                  Withdraw 3% (Today)
+                  Withdrawals approved (Today)
                 </small>
                 <strong style={{ display: "block", fontSize: "24px" }}>
-                  {money(todayData?.withdrawCommissionCents ?? 0)}
+                  {money(todayData?.withdrawVolumeCents ?? 0)}
                 </strong>
               </div>
             </div>
@@ -420,7 +421,7 @@ export function AdminEarningsPage() {
                     "Date",
                     "Orders",
                     "Sale 10%",
-                    "Withdraw 3%",
+                    "Withdrawal volume",
                     "Total",
                     "Net Income",
                   ].map((h) => (
@@ -455,7 +456,7 @@ export function AdminEarningsPage() {
                       {money(row.saleCommissionCents)}
                     </td>
                     <td style={{ padding: "10px 16px", fontSize: "13px" }}>
-                      {money(row.withdrawCommissionCents)}
+                      {money(row.withdrawVolumeCents)}
                     </td>
                     <td
                       style={{
@@ -626,7 +627,7 @@ export function AdminEarningsPage() {
               </div>
               <div>
                 <strong style={{ color: "#10b981", fontSize: "13px" }}>
-                  Withdraw Commission (3%)
+                  Withdrawal review
                 </strong>
                 <p
                   style={{
@@ -635,8 +636,8 @@ export function AdminEarningsPage() {
                     marginTop: "4px",
                   }}
                 >
-                  Seller withdraws $90 → $2.70 to admin (COMMISSION_WITHDRAW) →
-                  net $87.30 payout
+                  Seller withdrawals carry no extra platform commission. The
+                  full requested amount is paid after admin approval.
                 </p>
               </div>
               <div>

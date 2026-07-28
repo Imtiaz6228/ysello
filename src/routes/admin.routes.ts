@@ -40,8 +40,9 @@ import {
 } from "../services/dispute.service.js";
 import { sendTicketUpdateEmail } from "../lib/email.js";
 import {
-  imageUpload,
+  discardPublicImage,
   privateUploadRoot,
+  productImageUpload,
   publicUploadUrl,
 } from "../middleware/upload.js";
 import {
@@ -685,7 +686,7 @@ adminRouter.get(
 adminRouter.post(
   "/products",
   requireAdmin,
-  imageUpload.single("coverImage"),
+  productImageUpload.single("coverImage"),
   asyncHandler(async (req, res) => {
     try {
       const input = z
@@ -800,7 +801,7 @@ adminRouter.post(
           : "Product saved as a draft. Add inventory before publishing a downloadable item.",
       });
     } catch (error) {
-      if (req.file) await fs.unlink(req.file.path).catch(() => undefined);
+      await discardPublicImage(req.file);
       throw error;
     }
   }),
@@ -971,6 +972,7 @@ adminRouter.get(
             email: true,
             username: true,
             balanceCents: true,
+            sellerBalanceCents: true,
             role: true,
           },
         },
@@ -992,6 +994,7 @@ adminRouter.patch(
     const withdrawal = await reviewWithdrawalRequest(
       id,
       action,
+      req.auth!.id,
       input.adminNotes,
     );
     res.json({

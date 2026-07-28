@@ -272,7 +272,7 @@ export function YselloReferenceProductCard({
   onBuy,
   layout = "grid",
 }: ProductCardProps) {
-  const { formatMoney } = useLocale();
+  const { formatMoney, formatProductMoney } = useLocale();
   const [saved, setSaved] = useState(false);
   const categoryParts = product.category.split(" / ");
   const categoryLabel =
@@ -312,19 +312,20 @@ export function YselloReferenceProductCard({
           aria-label={`View ${product.title}`}
         >
           {product.imageUrl ? (
-            <img src={product.imageUrl} alt={product.title} loading="lazy" />
+            <img
+              src={product.imageUrl}
+              alt={product.title}
+              loading="lazy"
+              decoding="async"
+              width="640"
+              height="480"
+            />
           ) : (
             <span className="ys-ref-product-symbol" aria-hidden="true">
               <i>{product.icon || <ProductIcon />}</i>
               <small>{categoryLabel}</small>
             </span>
           )}
-        </Link>
-        <Link
-          className="g2-product-badge"
-          to={`/category/${product.categorySlug}`}
-        >
-          {product.badge || categoryLabel}
         </Link>
         <button
           type="button"
@@ -356,7 +357,7 @@ export function YselloReferenceProductCard({
         </div>
         <div className="ys-ref-product-price-row g2-product-price-row">
           <div>
-            <strong>{formatMoney(product.priceCents)}</strong>
+            <strong>{formatProductMoney(product)}</strong>
             {originalPrice ? <small>{formatMoney(originalPrice)}</small> : null}
           </div>
           {discount ? <b>-{discount}%</b> : null}

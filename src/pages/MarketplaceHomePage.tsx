@@ -196,7 +196,7 @@ function ProductRail({
 export function MarketplaceHomePage() {
   const navigate = useNavigate();
   const { add } = useCart();
-  const { formatMoney } = useLocale();
+  const { formatMoney, formatProductMoney, t } = useLocale();
   const products = useMarketplaceProducts();
   const categories = useMarketplaceCategories();
   const [email, setEmail] = useState("");
@@ -260,11 +260,7 @@ export function MarketplaceHomePage() {
               "creative-software",
               categories,
             ) ||
-            categoryMatches(
-              product.categorySlug,
-              "social-media",
-              categories,
-            ),
+            categoryMatches(product.categorySlug, "social-media", categories),
         ),
         bestSellers,
       ),
@@ -276,21 +272,13 @@ export function MarketplaceHomePage() {
       mergeProductPicks(
         products.filter(
           (product) =>
-            categoryMatches(
-              product.categorySlug,
-              "software",
-              categories,
-            ) ||
+            categoryMatches(product.categorySlug, "software", categories) ||
             categoryMatches(
               product.categorySlug,
               "subscriptions",
               categories,
             ) ||
-            categoryMatches(
-              product.categorySlug,
-              "gift-cards",
-              categories,
-            ),
+            categoryMatches(product.categorySlug, "gift-cards", categories),
         ),
         newArrivals,
       ),
@@ -337,8 +325,8 @@ export function MarketplaceHomePage() {
   return (
     <main className="market-home-page g2-home-page">
       <Seo
-        title="Ysello — Digital products and expert services"
-        description="Discover licensed software, creative assets, AI workflows, business resources and expert digital services from verified sellers."
+        title={`Ysello — ${t("homeHeroTitle")}`}
+        description={t("homeHeroIntro")}
         canonicalPath="/"
         schema={[
           {
@@ -381,10 +369,16 @@ export function MarketplaceHomePage() {
           return (
             <Link key={product.id} to={`/product/${product.slug}`}>
               {product.imageUrl ? (
-                <img src={product.imageUrl} alt="" loading="eager" />
+                <img
+                  src={product.imageUrl}
+                  alt=""
+                  loading="lazy"
+                  decoding="async"
+                  width="640"
+                  height="480"
+                />
               ) : null}
               <span>
-                <b>{product.badge || "Bestseller"}</b>
                 <strong>{product.title}</strong>
                 <small>
                   {platform} · {product.type === "SERVICE" ? "Service" : "Key"}{" "}
@@ -404,29 +398,24 @@ export function MarketplaceHomePage() {
           <span>
             <Zap aria-hidden="true" /> YSELLO SELECTS
           </span>
-          <h1 id="marketplace-hero-title">
-            Everything digital, ready for your next move.
-          </h1>
-          <p>
-            Discover trusted software, creator assets, practical AI tools and
-            expert services—with every detail clear before checkout.
-          </p>
+          <h1 id="marketplace-hero-title">{t("homeHeroTitle")}</h1>
+          <p>{t("homeHeroIntro")}</p>
           <div>
             <Link to="/catalog">
-              Shop marketplace <ArrowRight aria-hidden="true" />
+              {t("shopMarketplace")} <ArrowRight aria-hidden="true" />
             </Link>
-            <Link to="/seller/apply">Start selling</Link>
+            <Link to="/seller/apply">{t("startSelling")}</Link>
           </div>
         </div>
         <div className="g2-hero-proof" aria-label="Marketplace benefits">
           <span>
-            <BadgeCheck aria-hidden="true" /> Verified sellers
+            <BadgeCheck aria-hidden="true" /> {t("verifiedSellers")}
           </span>
           <span>
-            <Download aria-hidden="true" /> Fast digital delivery
+            <Download aria-hidden="true" /> {t("fastDelivery")}
           </span>
           <span>
-            <ShieldCheck aria-hidden="true" /> Protected checkout
+            <ShieldCheck aria-hidden="true" /> {t("protectedCheckout")}
           </span>
         </div>
       </section>
@@ -454,7 +443,7 @@ export function MarketplaceHomePage() {
                 <small>
                   {count
                     ? `${count.toLocaleString()} live`
-                    : "Explore department"}
+                    : t("exploreDepartment")}
                 </small>
               </Link>
             );
@@ -472,14 +461,14 @@ export function MarketplaceHomePage() {
             </Link>
           ))}
           <Link to={`/category/${focusedCategory.slug}`}>
-            View all <ArrowRight aria-hidden="true" />
+            {t("viewAll")} <ArrowRight aria-hidden="true" />
           </Link>
         </div>
       </section>
 
       <section className="market-home-section g2-home-section" id="products">
         <SectionHeading
-          title="Bestsellers"
+          title={t("popularNow")}
           text="The marketplace products buyers are choosing right now."
           href="/catalog?sort=popular"
         />
@@ -504,7 +493,14 @@ export function MarketplaceHomePage() {
                   <Link to={`/product/${product.slug}`}>
                     <span>
                       {product.imageUrl ? (
-                        <img src={product.imageUrl} alt="" />
+                        <img
+                          src={product.imageUrl}
+                          alt=""
+                          loading="lazy"
+                          decoding="async"
+                          width="320"
+                          height="240"
+                        />
                       ) : (
                         <i>{product.icon}</i>
                       )}
@@ -512,7 +508,7 @@ export function MarketplaceHomePage() {
                     <div>
                       <small>{product.seller}</small>
                       <strong>{product.title}</strong>
-                      <em>{formatMoney(product.priceCents)}</em>
+                      <em>{formatProductMoney(product)}</em>
                     </div>
                   </Link>
                 </div>
@@ -562,7 +558,14 @@ export function MarketplaceHomePage() {
           {marketplaceTaxonomy.slice(0, 4).map((category) => (
             <Link key={category.slug} to={`/category/${category.slug}`}>
               <span>
-                <img src={categoryArt[category.slug]} alt="" loading="lazy" />
+                <img
+                  src={categoryArt[category.slug]}
+                  alt=""
+                  loading="lazy"
+                  decoding="async"
+                  width="640"
+                  height="480"
+                />
               </span>
               <strong>{category.name}</strong>
               <small>
@@ -667,6 +670,9 @@ export function MarketplaceHomePage() {
           src="/marketplace-assets/seller-growth.webp"
           alt=""
           loading="lazy"
+          decoding="async"
+          width="960"
+          height="720"
         />
       </section>
 

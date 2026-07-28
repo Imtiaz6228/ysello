@@ -42,7 +42,7 @@ const icons: Record<MethodId, typeof CreditCard> = {
 };
 
 export function CheckoutPage() {
-  const { formatMoney } = useLocale();
+  const { formatMoney, formatProductMoney, t } = useLocale();
   const { user, setUser } = useAuth();
   const { items, subtotalCents, clear } = useCart();
   const navigate = useNavigate();
@@ -168,7 +168,9 @@ export function CheckoutPage() {
           <Link className="back-link" to="/cart">
             <ArrowLeft /> Back to cart
           </Link>
-          <span className="section-index">SECURE CHECKOUT</span>
+          <span className="section-index">
+            {t("secureCheckout").toUpperCase()}
+          </span>
           <h1>Choose how to pay.</h1>
           <div className="checkout-account">
             <span>
@@ -238,7 +240,7 @@ export function CheckoutPage() {
                   Qty {quantity} · {product.delivery}
                 </small>
               </div>
-              <b>{formatMoney(product.priceCents * quantity)}</b>
+              <b>{formatProductMoney(product, quantity)}</b>
             </div>
           ))}
           <div className="checkout-totals">

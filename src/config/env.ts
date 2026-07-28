@@ -125,11 +125,26 @@ const envSchema = z.object({
     .default(30),
   CRYPTO_WEBHOOK_SECRET: z.preprocess(emptyToUndefined, z.string().optional()),
   REDIS_URL: z.preprocess(emptyToUndefined, z.string().optional()),
-  TOPUP_TRC20_ADDRESS: z.preprocess(emptyToUndefined, z.string().optional()),
-  TOPUP_ERC20_ADDRESS: z.preprocess(emptyToUndefined, z.string().optional()),
-  TOPUP_BEP20_ADDRESS: z.preprocess(emptyToUndefined, z.string().optional()),
-  TOPUP_BTC_ADDRESS: z.preprocess(emptyToUndefined, z.string().optional()),
-  TOPUP_ETH_ADDRESS: z.preprocess(emptyToUndefined, z.string().optional()),
+  TOPUP_TRC20_ADDRESS: z.preprocess(
+    emptyToUndefined,
+    z.string().default("TDffsBmuyrMsNEQXzzLYfzAwz7W6Jmvb1W"),
+  ),
+  TOPUP_ERC20_ADDRESS: z.preprocess(
+    emptyToUndefined,
+    z.string().default("0x5fe0bc617b00812396560e00a47b68a4d19933df"),
+  ),
+  TOPUP_BEP20_ADDRESS: z.preprocess(
+    emptyToUndefined,
+    z.string().default("0x5fe0bc617b00812396560e00a47b68a4d19933df"),
+  ),
+  TOPUP_BTC_ADDRESS: z.preprocess(
+    emptyToUndefined,
+    z.string().default("1CRoGe5BKjSTYBjxjPaS5NRCP8eyZ8cSpA"),
+  ),
+  TOPUP_ETH_ADDRESS: z.preprocess(
+    emptyToUndefined,
+    z.string().default("0x5fe0bc617b00812396560e00a47b68a4d19933df"),
+  ),
   TOPUP_SOL_ADDRESS: z.preprocess(emptyToUndefined, z.string().optional()),
   COMMISSION_SALE_PERCENT: z.coerce.number().int().min(0).max(50).default(10),
   COMMISSION_WITHDRAW_PERCENT: z.coerce
@@ -137,7 +152,7 @@ const envSchema = z.object({
     .int()
     .min(0)
     .max(20)
-    .default(3),
+    .default(0),
   FROZEN_HOLD_HOURS: z.coerce.number().int().min(1).max(720).default(72),
   DOWNLOAD_LINK_EXPIRY_DAYS: z.coerce.number().int().min(1).max(30).default(7),
 });

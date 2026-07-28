@@ -28,6 +28,7 @@ export function publicUser(user: User) {
     isSuspended: user.isSuspended,
     emailVerified: true,
     balanceCents: user.balanceCents ?? 0,
+    sellerBalanceCents: user.sellerBalanceCents ?? 0,
     createdAt: user.createdAt,
   };
 }

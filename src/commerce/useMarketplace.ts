@@ -213,8 +213,7 @@ function mergeWithLocalCategories(remoteCategories: CatalogCategory[]) {
   });
   return [...merged.values()].sort(
     (a, b) =>
-      (a.sortOrder ?? 0) - (b.sortOrder ?? 0) ||
-      a.name.localeCompare(b.name),
+      (a.sortOrder ?? 0) - (b.sortOrder ?? 0) || a.name.localeCompare(b.name),
   );
 }
 
@@ -366,15 +365,14 @@ function mapCategories(categories: ApiCategory[]): CatalogCategory[] {
 
 export function useMarketplaceProducts() {
   const { locale } = useLocale();
-  const [products, setProducts] =
-    useState<CatalogProduct[]>(localProducts);
+  const [products, setProducts] = useState<CatalogProduct[]>(localProducts);
   useEffect(() => {
     void apiRequest<{ products: ApiProduct[] }>(
       "/api/marketplace/products?take=96",
     )
       .then((data) => {
         const remoteProducts = data.products.map((product, index) =>
-            mapProduct(product, index, locale),
+          mapProduct(product, index, locale),
         );
         setProducts(mergeWithLocalProducts(remoteProducts));
       })
@@ -566,8 +564,7 @@ export function useMarketplaceStore(slug?: string) {
       }
     : undefined;
   const [store, setStore] = useState<PublicStore | undefined>(fallbackStore);
-  const [products, setProducts] =
-    useState<CatalogProduct[]>(fallbackProducts);
+  const [products, setProducts] = useState<CatalogProduct[]>(fallbackProducts);
   const [loading, setLoading] = useState(Boolean(slug && !fallbackStore));
   useEffect(() => {
     if (!slug) return;
@@ -583,10 +580,8 @@ export function useMarketplaceStore(slug?: string) {
         policy:
           "Ysello buyer protection and the listing-specific delivery terms apply to every order.",
         rating:
-          localStoreProducts.reduce(
-            (sum, product) => sum + product.rating,
-            0,
-          ) / localStoreProducts.length,
+          localStoreProducts.reduce((sum, product) => sum + product.rating, 0) /
+          localStoreProducts.length,
         sales: localStoreProducts
           .reduce((sum, product) => sum + product.reviews, 0)
           .toLocaleString(),

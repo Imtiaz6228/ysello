@@ -13,8 +13,10 @@ import { prisma } from "../lib/prisma.js";
 import { requireAuth, requireVerifiedUser } from "../middleware/auth.js";
 import { ApiError, asyncHandler } from "../middleware/error-handler.js";
 import {
+  discardPublicImage,
   imageUpload,
   productFileUpload,
+  productImageUpload,
   publicUploadUrl,
   sellerDocumentUpload,
 } from "../middleware/upload.js";
@@ -186,6 +188,30 @@ const jsonObject = z.preprocess((value) => {
   }
 }, z.record(z.unknown()));
 
+const localizedProductCopySchema = z.object({
+  title: z.string().trim().min(3).max(160),
+  shortDescription: z.string().trim().min(10).max(240),
+  description: z.string().trim().min(30).max(20000),
+  seoTitle: z.string().trim().min(3).max(70),
+  seoDescription: z.string().trim().min(30).max(170),
+});
+
+const productTranslationsSchema = z.preprocess(
+  (value) => {
+    if (typeof value !== "string") return value;
+    try {
+      return JSON.parse(value);
+    } catch {
+      return {};
+    }
+  },
+  z.object({
+    en: localizedProductCopySchema,
+    "zh-CN": localizedProductCopySchema,
+    ru: localizedProductCopySchema,
+  }),
+);
+
 const productSchema = z.object({
   categoryId: z.string().uuid(),
   name: z.string().trim().min(3).max(160),
@@ -194,8 +220,14 @@ const productSchema = z.object({
   type: z.nativeEnum(ProductType).default(ProductType.DOWNLOAD),
   priceCents: optionalCents,
   priceUsdCents: optionalCents,
-  priceCnyCents: optionalCents.default(0),
-  priceRubCents: optionalCents.default(0),
+  priceCnyCents: z.preprocess(
+    emptyToUndefined,
+    z.coerce.number().int().min(1).max(100_000_000),
+  ),
+  priceRubCents: z.preprocess(
+    emptyToUndefined,
+    z.coerce.number().int().min(1).max(100_000_000),
+  ),
   compareAtPriceCents: z.preprocess(
     emptyToNull,
     z.coerce.number().int().positive().nullable().optional(),
@@ -258,7 +290,7 @@ const productSchema = z.object({
   manualDelivery: z.preprocess(checkboxToBoolean, z.boolean().default(true)),
   digitalDownload: z.preprocess(checkboxToBoolean, z.boolean().default(false)),
   productAttributes: jsonObject.default({}),
-  translations: jsonObject.default({}),
+  translations: productTranslationsSchema,
 });
 
 function parseInventoryLines(raw?: string | null) {
@@ -299,6 +331,13 @@ function productDataFromInput(
       "USD_PRICE_REQUIRED",
     );
   }
+  if (input.priceCnyCents < 1 || input.priceRubCents < 1) {
+    throw new ApiError(
+      400,
+      "Set valid USD, Chinese yuan, and Russian ruble prices.",
+      "LOCALIZED_PRICES_REQUIRED",
+    );
+  }
 
   return {
     categoryId: input.categoryId,
@@ -308,8 +347,8 @@ function productDataFromInput(
     type: input.type,
     priceCents: priceUsdCents,
     priceUsdCents,
-    priceCnyCents: input.priceCnyCents ?? 0,
-    priceRubCents: input.priceRubCents ?? 0,
+    priceCnyCents: input.priceCnyCents,
+    priceRubCents: input.priceRubCents,
     compareAtPriceCents: input.compareAtPriceCents,
     currency: "USD",
     coverImageUrl,
@@ -355,8 +394,7 @@ function productDataFromInput(
 }
 
 async function deleteUploadedFile(file?: Express.Multer.File) {
-  if (!file) return;
-  await fs.unlink(file.path).catch(() => undefined);
+  await discardPublicImage(file);
 }
 
 sellerRouter.get(
@@ -487,7 +525,7 @@ sellerRouter.get(
 sellerRouter.post(
   "/products",
   requireSeller,
-  imageUpload.single("coverImage"),
+  productImageUpload.single("coverImage"),
   asyncHandler(async (req, res) => {
     try {
       const input = productSchema.parse(req.body);
@@ -999,6 +1037,20 @@ sellerRouter.post(
         "AFTER_SALES_MINIMUM",
       );
     }
+    const localizedContent = productTranslationsSchema.safeParse(
+      existing.translations,
+    );
+    if (
+      !localizedContent.success ||
+      existing.priceCnyCents < 1 ||
+      existing.priceRubCents < 1
+    ) {
+      throw new ApiError(
+        400,
+        "Complete English, Chinese, and Russian titles, descriptions, SEO metadata, and prices before submitting.",
+        "MULTILINGUAL_PRODUCT_REQUIRED",
+      );
+    }
     const product = await prisma.product.update({
       where: { id },
       data: { status: ProductStatus.PENDING, rejectionReason: null },
@@ -1010,7 +1062,7 @@ sellerRouter.post(
 sellerRouter.post(
   "/products/:id/image",
   requireSeller,
-  imageUpload.single("coverImage"),
+  productImageUpload.single("coverImage"),
   asyncHandler(async (req, res) => {
     try {
       const id = z.string().uuid().parse(req.params.id);

@@ -4,6 +4,7 @@ import {
   PaymentStatus,
   ProductStatus,
   ProductType,
+  WalletBalanceKind,
 } from "@prisma/client";
 import { env } from "../config/env.js";
 import { randomToken, sha256 } from "../lib/crypto.js";
@@ -516,11 +517,27 @@ export async function createWalletCheckout(
         "INSUFFICIENT_FUNDS",
       );
     }
-    await tx.user.update({
-      where: { id: buyerId },
-      data: { balanceCents: { decrement: subtotalCents } },
+    const debited = await tx.user.updateMany({
+      where: {
+        id: buyerId,
+        balanceCents: { gte: subtotalCents },
+      },
+      data: {
+        balanceCents: { decrement: subtotalCents },
+      },
     });
-    return tx.order.create({
+    if (debited.count !== 1) {
+      throw new ApiError(
+        409,
+        "Your wallet balance changed. Refresh checkout and try again.",
+        "INSUFFICIENT_FUNDS",
+      );
+    }
+    const account = await tx.user.findUniqueOrThrow({
+      where: { id: buyerId },
+      select: { balanceCents: true },
+    });
+    const createdOrder = await tx.order.create({
       data: {
         orderNumber: reference("HS"),
         invoiceNumber: reference("INV"),
@@ -557,6 +574,20 @@ export async function createWalletCheckout(
       },
       include: { payment: true, items: true },
     });
+    await tx.walletTransaction.create({
+      data: {
+        userId: buyerId,
+        type: "PURCHASE",
+        balanceKind: WalletBalanceKind.BUYER,
+        amountCents: -subtotalCents,
+        balanceAfter: account.balanceCents,
+        description: `Wallet purchase ${createdOrder.orderNumber}`,
+        reference: createdOrder.orderNumber,
+        orderId: createdOrder.id,
+        relatedId: createdOrder.payment?.id,
+      },
+    });
+    return createdOrder;
   });
 
   try {
@@ -571,24 +602,38 @@ export async function createWalletCheckout(
     };
   } catch (error) {
     await prisma
-      .$transaction([
-        prisma.user.update({
+      .$transaction(async (tx) => {
+        const account = await tx.user.update({
           where: { id: buyerId },
           data: { balanceCents: { increment: subtotalCents } },
-        }),
-        prisma.payment.update({
+          select: { balanceCents: true },
+        });
+        await tx.walletTransaction.create({
+          data: {
+            userId: buyerId,
+            type: "REFUND",
+            balanceKind: WalletBalanceKind.BUYER,
+            amountCents: subtotalCents,
+            balanceAfter: account.balanceCents,
+            description: `Cancelled wallet purchase ${order.orderNumber}`,
+            reference: order.orderNumber,
+            orderId: order.id,
+            relatedId: order.payment?.id,
+          },
+        });
+        await tx.payment.update({
           where: { orderId: order.id },
           data: {
             status: PaymentStatus.FAILED,
             failureReason:
               error instanceof Error ? error.message : "Wallet delivery failed",
           },
-        }),
-        prisma.order.update({
+        });
+        await tx.order.update({
           where: { id: order.id },
           data: { status: OrderStatus.CANCELLED },
-        }),
-      ])
+        });
+      })
       .catch(() => undefined);
     throw error;
   }
@@ -1048,36 +1093,48 @@ export async function issueRefund(refundId: string) {
   const isWalletPayment =
     payment.method === PaymentMethod.MANUAL &&
     (payment.providerPayload as any)?.kind === "WALLET_BALANCE";
-  await prisma.$transaction([
-    prisma.refund.update({
+  await prisma.$transaction(async (tx) => {
+    await tx.refund.update({
       where: { id: refund.id },
       data: {
         status: "COMPLETED",
         providerReference: providerRefundId,
         resolvedAt: new Date(),
       },
-    }),
-    prisma.order.update({
+    });
+    await tx.order.update({
       where: { id: refund.orderId },
       data: { status: fullRefund ? "REFUNDED" : undefined },
-    }),
-    prisma.payment.update({
+    });
+    await tx.payment.update({
       where: { orderId: refund.orderId },
       data: { status: fullRefund ? "REFUNDED" : "PARTIALLY_REFUNDED" },
-    }),
-    prisma.downloadGrant.updateMany({
+    });
+    await tx.downloadGrant.updateMany({
       where: { orderItem: { orderId: refund.orderId } },
       data: { revokedAt: fullRefund ? new Date() : undefined },
-    }),
-    ...(isWalletPayment
-      ? [
-          prisma.user.update({
-            where: { id: refund.order.buyerId },
-            data: { balanceCents: { increment: refund.amountCents } },
-          }),
-        ]
-      : []),
-  ]);
+    });
+    if (isWalletPayment) {
+      const account = await tx.user.update({
+        where: { id: refund.order.buyerId },
+        data: { balanceCents: { increment: refund.amountCents } },
+        select: { balanceCents: true },
+      });
+      await tx.walletTransaction.create({
+        data: {
+          userId: refund.order.buyerId,
+          type: "REFUND",
+          balanceKind: WalletBalanceKind.BUYER,
+          amountCents: refund.amountCents,
+          balanceAfter: account.balanceCents,
+          description: `Wallet refund for ${refund.order.orderNumber}`,
+          reference: refund.id,
+          orderId: refund.orderId,
+          relatedId: refund.id,
+        },
+      });
+    }
+  });
   if (fullRefund) await reverseSellerEarningsForOrder(refund.orderId);
   return prisma.refund.findUnique({ where: { id: refund.id } });
 }

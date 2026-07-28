@@ -1,16 +1,42 @@
+import { Role, WalletBalanceKind } from "@prisma/client";
 import { prisma } from "../lib/prisma.js";
 import { env } from "../config/env.js";
 import { ApiError } from "../middleware/error-handler.js";
-
-const HOLD_DAYS = 3;
-const withdrawalStatuses = new Set(["PENDING", "APPROVED", "REJECTED"]);
 
 function payoutReference(prefix: string) {
   return `${prefix}-${Date.now().toString(36).toUpperCase()}-${crypto.randomUUID().slice(0, 6).toUpperCase()}`;
 }
 
+export const withdrawalNetworks = [
+  "USDT TRC20",
+  "USDT BEP20",
+  "USDT ERC20",
+  "Bitcoin",
+  "Ethereum",
+] as const;
+
+function validateWithdrawalDestination(blockchain: string, rawAddress: string) {
+  const walletAddress = rawAddress.trim();
+  const valid =
+    blockchain === "USDT TRC20"
+      ? /^T[1-9A-HJ-NP-Za-km-z]{33}$/.test(walletAddress)
+      : ["USDT BEP20", "USDT ERC20", "Ethereum"].includes(blockchain)
+        ? /^0x[a-fA-F0-9]{40}$/.test(walletAddress)
+        : /^(?:bc1[ac-hj-np-z02-9]{11,71}|[13][a-km-zA-HJ-NP-Z1-9]{25,34})$/i.test(
+            walletAddress,
+          );
+  if (!valid) {
+    throw new ApiError(
+      400,
+      `Enter a valid ${blockchain} receiving address.`,
+      "WITHDRAWAL_ADDRESS_INVALID",
+    );
+  }
+  return walletAddress;
+}
+
 export function sellerFundsAvailableAt(from = new Date()) {
-  return new Date(from.getTime() + HOLD_DAYS * 24 * 60 * 60 * 1000);
+  return new Date(from.getTime() + env.FROZEN_HOLD_HOURS * 60 * 60 * 1000);
 }
 
 export async function releaseAvailableSellerEarnings(userId?: string) {
@@ -22,35 +48,50 @@ export async function releaseAvailableSellerEarnings(userId?: string) {
   });
   if (!earnings.length) return { releasedCount: 0, releasedCents: 0 };
 
-  const bySeller = new Map<string, number>();
-  for (const earning of earnings)
-    bySeller.set(
-      earning.sellerId,
-      (bySeller.get(earning.sellerId) ?? 0) + earning.netCents,
-    );
-
-  await prisma.$transaction(async (tx) => {
-    await (tx as any).sellerEarning.updateMany({
-      where: {
-        id: { in: earnings.map((earning: any) => earning.id) },
-        status: "FROZEN",
-      },
-      data: { status: "AVAILABLE", releasedAt: new Date() },
-    });
-    for (const [sellerId, cents] of bySeller.entries()) {
-      await tx.user.update({
+  const released = await prisma.$transaction(async (tx) => {
+    const bySeller = new Map<string, { cents: number; count: number }>();
+    for (const earning of earnings) {
+      const claimed = await (tx as any).sellerEarning.updateMany({
+        where: { id: earning.id, status: "FROZEN" },
+        data: { status: "AVAILABLE", releasedAt: new Date() },
+      });
+      if (claimed.count !== 1) continue;
+      const current = bySeller.get(earning.sellerId) ?? { cents: 0, count: 0 };
+      current.cents += earning.netCents;
+      current.count += 1;
+      bySeller.set(earning.sellerId, current);
+    }
+    for (const [sellerId, releasedForSeller] of bySeller.entries()) {
+      const account = await tx.user.update({
         where: { id: sellerId },
-        data: { balanceCents: { increment: cents } },
+        data: {
+          sellerBalanceCents: { increment: releasedForSeller.cents },
+        },
+        select: { sellerBalanceCents: true },
+      });
+      await tx.walletTransaction.create({
+        data: {
+          userId: sellerId,
+          type: "FROZEN_RELEASE",
+          balanceKind: WalletBalanceKind.SELLER,
+          amountCents: releasedForSeller.cents,
+          balanceAfter: account.sellerBalanceCents,
+          description: `${releasedForSeller.count} sale earning${releasedForSeller.count === 1 ? "" : "s"} released after ${env.FROZEN_HOLD_HOURS} hours`,
+        },
       });
     }
+    return [...bySeller.values()].reduce(
+      (summary, item) => ({
+        count: summary.count + item.count,
+        cents: summary.cents + item.cents,
+      }),
+      { count: 0, cents: 0 },
+    );
   });
 
   return {
-    releasedCount: earnings.length,
-    releasedCents: earnings.reduce(
-      (sum: number, earning: any) => sum + earning.netCents,
-      0,
-    ),
+    releasedCount: released.count,
+    releasedCents: released.cents,
   };
 }
 
@@ -124,9 +165,24 @@ export async function reverseSellerEarningsForOrder(orderId: string) {
   await prisma.$transaction(async (tx) => {
     for (const earning of earnings) {
       if (earning.status === "AVAILABLE") {
-        await tx.user.update({
+        const account = await tx.user.update({
           where: { id: earning.sellerId },
-          data: { balanceCents: { decrement: earning.netCents } },
+          data: {
+            sellerBalanceCents: { decrement: earning.netCents },
+          },
+          select: { sellerBalanceCents: true },
+        });
+        await tx.walletTransaction.create({
+          data: {
+            userId: earning.sellerId,
+            type: "REFUND",
+            balanceKind: WalletBalanceKind.SELLER,
+            amountCents: -earning.netCents,
+            balanceAfter: account.sellerBalanceCents,
+            description: "Seller earning reversed after buyer refund",
+            orderId,
+            relatedId: earning.id,
+          },
         });
       }
       await (tx as any).sellerEarning.update({
@@ -142,7 +198,7 @@ export async function getWalletSummary(userId: string) {
   const [user, frozen, pendingWithdrawals, withdrawals] = await Promise.all([
     prisma.user.findUnique({
       where: { id: userId },
-      select: { balanceCents: true },
+      select: { balanceCents: true, sellerBalanceCents: true },
     }),
     (prisma as any).sellerEarning.aggregate({
       where: { sellerId: userId, status: "FROZEN" },
@@ -161,6 +217,7 @@ export async function getWalletSummary(userId: string) {
   return {
     balanceCents: user?.balanceCents ?? 0,
     availableBalanceCents: user?.balanceCents ?? 0,
+    sellerAvailableBalanceCents: user?.sellerBalanceCents ?? 0,
     frozenSellerBalanceCents: frozen._sum.netCents ?? 0,
     pendingWithdrawalCents: pendingWithdrawals._sum.amountCents ?? 0,
     withdrawals,
@@ -180,7 +237,7 @@ export async function getSellerFinanceSummary(sellerId: string) {
   ] = await Promise.all([
     prisma.user.findUnique({
       where: { id: sellerId },
-      select: { balanceCents: true },
+      select: { sellerBalanceCents: true },
     }),
     (prisma as any).sellerEarning.aggregate({
       where: { sellerId, status: "FROZEN" },
@@ -214,7 +271,7 @@ export async function getSellerFinanceSummary(sellerId: string) {
     }),
   ]);
   return {
-    availableBalanceCents: wallet?.balanceCents ?? 0,
+    availableBalanceCents: wallet?.sellerBalanceCents ?? 0,
     frozenBalanceCents: frozen._sum.netCents ?? 0,
     releasedSellerEarningsCents: availableEarnings._sum.netCents ?? 0,
     totalSellerEarningsCents: totalEarnings._sum.netCents ?? 0,
@@ -229,19 +286,30 @@ export async function createWithdrawalRequest(
   userId: string,
   input: { amountCents: number; blockchain: string; walletAddress: string },
 ) {
+  const walletAddress = validateWithdrawalDestination(
+    input.blockchain,
+    input.walletAddress,
+  );
   await releaseAvailableSellerEarnings(userId);
   const user = await prisma.user.findUnique({
     where: { id: userId },
-    select: { balanceCents: true },
+    select: { sellerBalanceCents: true, role: true },
   });
   if (!user) throw new ApiError(404, "User not found.", "USER_NOT_FOUND");
+  if (user.role !== Role.SELLER) {
+    throw new ApiError(
+      403,
+      "Only approved seller earnings can be withdrawn.",
+      "SELLER_WITHDRAWAL_REQUIRED",
+    );
+  }
   if (input.amountCents < 500)
     throw new ApiError(
       400,
       "Minimum withdrawal is $5.00.",
       "WITHDRAWAL_MINIMUM",
     );
-  if (user.balanceCents < input.amountCents)
+  if (user.sellerBalanceCents < input.amountCents)
     throw new ApiError(
       402,
       "Insufficient available balance for this withdrawal.",
@@ -249,20 +317,50 @@ export async function createWithdrawalRequest(
     );
 
   const request = await prisma.$transaction(async (tx) => {
-    await tx.user.update({
-      where: { id: userId },
-      data: { balanceCents: { decrement: input.amountCents } },
+    const debited = await tx.user.updateMany({
+      where: {
+        id: userId,
+        role: Role.SELLER,
+        sellerBalanceCents: { gte: input.amountCents },
+      },
+      data: {
+        sellerBalanceCents: { decrement: input.amountCents },
+      },
     });
-    return (tx as any).withdrawalRequest.create({
+    if (debited.count !== 1) {
+      throw new ApiError(
+        409,
+        "Your available seller balance changed. Refresh and try again.",
+        "INSUFFICIENT_FUNDS",
+      );
+    }
+    const account = await tx.user.findUniqueOrThrow({
+      where: { id: userId },
+      select: { sellerBalanceCents: true },
+    });
+    const withdrawal = await (tx as any).withdrawalRequest.create({
       data: {
         userId,
         amountCents: input.amountCents,
         blockchain: input.blockchain,
-        walletAddress: input.walletAddress,
+        walletAddress,
         status: "PENDING",
         providerReference: payoutReference("WD"),
       },
     });
+    await tx.walletTransaction.create({
+      data: {
+        userId,
+        type: "WITHDRAWAL",
+        balanceKind: WalletBalanceKind.SELLER,
+        amountCents: -input.amountCents,
+        balanceAfter: account.sellerBalanceCents,
+        description: `Seller withdrawal requested on ${input.blockchain}`,
+        reference: withdrawal.providerReference,
+        relatedId: withdrawal.id,
+      },
+    });
+    return withdrawal;
   });
   return request;
 }
@@ -270,54 +368,69 @@ export async function createWithdrawalRequest(
 export async function reviewWithdrawalRequest(
   id: string,
   action: "approve" | "reject",
+  adminId: string,
   adminNotes?: string,
 ) {
-  const request = await (prisma as any).withdrawalRequest.findUnique({
-    where: { id },
-  });
-  if (!request)
-    throw new ApiError(
-      404,
-      "Withdrawal request not found.",
-      "WITHDRAWAL_NOT_FOUND",
-    );
-  if (request.status !== "PENDING")
-    throw new ApiError(
-      400,
-      "Withdrawal request is not pending.",
-      "WITHDRAWAL_NOT_PENDING",
-    );
-  if (!withdrawalStatuses.has(action === "approve" ? "APPROVED" : "REJECTED"))
-    throw new ApiError(
-      400,
-      "Invalid withdrawal status.",
-      "WITHDRAWAL_STATUS_INVALID",
-    );
+  return prisma.$transaction(async (tx) => {
+    const request = await (tx as any).withdrawalRequest.findUnique({
+      where: { id },
+    });
+    if (!request)
+      throw new ApiError(
+        404,
+        "Withdrawal request not found.",
+        "WITHDRAWAL_NOT_FOUND",
+      );
+    if (request.status !== "PENDING")
+      throw new ApiError(
+        409,
+        "Withdrawal request is no longer pending.",
+        "WITHDRAWAL_NOT_PENDING",
+      );
 
-  if (action === "reject") {
-    const [updated] = await prisma.$transaction([
-      (prisma as any).withdrawalRequest.update({
-        where: { id },
-        data: {
-          status: "REJECTED",
-          adminNotes: adminNotes ?? "Rejected by admin.",
-          processedAt: new Date(),
-        },
-      }),
-      prisma.user.update({
+    const nextStatus = action === "approve" ? "APPROVED" : "REJECTED";
+    const claimed = await (tx as any).withdrawalRequest.updateMany({
+      where: { id, status: "PENDING" },
+      data: {
+        status: nextStatus,
+        adminNotes:
+          adminNotes ??
+          (action === "approve"
+            ? "Payment sent and approved by admin."
+            : "Rejected by admin."),
+        reviewedById: adminId,
+        processedAt: new Date(),
+      },
+    });
+    if (claimed.count !== 1) {
+      throw new ApiError(
+        409,
+        "This withdrawal was already processed by another administrator.",
+        "WITHDRAWAL_NOT_PENDING",
+      );
+    }
+
+    if (action === "reject") {
+      const account = await tx.user.update({
         where: { id: request.userId },
-        data: { balanceCents: { increment: request.amountCents } },
-      }),
-    ]);
-    return updated;
-  }
-
-  return (prisma as any).withdrawalRequest.update({
-    where: { id },
-    data: {
-      status: "APPROVED",
-      adminNotes: adminNotes ?? "Approved by admin.",
-      processedAt: new Date(),
-    },
+        data: {
+          sellerBalanceCents: { increment: request.amountCents },
+        },
+        select: { sellerBalanceCents: true },
+      });
+      await tx.walletTransaction.create({
+        data: {
+          userId: request.userId,
+          type: "ADJUSTMENT",
+          balanceKind: WalletBalanceKind.SELLER,
+          amountCents: request.amountCents,
+          balanceAfter: account.sellerBalanceCents,
+          description: "Rejected withdrawal returned to seller balance",
+          reference: request.providerReference,
+          relatedId: request.id,
+        },
+      });
+    }
+    return (tx as any).withdrawalRequest.findUniqueOrThrow({ where: { id } });
   });
 }

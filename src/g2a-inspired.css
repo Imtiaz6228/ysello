@@ -4991,7 +4991,9 @@ body {
     color: #fff !important;
   }
 
-  .g2-header-locale .locale-control-button:first-child > *:not(svg:first-child) {
+  .g2-header-locale
+    .locale-control-button:first-child
+    > *:not(svg:first-child) {
     display: none !important;
   }
 
@@ -5294,8 +5296,7 @@ body {
     overflow: hidden;
     border-radius: 18px;
     background:
-      radial-gradient(circle at 75% 20%, #3b71d6, transparent 46%),
-      #121827;
+      radial-gradient(circle at 75% 20%, #3b71d6, transparent 46%), #121827;
     color: #fff;
     box-shadow: 0 10px 28px rgba(16, 18, 27, 0.1);
     text-decoration: none;

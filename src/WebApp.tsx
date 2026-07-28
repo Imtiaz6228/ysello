@@ -1,5 +1,5 @@
 import { lazy, Suspense } from "react";
-import { Route, Routes } from "react-router-dom";
+import { Navigate, Route, Routes } from "react-router-dom";
 import { ProtectedRoute } from "./auth/ProtectedRoute";
 import { HomepageContentBanner } from "./components/HomepageContentBanner";
 import { MobileBottomNavigation } from "./components/MobileBottomNavigation";
@@ -156,6 +156,10 @@ export function App() {
 
             <Route element={<ProtectedRoute />}>
               <Route path="/dashboard" element={<AccountDashboardPage />} />
+              <Route
+                path="/topup"
+                element={<Navigate to="/dashboard#wallet" replace />}
+              />
               <Route path="/orders/:id" element={<OrderDeliveryPage />} />
               <Route path="/checkout" element={<CheckoutPage />} />
               <Route

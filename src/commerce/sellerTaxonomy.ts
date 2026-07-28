@@ -15,9 +15,9 @@ export type SellerTaxonomyCategory = {
 
 const syntheticId = (slug: string) => `taxonomy-${slug}`;
 
-export function mergeSellerTaxonomy<
-  T extends SellerTaxonomyCategory,
->(remoteCategories: T[]): Array<T & SellerTaxonomyCategory> {
+export function mergeSellerTaxonomy<T extends SellerTaxonomyCategory>(
+  remoteCategories: T[],
+): Array<T & SellerTaxonomyCategory> {
   const remoteBySlug = new Map(
     remoteCategories
       .filter((category) => category.slug)
@@ -49,9 +49,7 @@ export function mergeSellerTaxonomy<
       backingId,
       isTaxonomyOption: true,
     });
-    node.children?.forEach((child) =>
-      appendNode(child, id, backingId),
-    );
+    node.children?.forEach((child) => appendNode(child, id, backingId));
   }
 
   marketplaceTaxonomy.forEach((root) => {

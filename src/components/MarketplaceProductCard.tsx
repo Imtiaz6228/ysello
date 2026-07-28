@@ -24,7 +24,7 @@ export function MarketplaceProductCard({
   onBuy,
   layout = "grid",
 }: Props) {
-  const { formatMoney, t } = useLocale();
+  const { formatProductMoney, t } = useLocale();
   const stockLabel =
     product.type === "SERVICE"
       ? "Service slot"
@@ -50,7 +50,6 @@ export function MarketplaceProductCard({
           <ProductIcon aria-hidden="true" />
         </Link>
         <div className="ys-product-badges">
-          <span className="badge green">{product.badge}</span>
           <span className="ys-product-kind">
             {product.type === "SERVICE" ? "Service" : "Digital product"}
           </span>
@@ -85,7 +84,8 @@ export function MarketplaceProductCard({
             <PackageCheck /> {stockLabel}
           </span>
           <span>
-            <Star fill="currentColor" /> {product.rating || "New"}{" "}
+            <Star fill="currentColor" />{" "}
+            {product.rating > 0 ? product.rating : "No rating"}{" "}
             <small>({product.reviews})</small>
           </span>
           <span>
@@ -94,7 +94,7 @@ export function MarketplaceProductCard({
         </div>
         <footer>
           <div>
-            <strong>{formatMoney(product.priceCents)}</strong>
+            <strong>{formatProductMoney(product)}</strong>
             <small>Secure marketplace checkout</small>
           </div>
           <div className="market-card-actions">
@@ -106,7 +106,7 @@ export function MarketplaceProductCard({
               disabled={!canPurchase}
               onClick={() => onBuy(product)}
             >
-              <ShoppingCart /> {canPurchase ? t("purchase") : "Unavailable"}
+              <ShoppingCart /> {canPurchase ? t("purchase") : t("unavailable")}
             </button>
           </div>
         </footer>

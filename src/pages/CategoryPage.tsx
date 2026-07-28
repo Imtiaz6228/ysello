@@ -221,8 +221,7 @@ export function CategoryPage() {
           : []),
         {
           "@type": "ListItem",
-          position:
-            rootCategory && rootCategory.slug !== category.slug ? 3 : 2,
+          position: rootCategory && rootCategory.slug !== category.slug ? 3 : 2,
           name: category.name,
           item: `https://ysello.com/category/${slug}`,
         },
@@ -309,10 +308,7 @@ export function CategoryPage() {
                 categoryMatches(product.categorySlug, child.slug, categories),
               ).length;
               return (
-                <Link
-                  to={`/category/${child.slug}`}
-                  key={child.slug}
-                >
+                <Link to={`/category/${child.slug}`} key={child.slug}>
                   <span>{child.icon || <PackageOpen />}</span>
                   <div>
                     <strong>{child.name}</strong>
@@ -599,10 +595,7 @@ export function CategoryPage() {
                 <Search aria-hidden="true" />
                 <strong>No matching products</strong>
                 <span>Try another specialty or a broader search.</span>
-                <button
-                  type="button"
-                  onClick={resetFilters}
-                >
+                <button type="button" onClick={resetFilters}>
                   Reset filters
                 </button>
               </div>
@@ -616,8 +609,8 @@ export function CategoryPage() {
             <span>
               {subFilter === "all"
                 ? category.name
-                : children.find((item) => item.slug === subFilter)?.name ??
-                  category.name}
+                : (children.find((item) => item.slug === subFilter)?.name ??
+                  category.name)}
               {subFilter !== "all" ? (
                 <button
                   type="button"

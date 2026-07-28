@@ -3342,6 +3342,8 @@ type TopupMethodConfig = {
   network: string;
   asset: string;
   address: string;
+  feePolicy?: string;
+  amountPolicy?: string;
 };
 type Withdrawal = {
   id: string;
@@ -3357,9 +3359,20 @@ type Withdrawal = {
 type WalletSummary = {
   balanceCents: number;
   availableBalanceCents: number;
+  sellerAvailableBalanceCents: number;
   frozenSellerBalanceCents: number;
   pendingWithdrawalCents: number;
   withdrawals: Withdrawal[];
+};
+type WalletLedgerEntry = {
+  id: string;
+  type: string;
+  balanceKind: "BUYER" | "SELLER";
+  amountCents: number;
+  balanceAfter: number;
+  description: string;
+  reference?: string | null;
+  createdAt: string;
 };
 
 function WalletTabContent({
@@ -3375,12 +3388,16 @@ function WalletTabContent({
   onBalanceChange: (balanceCents: number) => void;
   mode?: "wallet" | "transactions";
 }) {
-  const { formatMoney } = useLocale();
+  const { formatMoney, t } = useLocale();
   const [deposits, setDeposits] = useState<Deposit[]>([]);
   const [topupMethods, setTopupMethods] = useState<TopupMethodConfig[]>([]);
   const [withdrawals, setWithdrawals] = useState<Withdrawal[]>([]);
+  const [transactions, setTransactions] = useState<WalletLedgerEntry[]>([]);
   const [balance, setBalance] = useState(
     initialBalance ?? user.balanceCents ?? 0,
+  );
+  const [sellerBalance, setSellerBalance] = useState(
+    user.sellerBalanceCents ?? 0,
   );
   const [frozenBalance, setFrozenBalance] = useState(0);
   const [pendingWithdrawalCents, setPendingWithdrawalCents] = useState(0);
@@ -3390,7 +3407,7 @@ function WalletTabContent({
   const [activeTopup, setActiveTopup] = useState<Deposit | null>(null);
   const [proofTx, setProofTx] = useState("");
   const [proofFile, setProofFile] = useState<File | null>(null);
-  const [withdrawBlockchain, setWithdrawBlockchain] = useState("TRC20 USDT");
+  const [withdrawBlockchain, setWithdrawBlockchain] = useState("USDT TRC20");
   const [withdrawAddress, setWithdrawAddress] = useState("");
   const [withdrawAmount, setWithdrawAmount] = useState("");
   const [topupFeedback, setTopupFeedback] = useState<{
@@ -3412,20 +3429,25 @@ function WalletTabContent({
   }, [activeTopup]);
 
   const refreshWallet = useCallback(async () => {
-    const [summary, depositHistory, methodData] = await Promise.all([
+    const [summary, depositHistory, methodData, ledger] = await Promise.all([
       apiRequest<WalletSummary>("/api/wallet/balance"),
       apiRequest<{ deposits: Deposit[] }>("/api/wallet/deposits"),
       apiRequest<{ methods: TopupMethodConfig[] }>(
         "/api/wallet/topup-methods",
       ).catch(() => ({ methods: [] })),
+      apiRequest<{ transactions: WalletLedgerEntry[] }>(
+        "/api/wallet/transactions",
+      ).catch(() => ({ transactions: [] })),
     ]);
     setBalance(summary.availableBalanceCents ?? summary.balanceCents);
+    setSellerBalance(summary.sellerAvailableBalanceCents ?? 0);
     setFrozenBalance(summary.frozenSellerBalanceCents ?? 0);
     setPendingWithdrawalCents(summary.pendingWithdrawalCents ?? 0);
     setWithdrawals(summary.withdrawals ?? []);
     onBalanceChange(summary.availableBalanceCents ?? summary.balanceCents);
     setDeposits(depositHistory.deposits);
     setTopupMethods(methodData.methods);
+    setTransactions(ledger.transactions);
     setDepositMethod((current) =>
       methodData.methods.some((method) => method.method === current)
         ? current
@@ -3454,8 +3476,8 @@ function WalletTabContent({
       return;
     }
     const cents = Math.round(parseFloat(depositAmount) * 100);
-    if (!cents || cents < 100 || cents > 500000) {
-      const text = "Enter an amount between $1.00 and $5,000.00.";
+    if (!cents || cents < 100 || cents > 10_000_000) {
+      const text = "Enter an amount between $1.00 and $100,000.00.";
       setTopupFeedback({ kind: "error", text });
       setMessage(text);
       return;
@@ -3532,7 +3554,7 @@ function WalletTabContent({
       setMessage("Minimum withdrawal is $5.00.");
       return;
     }
-    if (cents > balance) {
+    if (cents > sellerBalance) {
       setMessage("Withdrawal amount is higher than your available balance.");
       return;
     }
@@ -3574,53 +3596,56 @@ function WalletTabContent({
       method.method,
     )
       ? Bitcoin
-      : method.method === "SOL"
-        ? Smartphone
-        : DollarSign,
+      : DollarSign,
   }));
   const selectedMethod =
     methods.find((method) => method.value === depositMethod) ?? null;
   const chains = [
-    "TRC20 USDT",
-    "ERC20 USDT",
-    "BEP20 USDT",
-    "BTC",
-    "ETH",
-    "SOL",
-    "TON",
-    "Polygon USDT",
+    "USDT TRC20",
+    "USDT ERC20",
+    "USDT BEP20",
+    "Bitcoin",
+    "Ethereum",
   ];
 
   return (
     <div className="tab-content wallet-tab">
       <header className="tab-header">
-        <span className="section-index">BUYER WALLET</span>
+        <span className="section-index">{t("buyerWallet").toUpperCase()}</span>
         <h1>
-          {mode === "transactions"
-            ? "Wallet transactions"
-            : "Top up your balance"}
+          {mode === "transactions" ? t("transactionsTitle") : t("topupTitle")}
         </h1>
         <p>
           {mode === "transactions"
-            ? "Review top-ups, payment history and approval status in one protected ledger."
-            : "Send the exact USDT or crypto amount on the selected network, then submit a TXID and screenshot for admin approval."}
+            ? t("topupTransactionIntro")
+            : t("topupIntro")}
         </p>
       </header>
 
-      <div className="topup-progress" aria-label="Top-up steps">
-        <span className="active">
-          <b>1</b>Choose network
-        </span>
-        <span className={depositAmount ? "active" : ""}>
-          <b>2</b>Enter amount
-        </span>
-        <span className={activeTopup ? "active" : ""}>
-          <b>3</b>Send payment
-        </span>
-        <span className={proofFile && proofTx ? "active" : ""}>
-          <b>4</b>Upload proof
-        </span>
-      </div>
+      {mode === "wallet" ? (
+        <div className="topup-progress" aria-label="Top-up steps">
+          <span className="active">
+            <b>1</b>
+            {t("topupStepNetwork")}
+          </span>
+          <span className={depositAmount ? "active" : ""}>
+            <b>2</b>
+            {t("topupStepAmount")}
+          </span>
+          <span className={activeTopup ? "active" : ""}>
+            <b>3</b>
+            {t("topupStepPayment")}
+          </span>
+          <span className={proofFile && proofTx ? "active" : ""}>
+            <b>4</b>
+            {t("topupStepProof")}
+          </span>
+          <span className={activeTopup?.txHash ? "active" : ""}>
+            <b>5</b>
+            {t("topupStepApproval")}
+          </span>
+        </div>
+      ) : null}
 
       {topupFeedback ? (
         <div
@@ -3650,15 +3675,24 @@ function WalletTabContent({
           <Wallet size={32} />
           <div>
             <strong>{formatMoney(balance)}</strong>
-            <small>Available balance</small>
+            <small>{t("availableBalance")}</small>
           </div>
         </div>
+        {user.role === "SELLER" ? (
+          <div className="wallet-balance-banner muted">
+            <DollarSign size={28} />
+            <div>
+              <strong>{formatMoney(sellerBalance)}</strong>
+              <small>{t("availableSellerBalance")}</small>
+            </div>
+          </div>
+        ) : null}
         {user.role === "SELLER" ? (
           <div className="wallet-balance-banner muted">
             <LockKeyhole size={28} />
             <div>
               <strong>{formatMoney(frozenBalance)}</strong>
-              <small>Frozen seller earnings · releases after 3 days</small>
+              <small>{t("frozenEarnings")}</small>
             </div>
           </div>
         ) : null}
@@ -3667,13 +3701,13 @@ function WalletTabContent({
             <RefreshCw size={28} />
             <div>
               <strong>{formatMoney(pendingWithdrawalCents)}</strong>
-              <small>Pending withdrawal review</small>
+              <small>{t("pendingWithdrawalReview")}</small>
             </div>
           </div>
         ) : null}
       </div>
 
-      {user.role !== "SELLER" ? (
+      {mode === "wallet" && user.role !== "SELLER" ? (
         <Link className="seller-application-cta" to="/seller/apply">
           <Store size={21} />
           <span>
@@ -3686,157 +3720,159 @@ function WalletTabContent({
         </Link>
       ) : null}
 
-      <div className="wallet-action-grid">
-        <div className="wallet-deposit-form">
-          <h2>Crypto top-up</h2>
-          <p>
-            Choose one network only. The verified destination address is shown
-            immediately below.
-          </p>
-          {methods.length ? (
-            <div className="deposit-method-tabs">
-              {methods.map((m) => {
-                const Icon = m.icon;
-                return (
-                  <button
-                    key={m.value}
-                    type="button"
-                    className={depositMethod === m.value ? "active" : ""}
-                    onClick={() => setDepositMethod(m.value)}
-                  >
-                    <Icon size={16} /> {m.label}
-                  </button>
-                );
-              })}
-            </div>
-          ) : (
-            <div className="dashboard-empty compact" role="status">
-              <ShieldAlert />
-              <h3>Top-up is temporarily unavailable</h3>
-              <p>
-                No verified payment destination is configured. Please return
-                later or contact support—do not send funds to an address from
-                another source.
-              </p>
-            </div>
-          )}
-          {selectedMethod ? (
-            <div className="topup-network-address">
-              <span>
-                <Bitcoin />
-                <small>SELECTED PAYMENT ADDRESS</small>
-                <strong>{selectedMethod.label}</strong>
-                <b>{selectedMethod.network}</b>
-              </span>
-              <code>{selectedMethod.address}</code>
+      {mode === "wallet" ? (
+        <div className="wallet-action-grid">
+          <div className="wallet-deposit-form">
+            <h2>{t("cryptoTopup")}</h2>
+            <p>{t("cryptoTopupHelp")}</p>
+            {methods.length ? (
+              <div className="deposit-method-tabs">
+                {methods.map((m) => {
+                  const Icon = m.icon;
+                  return (
+                    <button
+                      key={m.value}
+                      type="button"
+                      className={depositMethod === m.value ? "active" : ""}
+                      onClick={() => setDepositMethod(m.value)}
+                    >
+                      <Icon size={16} /> {m.label}
+                    </button>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="dashboard-empty compact" role="status">
+                <ShieldAlert />
+                <h3>Top-up is temporarily unavailable</h3>
+                <p>
+                  No verified payment destination is configured. Please return
+                  later or contact support—do not send funds to an address from
+                  another source.
+                </p>
+              </div>
+            )}
+            {selectedMethod ? (
+              <div className="topup-network-address">
+                <span>
+                  <Bitcoin />
+                  <small>{t("selectedPaymentAddress").toUpperCase()}</small>
+                  <strong>{selectedMethod.label}</strong>
+                  <b>{selectedMethod.network}</b>
+                </span>
+                <code>{selectedMethod.address}</code>
+                <button
+                  type="button"
+                  onClick={() =>
+                    void navigator.clipboard?.writeText(selectedMethod.address)
+                  }
+                >
+                  <ClipboardCopy /> {t("copyAddress")}
+                </button>
+                <small>{selectedMethod.amountPolicy}</small>
+              </div>
+            ) : null}
+            <div className="deposit-input-row">
+              <div className="field">
+                <span>{t("amountUsd")}</span>
+                <input
+                  type="number"
+                  min="1"
+                  max="100000"
+                  step="0.01"
+                  placeholder="50.00"
+                  value={depositAmount}
+                  onChange={(e) => setDepositAmount(e.target.value)}
+                />
+              </div>
               <button
                 type="button"
-                onClick={() =>
-                  void navigator.clipboard?.writeText(selectedMethod.address)
-                }
+                className="primary-button"
+                disabled={busy || !selectedMethod}
+                onClick={() => void submitDeposit()}
               >
-                <ClipboardCopy /> Copy address
+                <PlusCircle size={16} />{" "}
+                {busy ? t("creatingPayment") : t("createPayment")}
+              </button>
+            </div>
+            <div className="wallet-safety-note">
+              <ShieldAlert size={16} />
+              <span>{t("topupFeeWarning")}</span>
+            </div>
+          </div>
+
+          {user.role === "SELLER" ? (
+            <div className="wallet-deposit-form withdrawal-form">
+              <h2>{t("withdrawFunds")}</h2>
+              <p>{t("withdrawHelp")}</p>
+              <div className="withdraw-grid">
+                <div className="field">
+                  <span>{t("blockchainNetwork")}</span>
+                  <select
+                    value={withdrawBlockchain}
+                    onChange={(e) => setWithdrawBlockchain(e.target.value)}
+                  >
+                    {chains.map((chain) => (
+                      <option value={chain} key={chain}>
+                        {chain}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="field">
+                  <span>{t("amountUsd")}</span>
+                  <input
+                    type="number"
+                    min="5"
+                    step="0.01"
+                    placeholder="25.00"
+                    value={withdrawAmount}
+                    onChange={(e) => setWithdrawAmount(e.target.value)}
+                  />
+                </div>
+                <div className="field wide">
+                  <span>{t("walletAddress")}</span>
+                  <input
+                    placeholder="Paste your wallet address"
+                    value={withdrawAddress}
+                    onChange={(e) => setWithdrawAddress(e.target.value)}
+                  />
+                </div>
+              </div>
+              <button
+                className="primary-button"
+                disabled={busy}
+                onClick={() => void submitWithdrawal()}
+              >
+                <Wallet size={16} />{" "}
+                {busy ? t("submitting") : t("requestWithdrawal")}
               </button>
             </div>
           ) : null}
-          <div className="deposit-input-row">
-            <div className="field">
-              <span>Amount (USD)</span>
-              <input
-                type="number"
-                min="1"
-                max="100000"
-                step="0.01"
-                placeholder="50.00"
-                value={depositAmount}
-                onChange={(e) => setDepositAmount(e.target.value)}
-              />
-            </div>
-            <button
-              type="button"
-              className="primary-button"
-              disabled={busy || !selectedMethod}
-              onClick={() => void submitDeposit()}
-            >
-              <PlusCircle size={16} /> {busy ? "Creating…" : "Create payment"}
-            </button>
-          </div>
-          <div className="wallet-safety-note">
-            <ShieldAlert size={16} />
-            <span>
-              Send only on the selected network. A payment sent on another chain
-              cannot be credited automatically.
-            </span>
-          </div>
         </div>
+      ) : null}
 
-        {user.role === "SELLER" ? (
-          <div className="wallet-deposit-form withdrawal-form">
-            <h2>Withdraw funds</h2>
-            <p>
-              Select blockchain, enter your wallet address, and request
-              withdrawal. Admin approval marks it successful.
-            </p>
-            <div className="withdraw-grid">
-              <div className="field">
-                <span>Blockchain / Network</span>
-                <select
-                  value={withdrawBlockchain}
-                  onChange={(e) => setWithdrawBlockchain(e.target.value)}
-                >
-                  {chains.map((chain) => (
-                    <option value={chain} key={chain}>
-                      {chain}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="field">
-                <span>Amount (USD)</span>
-                <input
-                  type="number"
-                  min="5"
-                  step="0.01"
-                  placeholder="25.00"
-                  value={withdrawAmount}
-                  onChange={(e) => setWithdrawAmount(e.target.value)}
-                />
-              </div>
-              <div className="field wide">
-                <span>Wallet address</span>
-                <input
-                  placeholder="Paste your wallet address"
-                  value={withdrawAddress}
-                  onChange={(e) => setWithdrawAddress(e.target.value)}
-                />
-              </div>
-            </div>
-            <button
-              className="primary-button"
-              disabled={busy}
-              onClick={() => void submitWithdrawal()}
-            >
-              <Wallet size={16} /> {busy ? "Submitting…" : "Request withdrawal"}
-            </button>
-          </div>
-        ) : null}
-      </div>
-
-      {activeTopup ? (
+      {mode === "wallet" && activeTopup ? (
         <section className="topup-proof-card" id="topup-payment-request">
           <header>
             <div>
-              <span className="section-index">PAYMENT REQUEST</span>
-              <h2>Send exactly {formatMoney(activeTopup.amountCents)}</h2>
+              <span className="section-index">
+                {t("paymentRequest").toUpperCase()}
+              </span>
+              <h2>
+                {t("sendExactly")} {formatMoney(activeTopup.amountCents)}
+              </h2>
               <p>
                 {activeTopup.method.replaceAll("_", " ")} · request{" "}
                 {activeTopup.reference}
               </p>
             </div>
-            <span className="status-pill pending">AWAITING PAYMENT</span>
+            <span className="status-pill pending">
+              {t("awaitingPayment").toUpperCase()}
+            </span>
           </header>
           <div className="topup-address-box">
-            <small>Send only to this address</small>
+            <small>{t("sendOnlyAddress")}</small>
             <code>{activeTopup.depositAddress}</code>
             <button
               type="button"
@@ -3846,25 +3882,26 @@ function WalletTabContent({
                 )
               }
             >
-              <ClipboardCopy size={15} /> Copy address
+              <ClipboardCopy size={15} /> {t("copyAddress")}
             </button>
           </div>
           <div className="topup-proof-grid">
             <label>
-              <span>Transaction ID / TXID *</span>
+              <span>{t("transactionId")} *</span>
               <input
                 value={proofTx}
-                minLength={6}
+                minLength={64}
+                maxLength={66}
                 onChange={(event) => setProofTx(event.target.value)}
-                placeholder="Paste the transaction hash"
+                placeholder="Paste the complete on-chain transaction hash"
               />
             </label>
             <label className="topup-upload">
               <UploadCloud size={24} />
               <span>
-                {proofFile ? proofFile.name : "Upload payment screenshot *"}
+                {proofFile ? proofFile.name : `${t("uploadScreenshot")} *`}
               </span>
-              <small>JPEG, PNG or WebP · maximum 8 MB</small>
+              <small>{t("proofFileRules")}</small>
               <input
                 type="file"
                 accept="image/jpeg,image/png,image/webp"
@@ -3905,19 +3942,73 @@ function WalletTabContent({
           </div>
           <footer>
             <small>
-              <Clock3 size={17} /> Admin will approve or reject this proof.
-              Approved funds are added to available balance automatically.
+              <Clock3 size={17} /> {t("approvalProofNote")}
             </small>
             <button
               type="button"
               className="primary-button"
-              disabled={busy || proofTx.trim().length < 6 || !proofFile}
+              disabled={busy || proofTx.trim().length < 64 || !proofFile}
               onClick={() => void submitProof()}
             >
               <CheckCircle2 size={18} />{" "}
-              {busy ? "Confirming…" : "Confirm payment & submit proof"}
+              {busy ? t("confirming") : t("confirmPayment")}
             </button>
           </footer>
+        </section>
+      ) : null}
+
+      {mode === "transactions" ? (
+        <section className="section-block wallet-ledger">
+          <header className="wallet-ledger-heading">
+            <div>
+              <span className="section-index">
+                {t("auditableLedger").toUpperCase()}
+              </span>
+              <h2>{t("balanceActivity")}</h2>
+            </div>
+            <small>{t("separateBalances")}</small>
+          </header>
+          {transactions.length ? (
+            <div className="wallet-ledger-list">
+              {transactions.map((entry) => (
+                <article key={entry.id}>
+                  <span
+                    className={
+                      entry.amountCents >= 0 ? "ledger-credit" : "ledger-debit"
+                    }
+                  >
+                    <ReceiptText />
+                  </span>
+                  <div>
+                    <strong>{entry.description}</strong>
+                    <small>
+                      {entry.balanceKind === "SELLER"
+                        ? "Seller balance"
+                        : "Buyer balance"}{" "}
+                      · {new Date(entry.createdAt).toLocaleString()}
+                    </small>
+                    {entry.reference ? <code>{entry.reference}</code> : null}
+                  </div>
+                  <b
+                    className={entry.amountCents >= 0 ? "positive" : "negative"}
+                  >
+                    {entry.amountCents >= 0 ? "+" : "−"}
+                    {formatMoney(Math.abs(entry.amountCents))}
+                  </b>
+                  <small>After: {formatMoney(entry.balanceAfter)}</small>
+                </article>
+              ))}
+            </div>
+          ) : (
+            <div className="empty-state-large">
+              <ReceiptText size={42} />
+              <h2>No balance activity yet</h2>
+              <p>
+                Approved top-ups, purchases, releases, and withdrawals appear
+                here.
+              </p>
+            </div>
+          )}
         </section>
       ) : null}
 
@@ -3992,7 +4083,11 @@ function WalletTabContent({
                   <span
                     className={`status-pill ${deposit.status.toLowerCase()}`}
                   >
-                    {deposit.status}
+                    {deposit.status === "PENDING"
+                      ? deposit.txHash && deposit.screenshotUrl
+                        ? "PENDING APPROVAL"
+                        : "AWAITING PROOF"
+                      : deposit.status}
                   </span>
                   <small>
                     {new Date(deposit.createdAt).toLocaleDateString()}

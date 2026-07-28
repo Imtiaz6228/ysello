@@ -23,14 +23,7 @@ export const languages: Array<{
     native: "简体中文",
     flag: "🇨🇳",
   },
-  {
-    code: "zh-TW",
-    label: "Traditional Chinese",
-    native: "繁體中文",
-    flag: "🇹🇼",
-  },
   { code: "ru", label: "Russian", native: "Русский", flag: "🇷🇺" },
-  { code: "vi", label: "Vietnamese", native: "Tiếng Việt", flag: "🇻🇳" },
 ];
 
 export const currencies: Array<{
@@ -40,10 +33,7 @@ export const currencies: Array<{
 }> = [
   { code: "USD", label: "US Dollar", symbol: "$" },
   { code: "CNY", label: "Chinese Yuan", symbol: "¥" },
-  { code: "TWD", label: "Taiwan Dollar", symbol: "NT$" },
   { code: "RUB", label: "Russian Ruble", symbol: "₽" },
-  { code: "VND", label: "Vietnamese Dong", symbol: "₫" },
-  { code: "PKR", label: "Pakistani Rupee", symbol: "Rs" },
 ];
 
 const copy: Record<LocaleCode, Record<string, string>> = {
@@ -90,6 +80,76 @@ const copy: Record<LocaleCode, Record<string, string>> = {
     newArrivals: "New arrivals",
     menu: "Menu",
     close: "Close",
+    campaignLabel: "Editor’s picks",
+    campaignText: "Fresh digital tools, assets and services",
+    campaignCta: "Explore marketplace",
+    welcomeBack: "Welcome back",
+    whatLooking: "What are you looking for?",
+    homeHeroTitle: "Everything digital, ready for your next move.",
+    homeHeroIntro:
+      "Discover trusted software, creator assets, practical AI tools and expert services—with every detail clear before checkout.",
+    shopMarketplace: "Shop marketplace",
+    startSelling: "Start selling",
+    verifiedSellers: "Verified sellers",
+    fastDelivery: "Fast digital delivery",
+    protectedCheckout: "Protected checkout",
+    exploreDepartment: "Explore department",
+    secureCheckout: "Secure checkout",
+    addToCart: "Add to cart",
+    unavailable: "Unavailable",
+    buyerWallet: "Buyer wallet",
+    sellerBalance: "Seller balance",
+    pendingApproval: "Pending approval",
+    awaitingProof: "Awaiting proof",
+    buyOnline: "Buy online",
+    productSeoSuffix:
+      "Compare delivery, seller information, and buyer protection before checkout.",
+    topupTitle: "Top up your balance",
+    topupIntro:
+      "Choose a supported crypto network, send payment, and submit your TXID and screenshot for admin approval.",
+    transactionsTitle: "Wallet transactions",
+    availableBalance: "Available buyer balance",
+    availableSellerBalance: "Available seller balance",
+    frozenEarnings: "Frozen seller earnings · releases after 72 hours",
+    pendingWithdrawalReview: "Pending withdrawal review",
+    topupTransactionIntro:
+      "Review top-ups, payment history and approval status in one protected ledger.",
+    topupStepNetwork: "Choose network",
+    topupStepAmount: "Enter amount",
+    topupStepPayment: "Send payment",
+    topupStepProof: "Upload proof",
+    topupStepApproval: "Admin approval",
+    cryptoTopup: "Crypto top-up",
+    cryptoTopupHelp:
+      "Choose one network only. The verified destination address appears below.",
+    selectedPaymentAddress: "Selected payment address",
+    copyAddress: "Copy address",
+    amountUsd: "Amount (USD)",
+    createPayment: "Create payment",
+    creatingPayment: "Creating…",
+    topupFeeWarning:
+      "Send only on the selected network. Network and exchange fees are paid by the buyer, so the receiving amount must match the requested credit.",
+    withdrawFunds: "Withdraw funds",
+    withdrawHelp:
+      "Choose a network and wallet address. There is no additional platform withdrawal fee; the request completes after admin approval.",
+    blockchainNetwork: "Blockchain / Network",
+    walletAddress: "Wallet address",
+    requestWithdrawal: "Request withdrawal",
+    submitting: "Submitting…",
+    paymentRequest: "Payment request",
+    sendExactly: "Send exactly",
+    awaitingPayment: "Awaiting payment",
+    sendOnlyAddress: "Send only to this address",
+    transactionId: "Transaction ID / TXID",
+    uploadScreenshot: "Upload payment screenshot",
+    proofFileRules: "JPEG, PNG or WebP · maximum 8 MB",
+    approvalProofNote:
+      "Admin verifies this proof. Approved funds are added to available balance automatically.",
+    confirmPayment: "Confirm payment & submit proof",
+    confirming: "Confirming…",
+    auditableLedger: "Auditable ledger",
+    balanceActivity: "Balance activity",
+    separateBalances: "Buyer and seller balances are tracked separately",
   },
   "zh-CN": {
     explore: "探索",
@@ -134,6 +194,72 @@ const copy: Record<LocaleCode, Record<string, string>> = {
     newArrivals: "最新上架",
     menu: "菜单",
     close: "关闭",
+    campaignLabel: "编辑精选",
+    campaignText: "最新数字工具、素材与专业服务",
+    campaignCta: "探索市场",
+    welcomeBack: "欢迎回来",
+    whatLooking: "您在寻找什么？",
+    homeHeroTitle: "数字所需，为下一步即刻就绪。",
+    homeHeroIntro:
+      "发现可信的软件、创作素材、实用 AI 工具与专业服务，结账前所有细节清晰可见。",
+    shopMarketplace: "选购数字商品",
+    startSelling: "开始销售",
+    verifiedSellers: "认证卖家",
+    fastDelivery: "快速数字交付",
+    protectedCheckout: "受保护的结账",
+    exploreDepartment: "探索分类",
+    secureCheckout: "安全结账",
+    addToCart: "加入购物车",
+    unavailable: "暂不可用",
+    buyerWallet: "买家钱包",
+    sellerBalance: "卖家余额",
+    pendingApproval: "等待管理员审批",
+    awaitingProof: "等待付款凭证",
+    buyOnline: "在线购买",
+    productSeoSuffix: "结账前比较交付方式、卖家信息与买家保障。",
+    topupTitle: "充值账户余额",
+    topupIntro:
+      "选择支持的加密网络，完成付款，并提交交易 ID 与截图等待管理员审批。",
+    transactionsTitle: "钱包交易记录",
+    availableBalance: "可用买家余额",
+    availableSellerBalance: "可用卖家余额",
+    frozenEarnings: "冻结的卖家收入 · 72 小时后解冻",
+    pendingWithdrawalReview: "等待审核的提现",
+    topupTransactionIntro: "在受保护的账本中查看充值、付款历史和审批状态。",
+    topupStepNetwork: "选择网络",
+    topupStepAmount: "输入金额",
+    topupStepPayment: "发送付款",
+    topupStepProof: "上传凭证",
+    topupStepApproval: "管理员审批",
+    cryptoTopup: "加密货币充值",
+    cryptoTopupHelp: "仅选择一个网络。下方会显示经过验证的收款地址。",
+    selectedPaymentAddress: "已选收款地址",
+    copyAddress: "复制地址",
+    amountUsd: "金额（美元）",
+    createPayment: "创建付款",
+    creatingPayment: "正在创建…",
+    topupFeeWarning:
+      "请仅通过所选网络付款。网络及交易所手续费由买家承担，实际到账金额必须与申请充值金额一致。",
+    withdrawFunds: "提取资金",
+    withdrawHelp:
+      "选择网络并输入钱包地址。平台不收取额外提现费；管理员批准后提现完成。",
+    blockchainNetwork: "区块链 / 网络",
+    walletAddress: "钱包地址",
+    requestWithdrawal: "申请提现",
+    submitting: "正在提交…",
+    paymentRequest: "付款申请",
+    sendExactly: "请准确发送",
+    awaitingPayment: "等待付款",
+    sendOnlyAddress: "仅向此地址发送",
+    transactionId: "交易 ID / TXID",
+    uploadScreenshot: "上传付款截图",
+    proofFileRules: "JPEG、PNG 或 WebP · 最大 8 MB",
+    approvalProofNote: "管理员将核验此凭证。批准后资金会自动加入可用余额。",
+    confirmPayment: "确认付款并提交凭证",
+    confirming: "正在确认…",
+    auditableLedger: "可审计账本",
+    balanceActivity: "余额变动",
+    separateBalances: "买家余额与卖家余额分开记录",
   },
   "zh-TW": {
     explore: "探索",
@@ -222,6 +348,76 @@ const copy: Record<LocaleCode, Record<string, string>> = {
     newArrivals: "Новинки",
     menu: "Меню",
     close: "Закрыть",
+    campaignLabel: "Выбор редакции",
+    campaignText: "Новые цифровые инструменты, материалы и услуги",
+    campaignCta: "Открыть маркетплейс",
+    welcomeBack: "С возвращением",
+    whatLooking: "Что вы ищете?",
+    homeHeroTitle: "Всё цифровое — для вашего следующего шага.",
+    homeHeroIntro:
+      "Надёжное ПО, материалы для авторов, AI-инструменты и услуги экспертов с понятными условиями до оплаты.",
+    shopMarketplace: "Перейти к покупкам",
+    startSelling: "Начать продавать",
+    verifiedSellers: "Проверенные продавцы",
+    fastDelivery: "Быстрая цифровая доставка",
+    protectedCheckout: "Защищённая оплата",
+    exploreDepartment: "Открыть категорию",
+    secureCheckout: "Безопасная оплата",
+    addToCart: "В корзину",
+    unavailable: "Недоступно",
+    buyerWallet: "Кошелёк покупателя",
+    sellerBalance: "Баланс продавца",
+    pendingApproval: "Ожидает одобрения",
+    awaitingProof: "Ожидает подтверждения",
+    buyOnline: "Купить онлайн",
+    productSeoSuffix:
+      "Сравните доставку, продавца и защиту покупателя до оплаты.",
+    topupTitle: "Пополнить баланс",
+    topupIntro:
+      "Выберите поддерживаемую сеть, отправьте платёж и загрузите TXID со скриншотом для одобрения.",
+    transactionsTitle: "Операции кошелька",
+    availableBalance: "Доступный баланс покупателя",
+    availableSellerBalance: "Доступный баланс продавца",
+    frozenEarnings: "Замороженный доход · доступен через 72 часа",
+    pendingWithdrawalReview: "Выводы на проверке",
+    topupTransactionIntro:
+      "Пополнения, платежи и статусы одобрения собраны в защищённом журнале.",
+    topupStepNetwork: "Выберите сеть",
+    topupStepAmount: "Введите сумму",
+    topupStepPayment: "Отправьте платёж",
+    topupStepProof: "Загрузите подтверждение",
+    topupStepApproval: "Одобрение админа",
+    cryptoTopup: "Пополнение криптовалютой",
+    cryptoTopupHelp:
+      "Выберите только одну сеть. Проверенный адрес появится ниже.",
+    selectedPaymentAddress: "Выбранный адрес оплаты",
+    copyAddress: "Копировать адрес",
+    amountUsd: "Сумма (USD)",
+    createPayment: "Создать платёж",
+    creatingPayment: "Создание…",
+    topupFeeWarning:
+      "Отправляйте только в выбранной сети. Сетевые комиссии и комиссии биржи оплачивает покупатель; на адрес должна поступить полная сумма пополнения.",
+    withdrawFunds: "Вывести средства",
+    withdrawHelp:
+      "Выберите сеть и адрес кошелька. Дополнительной комиссии платформы нет; вывод завершается после одобрения администратора.",
+    blockchainNetwork: "Блокчейн / Сеть",
+    walletAddress: "Адрес кошелька",
+    requestWithdrawal: "Запросить вывод",
+    submitting: "Отправка…",
+    paymentRequest: "Запрос платежа",
+    sendExactly: "Отправьте точно",
+    awaitingPayment: "Ожидает оплаты",
+    sendOnlyAddress: "Отправляйте только на этот адрес",
+    transactionId: "ID транзакции / TXID",
+    uploadScreenshot: "Загрузите скриншот оплаты",
+    proofFileRules: "JPEG, PNG или WebP · до 8 МБ",
+    approvalProofNote:
+      "Администратор проверит подтверждение. После одобрения средства автоматически зачислятся на доступный баланс.",
+    confirmPayment: "Подтвердить и отправить доказательство",
+    confirming: "Подтверждение…",
+    auditableLedger: "Проверяемый журнал",
+    balanceActivity: "Операции по балансу",
+    separateBalances: "Баланс покупателя и продавца учитываются отдельно",
   },
   vi: {
     explore: "Khám phá",
@@ -289,11 +485,23 @@ type LocaleValue = {
   setCurrency: (currency: CurrencyCode) => void;
   t: (key: string) => string;
   formatMoney: (usdCents: number) => string;
+  formatProductMoney: (
+    prices: {
+      priceCents: number;
+      priceCnyCents?: number;
+      priceRubCents?: number;
+    },
+    quantity?: number,
+  ) => string;
 };
 
 const LocaleContext = createContext<LocaleValue | null>(null);
 
 function storedLocale(): LocaleCode {
+  const queryLocale = new URLSearchParams(window.location.search).get(
+    "lang",
+  ) as LocaleCode | null;
+  if (queryLocale && validLocales.has(queryLocale)) return queryLocale;
   const value = localStorage.getItem("ysello-locale") as LocaleCode | null;
   return value && validLocales.has(value) ? value : "en";
 }
@@ -320,14 +528,54 @@ export function LocaleProvider({ children }: { children: ReactNode }) {
     () => ({
       locale,
       currency,
-      // Language and currency are intentionally independent preferences.
-      setLocale: setLocaleState,
+      // Each language defaults to its matching storefront currency; buyers can
+      // still change currency independently afterward.
+      setLocale(nextLocale) {
+        setLocaleState(nextLocale);
+        const preferredCurrency: Partial<Record<LocaleCode, CurrencyCode>> = {
+          en: "USD",
+          "zh-CN": "CNY",
+          ru: "RUB",
+        };
+        const nextCurrency = preferredCurrency[nextLocale];
+        if (nextCurrency) setCurrencyState(nextCurrency);
+        const url = new URL(window.location.href);
+        if (nextLocale === "en") url.searchParams.delete("lang");
+        else url.searchParams.set("lang", nextLocale);
+        window.history.replaceState(
+          window.history.state,
+          "",
+          `${url.pathname}${url.search}${url.hash}`,
+        );
+      },
       setCurrency: setCurrencyState,
       t(key) {
         return copy[locale][key] ?? copy.en[key] ?? key;
       },
       formatMoney(usdCents) {
         const converted = (usdCents / 100) * usdRates[currency];
+        return new Intl.NumberFormat(locale, {
+          style: "currency",
+          currency,
+          maximumFractionDigits: currency === "VND" ? 0 : 2,
+        }).format(converted);
+      },
+      formatProductMoney(prices, quantity = 1) {
+        const exactLocalizedCents =
+          currency === "CNY" && (prices.priceCnyCents ?? 0) > 0
+            ? prices.priceCnyCents!
+            : currency === "RUB" && (prices.priceRubCents ?? 0) > 0
+              ? prices.priceRubCents!
+              : null;
+        if (exactLocalizedCents !== null) {
+          return new Intl.NumberFormat(locale, {
+            style: "currency",
+            currency,
+            maximumFractionDigits: 2,
+          }).format((exactLocalizedCents * quantity) / 100);
+        }
+        const converted =
+          ((prices.priceCents * quantity) / 100) * usdRates[currency];
         return new Intl.NumberFormat(locale, {
           style: "currency",
           currency,

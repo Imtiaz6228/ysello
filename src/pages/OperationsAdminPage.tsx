@@ -186,6 +186,7 @@ type Deposit = {
   depositAddress?: string | null;
   txHash?: string | null;
   screenshotUrl?: string | null;
+  proofSubmittedAt?: string | null;
   adminNotes?: string | null;
   createdAt: string;
   user: {
@@ -194,6 +195,7 @@ type Deposit = {
     email: string;
     username: string;
     balanceCents: number;
+    sellerBalanceCents?: number;
   };
 };
 
@@ -223,6 +225,7 @@ type Withdrawal = {
     email: string;
     username: string;
     balanceCents: number;
+    sellerBalanceCents?: number;
     role?: string;
   };
 };
@@ -1654,7 +1657,15 @@ export function OperationsAdminPage() {
                   <small>Balance: {money(deposit.user.balanceCents)}</small>
                 </div>
                 <div>
-                  <Status value={deposit.status} />
+                  <Status
+                    value={
+                      deposit.status === "PENDING"
+                        ? deposit.txHash && deposit.screenshotUrl
+                          ? "PENDING APPROVAL"
+                          : "AWAITING PROOF"
+                        : deposit.status
+                    }
+                  />
                   <small>{deposit.adminNotes}</small>
                 </div>
                 <div className="row-actions">
@@ -1734,7 +1745,8 @@ export function OperationsAdminPage() {
                     {withdrawal.user.email} · @{withdrawal.user.username}
                   </small>
                   <small>
-                    Available: {money(withdrawal.user.balanceCents)}
+                    Seller balance:{" "}
+                    {money(withdrawal.user.sellerBalanceCents ?? 0)}
                   </small>
                 </div>
                 <div>

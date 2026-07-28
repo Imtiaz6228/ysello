@@ -23,6 +23,7 @@ export type User = {
   isSuspended: boolean;
   emailVerified: boolean;
   balanceCents: number;
+  sellerBalanceCents: number;
   createdAt: string;
 };
 

@@ -7,9 +7,8 @@ function rootForCategory(slug: string, categories: CatalogCategory[]) {
   while (current?.parentSlug && !visited.has(current.slug)) {
     visited.add(current.slug);
     current =
-      categories.find(
-        (category) => category.slug === current?.parentSlug,
-      ) ?? current;
+      categories.find((category) => category.slug === current?.parentSlug) ??
+      current;
   }
   return current;
 }

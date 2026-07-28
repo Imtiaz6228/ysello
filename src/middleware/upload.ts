@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import multer from "multer";
+import sharp from "sharp";
 import type { RequestHandler } from "express";
 import { env } from "../config/env.js";
 import { prisma } from "../lib/prisma.js";
@@ -61,10 +62,44 @@ async function persistPublicImage(file: Express.Multer.File) {
   });
 }
 
+async function optimizeProductImage(file: Express.Multer.File) {
+  const parsed = path.parse(file.filename);
+  const optimizedFilename = `${parsed.name}.webp`;
+  const optimizedPath = path.join(uploadRoot, optimizedFilename);
+  const temporaryPath = `${file.path}.optimized.webp`;
+  await sharp(file.path)
+    .rotate()
+    .resize({
+      width: 1600,
+      height: 1200,
+      fit: "inside",
+      withoutEnlargement: true,
+    })
+    .webp({ quality: 82, effort: 4, smartSubsample: true })
+    .toFile(temporaryPath);
+  await fs.promises.unlink(file.path);
+  await fs.promises.rename(temporaryPath, optimizedPath);
+  const stat = await fs.promises.stat(optimizedPath);
+  file.path = optimizedPath;
+  file.filename = optimizedFilename;
+  file.mimetype = "image/webp";
+  file.size = stat.size;
+}
+
+export async function discardPublicImage(file?: Express.Multer.File) {
+  if (!file) return;
+  await Promise.all([
+    fs.promises.unlink(file.path).catch(() => undefined),
+    prisma.publicUpload
+      .deleteMany({ where: { fileName: file.filename } })
+      .catch(() => undefined),
+  ]);
+}
+
 /**
  * Public images are written to the local upload cache and PostgreSQL before
  * the route handler runs. This keeps product images, store branding, profile
- * photos, chat attachments, and top-up proofs available after a redeploy.
+ * photos, and chat attachments available after a redeploy.
  */
 export const imageUpload = {
   single(fieldName: string): RequestHandler {
@@ -90,8 +125,64 @@ export const imageUpload = {
   },
 };
 
+export const productImageUpload = {
+  single(fieldName: string): RequestHandler {
+    const parse = diskImageUpload.single(fieldName);
+    return (req, res, next) => {
+      parse(req, res, (error) => {
+        if (error) {
+          next(error);
+          return;
+        }
+        if (!req.file) {
+          next();
+          return;
+        }
+        void optimizeProductImage(req.file)
+          .then(() => persistPublicImage(req.file!))
+          .then(() => next())
+          .catch(async (optimizationError) => {
+            await fs.promises.unlink(req.file!.path).catch(() => undefined);
+            next(optimizationError);
+          });
+      });
+    };
+  },
+};
+
 export function publicUploadUrl(fileName: string) {
   return `${env.API_URL.replace(/\/+$/, "")}/uploads/${encodeURIComponent(fileName)}`;
+}
+
+const privateImageStorage = multer.diskStorage({
+  destination: (_req, _file, callback) => callback(null, privateUploadRoot),
+  filename: (_req, file, callback) => {
+    const extension = path.extname(file.originalname).toLowerCase();
+    callback(
+      null,
+      `topup-proof-${Date.now()}-${crypto.randomUUID()}${extension}`,
+    );
+  },
+});
+
+export const topupProofUpload = multer({
+  storage: privateImageStorage,
+  limits: {
+    fileSize: env.MAX_UPLOAD_BYTES,
+    files: 1,
+  },
+  fileFilter: (_req, file, callback) => {
+    if (!allowedTypes.has(file.mimetype)) {
+      callback(new Error("Only JPEG, PNG, and WebP images are allowed."));
+      return;
+    }
+    callback(null, true);
+  },
+});
+
+export async function discardPrivateUpload(file?: Express.Multer.File) {
+  if (!file) return;
+  await fs.promises.unlink(file.path).catch(() => undefined);
 }
 
 const allowedProductTypes = new Set([

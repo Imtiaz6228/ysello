@@ -1,16 +1,27 @@
+import fs from "node:fs";
+import path from "node:path";
 import { Router } from "express";
-import { TopupMethod } from "@prisma/client";
+import { Role, TopupMethod } from "@prisma/client";
 import { z } from "zod";
 import { prisma } from "../lib/prisma.js";
-import { requireAuth, requireVerifiedUser } from "../middleware/auth.js";
+import {
+  requireAuth,
+  requireRole,
+  requireVerifiedUser,
+} from "../middleware/auth.js";
 import { ApiError, asyncHandler } from "../middleware/error-handler.js";
 import { createWalletCheckout } from "../services/payment.service.js";
 import {
   createWithdrawalRequest,
   getWalletSummary,
   releaseAvailableSellerEarnings,
+  withdrawalNetworks,
 } from "../services/finance.service.js";
-import { imageUpload, publicUploadUrl } from "../middleware/upload.js";
+import {
+  discardPrivateUpload,
+  privateUploadRoot,
+  topupProofUpload,
+} from "../middleware/upload.js";
 import {
   createTopupRequest,
   getTopupMethods,
@@ -47,6 +58,7 @@ walletRouter.get(
 
 walletRouter.get(
   "/withdrawals",
+  requireRole(Role.SELLER),
   asyncHandler(async (req, res) => {
     await releaseAvailableSellerEarnings(req.auth!.id);
     const withdrawals = await (prisma as any).withdrawalRequest.findMany({
@@ -57,13 +69,26 @@ walletRouter.get(
   }),
 );
 
+walletRouter.get(
+  "/transactions",
+  asyncHandler(async (req, res) => {
+    const transactions = await prisma.walletTransaction.findMany({
+      where: { userId: req.auth!.id },
+      orderBy: { createdAt: "desc" },
+      take: 100,
+    });
+    res.json({ transactions });
+  }),
+);
+
 walletRouter.post(
   "/withdrawals",
+  requireRole(Role.SELLER),
   asyncHandler(async (req, res) => {
     const input = z
       .object({
         amountCents: z.number().int().min(500).max(100_000_000),
-        blockchain: z.string().trim().min(2).max(80),
+        blockchain: z.enum(withdrawalNetworks),
         walletAddress: z.string().trim().min(12).max(240),
       })
       .parse(req.body);
@@ -86,7 +111,6 @@ const cryptoTopupSchema = z.object({
     TopupMethod.CRYPTO_ERC20,
     TopupMethod.BTC,
     TopupMethod.ETH,
-    TopupMethod.SOL,
   ]),
 });
 
@@ -109,31 +133,70 @@ walletRouter.post(
 
 walletRouter.post(
   "/topups/:id/proof",
-  imageUpload.single("screenshot"),
+  topupProofUpload.single("screenshot"),
+  asyncHandler(async (req, res) => {
+    try {
+      const id = z.string().uuid().parse(req.params.id);
+      const input = z
+        .object({ txHash: z.string().trim().min(64).max(66) })
+        .parse(req.body);
+      if (!req.file)
+        throw new ApiError(
+          400,
+          "Upload a payment screenshot as proof.",
+          "TOPUP_SCREENSHOT_REQUIRED",
+        );
+      const result = await submitTopupProof(
+        req.auth!.id,
+        id,
+        input.txHash,
+        req.file.path,
+        `/api/wallet/topups/${id}/proof-image`,
+      );
+      res.status(201).json({
+        message: result.autoVerified
+          ? "Transaction found. It is ready for final approval."
+          : "Payment proof submitted. Status: pending admin approval.",
+        ...result,
+      });
+    } catch (error) {
+      await discardPrivateUpload(req.file);
+      throw error;
+    }
+  }),
+);
+
+walletRouter.get(
+  "/topups/:id/proof-image",
   asyncHandler(async (req, res) => {
     const id = z.string().uuid().parse(req.params.id);
-    const input = z
-      .object({ txHash: z.string().trim().min(6).max(300) })
-      .parse(req.body);
-    if (!req.file)
-      throw new ApiError(
-        400,
-        "Upload a payment screenshot as proof.",
-        "TOPUP_SCREENSHOT_REQUIRED",
-      );
-    const result = await submitTopupProof(
-      req.auth!.id,
-      id,
-      input.txHash,
-      req.file.path,
-      publicUploadUrl(req.file.filename),
-    );
-    res.status(201).json({
-      message: result.autoVerified
-        ? "Transaction found. It is ready for final approval."
-        : "Payment proof submitted. An administrator will review it before your balance is credited.",
-      ...result,
+    const topup = await prisma.topupRequest.findUnique({
+      where: { id },
+      select: { userId: true, screenshotPath: true },
     });
+    const staffRoles: Role[] = [Role.SUPER_ADMIN, Role.ADMIN, Role.MODERATOR];
+    if (
+      !topup ||
+      !topup.screenshotPath ||
+      (topup.userId !== req.auth!.id && !staffRoles.includes(req.auth!.role))
+    ) {
+      throw new ApiError(404, "Payment proof not found.", "PROOF_NOT_FOUND");
+    }
+
+    const proofPath = path.resolve(topup.screenshotPath);
+    const privateRoot = path.resolve(privateUploadRoot);
+    if (!proofPath.startsWith(`${privateRoot}${path.sep}`)) {
+      throw new ApiError(404, "Payment proof not found.", "PROOF_NOT_FOUND");
+    }
+    await fs.promises.access(proofPath, fs.constants.R_OK).catch(() => {
+      throw new ApiError(404, "Payment proof not found.", "PROOF_NOT_FOUND");
+    });
+    res.set({
+      "Cache-Control": "private, no-store",
+      "Content-Disposition": "inline",
+      "X-Content-Type-Options": "nosniff",
+    });
+    res.sendFile(proofPath);
   }),
 );
 

@@ -1,4 +1,5 @@
 import { useEffect, useMemo } from "react";
+import { useLocale } from "../i18n/LocaleContext";
 
 type SeoProps = {
   title: string;
@@ -72,6 +73,7 @@ export function Seo({
   noIndex = false,
   schema,
 }: SeoProps) {
+  const { locale } = useLocale();
   const schemaText = useMemo(
     () => (schema ? JSON.stringify(schema) : ""),
     [schema],
@@ -81,7 +83,11 @@ export function Seo({
     const pageTitle = title.toLowerCase().includes("ysello")
       ? title
       : `${title} · Ysello`;
-    const canonicalUrl = canonicalPathname(canonicalPath);
+    const canonicalBase = canonicalPathname(canonicalPath);
+    const canonical = new URL(canonicalBase);
+    if (locale === "zh-CN" || locale === "ru")
+      canonical.searchParams.set("lang", locale);
+    const canonicalUrl = canonical.toString();
     document.title = pageTitle;
     setMeta('meta[name="description"]', "name", "description", description);
     setMeta(
@@ -112,7 +118,7 @@ export function Seo({
       'meta[property="og:locale"]',
       "property",
       "og:locale",
-      document.documentElement.lang.replace("-", "_") || "en_US",
+      locale.replace("-", "_") || "en_US",
     );
     setMeta('meta[property="og:title"]', "property", "og:title", pageTitle);
     setMeta(
@@ -154,15 +160,35 @@ export function Seo({
       resolvedImageAlt,
     );
 
-    let canonical = document.head.querySelector<HTMLLinkElement>(
+    let canonicalLink = document.head.querySelector<HTMLLinkElement>(
       'link[rel="canonical"]',
     );
-    if (!canonical) {
-      canonical = document.createElement("link");
-      canonical.rel = "canonical";
-      document.head.appendChild(canonical);
+    if (!canonicalLink) {
+      canonicalLink = document.createElement("link");
+      canonicalLink.rel = "canonical";
+      document.head.appendChild(canonicalLink);
     }
-    canonical.href = canonicalUrl;
+    canonicalLink.href = canonicalUrl;
+
+    document.head
+      .querySelectorAll('link[data-ysello-hreflang="true"]')
+      .forEach((link) => link.remove());
+    const alternates: Array<[string, string | null]> = [
+      ["en", null],
+      ["zh-CN", "zh-CN"],
+      ["ru", "ru"],
+      ["x-default", null],
+    ];
+    for (const [hreflang, lang] of alternates) {
+      const alternate = document.createElement("link");
+      alternate.rel = "alternate";
+      alternate.hreflang = hreflang;
+      alternate.dataset.yselloHreflang = "true";
+      const href = new URL(canonicalBase);
+      if (lang) href.searchParams.set("lang", lang);
+      alternate.href = href.toString();
+      document.head.appendChild(alternate);
+    }
 
     const id = "page-structured-data";
     document.getElementById(id)?.remove();
@@ -175,12 +201,16 @@ export function Seo({
     }
     return () => {
       document.getElementById(id)?.remove();
+      document.head
+        .querySelectorAll('link[data-ysello-hreflang="true"]')
+        .forEach((link) => link.remove());
     };
   }, [
     canonicalPath,
     description,
     image,
     imageAlt,
+    locale,
     noIndex,
     schemaText,
     title,

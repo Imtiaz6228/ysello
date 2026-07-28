@@ -1,0 +1,500 @@
+/*
+ * Final wallet and operations pass.
+ * This file intentionally loads last so buyer, seller, and admin workspaces
+ * share the same resilient grid, spacing, and overflow behavior.
+ */
+
+.account-dashboard-page,
+.dashboard-main,
+.buyer-dashboard-content,
+.admin-dashboard-main,
+.admin-workspace,
+.seller-pro-main,
+.seller-pro-content,
+.seller-studio-main {
+  min-width: 0;
+}
+
+.dashboard-main > *,
+.buyer-dashboard-content > *,
+.admin-dashboard-main > *,
+.seller-pro-main > *,
+.seller-pro-content > * {
+  min-width: 0;
+}
+
+.wallet-tab .topup-progress {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.wallet-tab .topup-progress > span {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+  min-width: 0;
+  border-color: #dce4ee;
+  color: #64748b;
+  background: linear-gradient(145deg, #ffffff, #f8fafc);
+  box-shadow: 0 7px 18px rgba(15, 23, 42, 0.04);
+}
+
+.wallet-tab .topup-progress > span::after {
+  position: absolute;
+  inset: auto 0 0;
+  z-index: -1;
+  height: 3px;
+  content: "";
+  background: #e2e8f0;
+}
+
+.wallet-tab .topup-progress > span.active {
+  border-color: #a5b4fc;
+  color: #3730a3;
+  background: linear-gradient(145deg, #eef2ff, #ffffff);
+}
+
+.wallet-tab .topup-progress > span.active::after {
+  background: linear-gradient(90deg, #4f46e5, #7c3aed);
+}
+
+.wallet-tab .topup-progress > span.active b {
+  color: #fff;
+  background: linear-gradient(135deg, #4f46e5, #7c3aed);
+  box-shadow: 0 6px 14px rgba(79, 70, 229, 0.24);
+}
+
+.wallet-tab .wallet-summary-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.wallet-tab .wallet-summary-grid .wallet-balance-banner:first-child {
+  border-color: #c7d2fe;
+  background:
+    radial-gradient(
+      circle at 95% 10%,
+      rgba(99, 102, 241, 0.17),
+      transparent 36%
+    ),
+    linear-gradient(145deg, #111827, #1e1b4b);
+  color: #fff;
+  box-shadow: 0 22px 48px rgba(30, 27, 75, 0.17);
+}
+
+.wallet-tab .wallet-summary-grid .wallet-balance-banner:first-child svg {
+  color: #c4b5fd;
+}
+
+.wallet-tab .wallet-summary-grid .wallet-balance-banner:first-child small {
+  color: #cbd5e1;
+}
+
+.wallet-tab .wallet-balance-banner {
+  min-width: 0;
+}
+
+.wallet-tab .wallet-balance-banner strong {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.wallet-tab .wallet-action-grid {
+  grid-template-columns: minmax(0, 1.2fr) minmax(340px, 0.8fr);
+}
+
+.wallet-tab .wallet-action-grid > :only-child {
+  grid-column: 1 / -1;
+}
+
+.wallet-tab .wallet-deposit-form {
+  overflow: hidden;
+  border-color: #dce4ee;
+  background:
+    linear-gradient(#fff, #fff) padding-box,
+    linear-gradient(135deg, #c7d2fe, #e2e8f0) border-box;
+}
+
+.wallet-tab .deposit-method-tabs {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
+.wallet-tab .deposit-method-tabs button {
+  min-width: 0;
+  border-color: #dce4ee;
+  color: #475569;
+  background: #f8fafc;
+  overflow-wrap: anywhere;
+}
+
+.wallet-tab .deposit-method-tabs button:hover {
+  border-color: #a5b4fc;
+  color: #3730a3;
+  background: #eef2ff;
+}
+
+.wallet-tab .deposit-method-tabs button.active {
+  border-color: #4f46e5;
+  color: #fff;
+  background: linear-gradient(135deg, #4f46e5, #7c3aed);
+  box-shadow: 0 10px 22px rgba(79, 70, 229, 0.2);
+}
+
+.wallet-tab .topup-network-address {
+  grid-template-columns: minmax(0, 1fr) auto;
+  border-color: #c7d2fe;
+  background: #f8faff;
+}
+
+.wallet-tab .topup-network-address > span,
+.wallet-tab .topup-network-address > code,
+.wallet-tab .topup-network-address > small {
+  grid-column: 1 / -1;
+  min-width: 0;
+}
+
+.wallet-tab .topup-network-address > code,
+.wallet-tab .topup-address-box code,
+.wallet-tab .compact-order small {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.wallet-tab .topup-network-address > button {
+  grid-column: 2;
+  justify-self: end;
+}
+
+.wallet-tab .deposit-input-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.wallet-tab .wallet-safety-note {
+  border: 1px solid #fde68a;
+  color: #854d0e;
+  background: #fffbeb;
+}
+
+.wallet-tab .topup-proof-card {
+  overflow: hidden;
+  border: 1px solid #c7d2fe;
+  background: #fff;
+  box-shadow: 0 24px 64px rgba(15, 23, 42, 0.1);
+}
+
+.wallet-tab .topup-proof-card > header {
+  background:
+    radial-gradient(
+      circle at 95% 0%,
+      rgba(139, 92, 246, 0.24),
+      transparent 35%
+    ),
+    linear-gradient(145deg, #111827, #1e1b4b);
+}
+
+.wallet-tab .topup-proof-card > header h2,
+.wallet-tab .topup-proof-card > header .section-index {
+  color: #fff;
+}
+
+.wallet-tab .topup-proof-card > header p {
+  color: #cbd5e1;
+}
+
+.wallet-tab .topup-proof-card .topup-address-box {
+  border: 1px solid #dbeafe;
+  background: #eff6ff;
+}
+
+.wallet-tab .topup-upload {
+  cursor: pointer;
+  border: 1px dashed #a5b4fc;
+  color: #3730a3;
+  background: #f5f3ff;
+}
+
+.wallet-tab .wallet-ledger {
+  overflow: hidden;
+}
+
+.wallet-ledger-heading {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 18px;
+}
+
+.wallet-ledger-heading h2 {
+  margin: 5px 0 0;
+}
+
+.wallet-ledger-heading > small {
+  color: #64748b;
+}
+
+.wallet-ledger-list {
+  display: grid;
+  gap: 10px;
+}
+
+.wallet-ledger-list article {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+  padding: 15px 17px;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  background: #fff;
+}
+
+.wallet-ledger-list article > span {
+  width: 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+}
+
+.wallet-ledger-list article > span svg {
+  width: 19px;
+}
+
+.wallet-ledger-list .ledger-credit {
+  color: #047857;
+  background: #ecfdf5;
+}
+
+.wallet-ledger-list .ledger-debit {
+  color: #be123c;
+  background: #fff1f2;
+}
+
+.wallet-ledger-list article > div {
+  min-width: 0;
+}
+
+.wallet-ledger-list article > div strong,
+.wallet-ledger-list article > div small,
+.wallet-ledger-list article > div code {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.wallet-ledger-list article > div small,
+.wallet-ledger-list article > small {
+  color: #64748b;
+}
+
+.wallet-ledger-list article > b {
+  font-size: 15px;
+  white-space: nowrap;
+}
+
+.wallet-ledger-list .positive {
+  color: #047857;
+}
+
+.wallet-ledger-list .negative {
+  color: #be123c;
+}
+
+.seller-multilingual-sequence {
+  display: grid;
+  gap: 14px;
+  min-width: 0;
+  padding: 0 !important;
+  border: 0 !important;
+  background: transparent !important;
+}
+
+.seller-multilingual-sequence > header {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  padding: 18px 20px;
+  border: 1px solid #c7d2fe;
+  border-radius: 16px;
+  color: #312e81;
+  background: linear-gradient(135deg, #eef2ff, #faf5ff);
+}
+
+.seller-multilingual-sequence > header > svg {
+  width: 22px;
+  flex: none;
+}
+
+.seller-multilingual-sequence > header strong,
+.seller-multilingual-sequence > header small {
+  display: block;
+}
+
+.seller-multilingual-sequence > header small {
+  margin-top: 3px;
+  color: #64748b;
+}
+
+.seller-multilingual-sequence > section {
+  min-width: 0;
+  padding: 20px;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.035);
+}
+
+.seller-multilingual-sequence > section h3 {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 16px;
+  color: #0f172a;
+  font-size: 15px;
+}
+
+.seller-multilingual-sequence > section h3 b {
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  flex: none;
+  border-radius: 9px;
+  color: #fff;
+  background: #4f46e5;
+  font-size: 12px;
+}
+
+.seller-multilingual-sequence .form-grid.three,
+.seller-multilingual-sequence .seller-editor-grid.three {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.seller-multilingual-sequence label {
+  min-width: 0;
+}
+
+.seller-multilingual-sequence input,
+.seller-multilingual-sequence textarea {
+  width: 100%;
+  min-width: 0;
+}
+
+.seller-pro-products,
+.admin-table-shell,
+.admin-data-table,
+.compact-orders,
+.dashboard-table-wrap {
+  max-width: 100%;
+}
+
+.admin-table-shell,
+.dashboard-table-wrap {
+  overflow-x: auto;
+  overscroll-behavior-inline: contain;
+}
+
+.product-card img,
+.g2-product-image img,
+.marketplace-product-card img,
+.seller-product-cover img {
+  object-fit: cover;
+  object-position: center;
+}
+
+.g2-header-actions .market-sign-in > span {
+  min-width: 0;
+}
+
+.g2-header-actions .market-sign-in small {
+  display: block;
+  max-width: 190px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (max-width: 1180px) {
+  .wallet-tab .wallet-summary-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .wallet-tab .wallet-action-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .wallet-tab .deposit-method-tabs {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 900px) {
+  .seller-multilingual-sequence .form-grid.three,
+  .seller-multilingual-sequence .seller-editor-grid.three {
+    grid-template-columns: 1fr;
+  }
+
+  .wallet-tab .topup-progress {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 680px) {
+  .wallet-tab .topup-progress {
+    grid-template-columns: 1fr;
+  }
+
+  .wallet-tab .topup-progress > span {
+    min-height: 52px;
+  }
+
+  .wallet-tab .wallet-summary-grid,
+  .wallet-tab .deposit-method-tabs,
+  .wallet-tab .deposit-input-row {
+    grid-template-columns: 1fr !important;
+  }
+
+  .wallet-tab .topup-network-address {
+    grid-template-columns: 1fr;
+  }
+
+  .wallet-tab .topup-network-address > button {
+    grid-column: 1;
+    width: 100%;
+    justify-content: center;
+  }
+
+  .wallet-tab .deposit-input-row .primary-button {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .wallet-ledger-heading {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .wallet-ledger-list article {
+    grid-template-columns: 38px minmax(0, 1fr) auto;
+    gap: 10px;
+  }
+
+  .wallet-ledger-list article > span {
+    width: 38px;
+    height: 38px;
+  }
+
+  .wallet-ledger-list article > small {
+    grid-column: 2 / -1;
+  }
+
+  .seller-multilingual-sequence > section,
+  .seller-multilingual-sequence > header {
+    padding: 16px;
+  }
+}

@@ -260,7 +260,9 @@ function productBody(page) {
     product.delivery,
   )}</li><li><strong>Availability:</strong> Available</li></ul><p><strong>Price:</strong> $${(
     product.priceCents / 100
-  ).toFixed(2)} USD</p></section><section><h2>Seller and category</h2><p>Sold by <a href="/stores/${escapeHtml(
+  ).toFixed(
+    2,
+  )} USD</p></section><section><h2>Seller and category</h2><p>Sold by <a href="/stores/${escapeHtml(
     product.sellerSlug,
   )}">${escapeHtml(product.seller)}</a> in <a href="/category/${escapeHtml(
     product.categorySlug,
@@ -510,9 +512,7 @@ function renderPage(page, { noIndex = false } = {}) {
     html,
     "property",
     "og:image:alt",
-    page.kind === "product"
-      ? page.product.title
-      : "Ysello digital marketplace",
+    page.kind === "product" ? page.product.title : "Ysello digital marketplace",
   );
   html = replaceMeta(html, "name", "twitter:card", "summary_large_image");
   html = replaceMeta(html, "name", "twitter:title", page.title);

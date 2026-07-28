@@ -21,10 +21,7 @@ type DemoProductInput = {
   stockCount?: number;
 };
 
-function demoProduct(
-  input: DemoProductInput,
-  index: number,
-): CatalogProduct {
+function demoProduct(input: DemoProductInput, index: number): CatalogProduct {
   const seller = input.seller ?? "Ysello Select";
   const type = input.type ?? "DOWNLOAD";
   return {
@@ -52,13 +49,22 @@ function demoProduct(
     stockCount: input.stockCount ?? (type === "SERVICE" ? 20 : 250 + index * 7),
     included:
       type === "SERVICE"
-        ? ["Defined service scope", "Written delivery summary", "Revision window"]
-        : ["Digital product", "Activation or delivery guide", "Order-linked support"],
+        ? [
+            "Defined service scope",
+            "Written delivery summary",
+            "Revision window",
+          ]
+        : [
+            "Digital product",
+            "Activation or delivery guide",
+            "Order-linked support",
+          ],
     license:
       type === "SERVICE"
         ? "Seller-delivered professional service"
         : "Single-user marketplace license",
-    formats: type === "SERVICE" ? ["Protected order delivery"] : ["Digital code"],
+    formats:
+      type === "SERVICE" ? ["Protected order delivery"] : ["Digital code"],
     version: "Current",
     updatedAt: "July 2026",
     publishedAt: new Date(2026, 6, Math.max(1, 28 - index)).toISOString(),
@@ -264,7 +270,8 @@ const demoInputs: DemoProductInput[] = [
     category: "Software / Image, video and audio / Video editing",
     categorySlug: "video-editing-software",
     title: "CapCut Pro Annual",
-    description: "Premium editing tools for supported desktop and mobile devices.",
+    description:
+      "Premium editing tools for supported desktop and mobile devices.",
     priceCents: 2499,
     originalPriceCents: 8999,
     imageUrl: "/editorial/creator-studio.webp",
@@ -319,7 +326,8 @@ const demoInputs: DemoProductInput[] = [
     category: "Subscriptions / Gaming / PlayStation Plus",
     categorySlug: "playstation-plus",
     title: "PlayStation Plus Essential — 12 Months",
-    description: "A twelve-month membership code for supported PlayStation regions.",
+    description:
+      "A twelve-month membership code for supported PlayStation regions.",
     priceCents: 5499,
     originalPriceCents: 7999,
     imageUrl: "/editorial/abstract-ai.webp",
@@ -330,7 +338,8 @@ const demoInputs: DemoProductInput[] = [
     category: "Subscriptions / Video streaming / Netflix",
     categorySlug: "netflix-subscription",
     title: "Netflix Premium Voucher",
-    description: "A digital entertainment voucher with regional terms shown upfront.",
+    description:
+      "A digital entertainment voucher with regional terms shown upfront.",
     priceCents: 1999,
     imageUrl: "/category-art/social-media.webp",
     platform: "Netflix",
@@ -393,7 +402,8 @@ const demoInputs: DemoProductInput[] = [
     category: "Gift cards / Gaming / Xbox",
     categorySlug: "xbox-gift-cards",
     title: "Xbox Gift Card — $25",
-    description: "Digital Xbox credit with regional compatibility shown upfront.",
+    description:
+      "Digital Xbox credit with regional compatibility shown upfront.",
     priceCents: 2599,
     imageUrl: "/category-art/ai-productivity.webp",
     platform: "Xbox",
@@ -445,7 +455,8 @@ const demoInputs: DemoProductInput[] = [
     category: "Gift cards / Cash gift cards / Visa prepaid",
     categorySlug: "visa-prepaid",
     title: "Visa Prepaid Card — $50",
-    description: "A digital prepaid product with verification and regional terms.",
+    description:
+      "A digital prepaid product with verification and regional terms.",
     priceCents: 5299,
     imageUrl: "/marketplace-assets/buyer-protection.webp",
     platform: "Visa",
@@ -455,7 +466,8 @@ const demoInputs: DemoProductInput[] = [
     category: "Social media / Instagram / Creator tools",
     categorySlug: "instagram-creator-tools",
     title: "Instagram Creator Launch System",
-    description: "Original Reels templates, captions and a publishing calendar.",
+    description:
+      "Original Reels templates, captions and a publishing calendar.",
     priceCents: 1899,
     originalPriceCents: 3499,
     imageUrl: "/category-art/social-media.webp",
@@ -467,7 +479,8 @@ const demoInputs: DemoProductInput[] = [
     category: "Social media / TikTok / Creator tools",
     categorySlug: "tiktok-creator-tools",
     title: "TikTok Content Production Kit",
-    description: "Hooks, storyboards and production checklists for original videos.",
+    description:
+      "Hooks, storyboards and production checklists for original videos.",
     priceCents: 1799,
     imageUrl: "/editorial/creator-studio.webp",
     platform: "TikTok",
@@ -478,7 +491,8 @@ const demoInputs: DemoProductInput[] = [
     category: "Social media / YouTube / Channel branding",
     categorySlug: "youtube-channel-branding",
     title: "YouTube Channel Brand Kit",
-    description: "Editable thumbnails, channel graphics and publishing templates.",
+    description:
+      "Editable thumbnails, channel graphics and publishing templates.",
     priceCents: 2499,
     originalPriceCents: 4499,
     imageUrl: "/editorial/color-shapes.webp",
@@ -490,7 +504,8 @@ const demoInputs: DemoProductInput[] = [
     category: "Social media / Twitch / Streaming overlays",
     categorySlug: "streaming-overlays",
     title: "Twitch Stream Overlay System",
-    description: "A complete broadcast package with overlays, alerts and panels.",
+    description:
+      "A complete broadcast package with overlays, alerts and panels.",
     priceCents: 2899,
     imageUrl: "/editorial/gaming-workspace.webp",
     platform: "Twitch",
@@ -512,7 +527,8 @@ const demoInputs: DemoProductInput[] = [
     category: "Social media / Social marketing / LinkedIn",
     categorySlug: "linkedin-content-kits",
     title: "LinkedIn Content Engine",
-    description: "Professional post frameworks, editorial calendar and reporting.",
+    description:
+      "Professional post frameworks, editorial calendar and reporting.",
     priceCents: 1999,
     imageUrl: "/category-art/business.webp",
     platform: "LinkedIn",

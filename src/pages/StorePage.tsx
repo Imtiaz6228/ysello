@@ -11,14 +11,12 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import { useCart } from "../commerce/CartContext";
 import { MarketFooter, MarketHeader } from "../components/MarketHeader";
 import { Seo } from "../components/Seo";
-import {
-  useMarketplaceStore,
-} from "../commerce/useMarketplace";
+import { useMarketplaceStore } from "../commerce/useMarketplace";
 import { useLocale } from "../i18n/LocaleContext";
 import { NotFoundPage } from "./NotFoundPage";
 
 export function StorePage() {
-  const { formatMoney } = useLocale();
+  const { formatProductMoney } = useLocale();
   const { slug } = useParams();
   const { add } = useCart();
   const navigate = useNavigate();
@@ -89,13 +87,12 @@ export function StorePage() {
                 <div className="store-product-icon" aria-hidden="true">
                   <PackageCheck />
                 </div>
-                <span>{product.badge}</span>
                 <Link to={`/product/${product.slug}`}>
                   <h2>{product.title}</h2>
                 </Link>
                 <p>{product.description}</p>
                 <footer>
-                  <strong>{formatMoney(product.priceCents)}</strong>
+                  <strong>{formatProductMoney(product)}</strong>
                   <button
                     onClick={() => {
                       add(product);

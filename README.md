@@ -4,6 +4,36 @@ Ysello is a full-stack marketplace for reviewed digital downloads and service-ba
 
 The trust policy is enforced throughout the product: account and credential trading, hacking tools, stolen files, fake reviews, spam, and bot services are prohibited.
 
+## Wallet, top-ups, and seller settlement
+
+The marketplace wallet keeps buyer funds and seller proceeds in separate
+balances. A buyer creates a crypto top-up request, sends the exact requested
+amount on the selected network, and submits both the complete TXID and a
+screenshot containing that TXID. Proof files are private and visible only to
+the submitting account and authorized staff. Funds remain pending until an
+admin verifies the network, receiving address, amount, TXID, and screenshot.
+
+| Asset | Network  | Receiving address                            |
+| ----- | -------- | -------------------------------------------- |
+| USDT  | TRC20    | `TDffsBmuyrMsNEQXzzLYfzAwz7W6Jmvb1W`         |
+| USDT  | BEP20    | `0x5fe0bc617b00812396560e00a47b68a4d19933df` |
+| USDT  | ERC20    | `0x5fe0bc617b00812396560e00a47b68a4d19933df` |
+| BTC   | Bitcoin  | `1CRoGe5BKjSTYBjxjPaS5NRCP8eyZ8cSpA`         |
+| ETH   | Ethereum | `0x5fe0bc617b00812396560e00a47b68a4d19933df` |
+
+Network and exchange fees are paid by the buyer. Wallet purchases debit the
+buyer balance atomically. Each completed sale records a 10% platform commission
+and freezes the seller's 90% net proceeds for 72 hours. Eligible proceeds move
+to the seller's available balance once, even if release jobs overlap. A seller
+withdrawal debits only available seller proceeds and stays pending until an
+admin approves or rejects it; rejection restores the reserved amount.
+
+Apply the committed Prisma migration before releasing this upgrade:
+
+```sh
+npm run prisma:migrate
+```
+
 One repository root, two deployment targets:
 
 - **Railway** builds the React app and Express API, runs migrations, and serves everything from one origin.
@@ -54,6 +84,14 @@ BANK_TRANSFER_INSTRUCTIONS="Bank and account details shown after order creation"
 CRYPTO_PAYMENT_INSTRUCTIONS="Supported asset, network, and receiving address"
 PRIVATE_UPLOAD_DIR=/app/private-uploads
 MAX_PRODUCT_FILE_BYTES=104857600
+TOPUP_TRC20_ADDRESS=TDffsBmuyrMsNEQXzzLYfzAwz7W6Jmvb1W
+TOPUP_BEP20_ADDRESS=0x5fe0bc617b00812396560e00a47b68a4d19933df
+TOPUP_ERC20_ADDRESS=0x5fe0bc617b00812396560e00a47b68a4d19933df
+TOPUP_BTC_ADDRESS=1CRoGe5BKjSTYBjxjPaS5NRCP8eyZ8cSpA
+TOPUP_ETH_ADDRESS=0x5fe0bc617b00812396560e00a47b68a4d19933df
+COMMISSION_SALE_PERCENT=10
+COMMISSION_WITHDRAW_PERCENT=0
+FROZEN_HOLD_HOURS=72
 ```
 
 `COOKIE_DOMAIN` must remain blank. Keep `APP_URL=https://ysello.com`, `API_URL=https://api.ysello.com`, and `CORS_ORIGIN=https://ysello.com,https://www.ysello.com`. These values are required for browser authentication after the custom-domain move.
@@ -68,9 +106,9 @@ commission rows exist, the migration keeps the oldest live record and preserves
 the other rows in `AdminTransactionDuplicateArchive` for audit before enforcing
 the idempotency constraint.
 
-Public images (product covers, store logo/banner, profile photos, chat attachments, and top-up proof screenshots) are saved to PostgreSQL and cached at `/app/uploads`, so a stateless redeploy no longer breaks newly uploaded media. A Railway volume at `/app/uploads` is still recommended for faster cache hits, but PostgreSQL is the durable source of truth.
+Public images (product covers, store logo/banner, profile photos, and chat attachments) are saved to PostgreSQL and cached at `/app/uploads`, so a stateless redeploy no longer breaks newly uploaded media. A Railway volume at `/app/uploads` is still recommended for faster cache hits, but PostgreSQL is the durable source of truth.
 
-Mount a second private volume at `/app/private-uploads` for seller delivery files. That directory is never exposed as static content; files are released only through validated download grants.
+Mount a second private volume at `/app/private-uploads` for seller delivery files and payment-proof screenshots. That directory is never exposed as static content; product files are released only through validated download grants, while payment proofs require the buyer's or an authorized staff member's session.
 
 Stripe and PayPal are hidden by the API until their credentials are configured. Bank transfer and crypto are also hidden until instructions are configured. Manual approval remains available for staff-reviewed payments. Hosted provider returns are verified server-side before delivery, and provider refunds are issued through the matching API.
 

@@ -31,8 +31,7 @@ function catalogCategories() {
         icon,
         depth,
       });
-      if (node.children)
-        append(node.children, node.slug, icon, depth + 1);
+      if (node.children) append(node.children, node.slug, icon, depth + 1);
     });
   };
   marketplaceTaxonomy.forEach((root) => {

@@ -21,7 +21,7 @@ test("seller product list opens a complete product editor", async () => {
   assert.match(studio, /<SellerProductEditor/);
   for (const section of [
     "Basic product details",
-    "English and Chinese content",
+    "Multilingual content",
     "Pricing and stock",
     "Product specifications and delivery",
     "Images, gallery, video and inventory",
@@ -34,13 +34,15 @@ test("seller product list opens a complete product editor", async () => {
 test("new listing flow keeps essentials simple and identity application omits address fields", async () => {
   const studio = await read("src/pages/SellerStudioPage.tsx");
   const application = await read("src/pages/SellerApplicationPage.tsx");
-  assert.match(studio, /Price and delivery/);
+  assert.match(studio, /Multilingual listing and SEO/);
   assert.match(studio, /<details className="seller-create-advanced">/);
   for (const field of [
-    "Product title",
-    "Full description",
-    "产品标题",
-    "完整描述",
+    "English title",
+    "English full description",
+    "中文标题",
+    "中文完整描述",
+    "Русское название",
+    "Полное описание",
   ])
     assert.match(studio, new RegExp(field));
   for (const field of [

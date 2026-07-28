@@ -31,6 +31,9 @@ function CartProductImage({
       src={mediaUrl(src)}
       alt={alt}
       loading="lazy"
+      decoding="async"
+      width="160"
+      height="120"
       onError={() => setFailed(true)}
     />
   ) : (
@@ -39,7 +42,7 @@ function CartProductImage({
 }
 
 export function CartPage() {
-  const { formatMoney } = useLocale();
+  const { formatMoney, formatProductMoney, t } = useLocale();
   const { items, subtotalCents, remove, setQuantity } = useCart();
   return (
     <main className="commerce-page">
@@ -63,7 +66,7 @@ export function CartPage() {
             catalog.
           </p>
           <Link className="primary-link" to="/catalog">
-            Browse marketplace <ArrowRight />
+            {t("shopMarketplace")} <ArrowRight />
           </Link>
         </section>
       ) : (
@@ -100,7 +103,7 @@ export function CartPage() {
                     <Plus />
                   </button>
                 </div>
-                <strong>{formatMoney(product.priceCents * quantity)}</strong>
+                <strong>{formatProductMoney(product, quantity)}</strong>
                 <button
                   className="icon-button"
                   onClick={() => remove(product.id)}
@@ -126,7 +129,7 @@ export function CartPage() {
               <strong>{formatMoney(subtotalCents)}</strong>
             </div>
             <Link className="checkout-button" to="/checkout">
-              Secure checkout <ArrowRight />
+              {t("secureCheckout")} <ArrowRight />
             </Link>
             <p>
               <ShieldCheck /> Payments stay protected. Downloads release only
