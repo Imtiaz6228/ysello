@@ -138,6 +138,8 @@ export function App() {
           <Routes>
             <Route path="/" element={<MarketplaceHomePage />} />
             <Route path="/catalog" element={<CatalogPage />} />
+            <Route path="/category/:slug" element={<CategoryPage />} />
+            <Route path="/product/:slug" element={<ProductPage />} />
             <Route path="/categories/:slug" element={<CategoryPage />} />
             <Route path="/products/:slug" element={<ProductPage />} />
             <Route path="/stores/:slug" element={<StorePage />} />

@@ -47,8 +47,8 @@ function isPrivateSpaPath(pathname) {
 function isDataBackedPublicPath(pathname) {
   return (
     pathname === "/catalog" ||
-    pathname.startsWith("/categories/") ||
-    pathname.startsWith("/products/") ||
+    pathname.startsWith("/category/") ||
+    pathname.startsWith("/product/") ||
     pathname.startsWith("/stores/")
   );
 }
@@ -59,11 +59,20 @@ export default {
     const apiOrigin = env.API_ORIGIN || DEFAULT_API_ORIGIN;
     if (
       url.pathname.startsWith("/api/") ||
-      url.pathname.startsWith("/uploads/") ||
-      url.pathname === "/robots.txt" ||
-      url.pathname === "/sitemap.xml"
+      url.pathname.startsWith("/uploads/")
     ) {
       return fetch(upstreamRequest(request, apiOrigin));
+    }
+
+    if (
+      (request.method === "GET" || request.method === "HEAD") &&
+      (url.pathname.startsWith("/categories/") ||
+        url.pathname.startsWith("/products/"))
+    ) {
+      url.pathname = url.pathname.startsWith("/categories/")
+        ? url.pathname.replace("/categories/", "/category/")
+        : url.pathname.replace("/products/", "/product/");
+      return Response.redirect(url, 308);
     }
 
     if (
@@ -73,10 +82,6 @@ export default {
     ) {
       url.pathname = url.pathname.replace(/\/+$/, "");
       return Response.redirect(url, 308);
-    }
-
-    if (isDataBackedPublicPath(url.pathname)) {
-      return fetch(upstreamRequest(request, apiOrigin));
     }
 
     const response = await env.ASSETS.fetch(request);
@@ -105,6 +110,16 @@ export default {
       return withHeaders(fallback, {
         "X-Robots-Tag": "noindex, nofollow, noarchive",
         "Cache-Control": "private, no-store",
+      });
+    }
+
+    if (isDataBackedPublicPath(url.pathname)) {
+      const fallbackUrl = new URL("/index.html", request.url);
+      const fallback = await env.ASSETS.fetch(
+        new Request(fallbackUrl, request),
+      );
+      return withHeaders(fallback, {
+        "Cache-Control": "public, max-age=0, must-revalidate",
       });
     }
 

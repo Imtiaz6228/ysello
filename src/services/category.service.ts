@@ -1,5 +1,8 @@
 import { prisma } from "../lib/prisma.js";
-import { marketplaceTaxonomy } from "../data/marketplaceTaxonomy.js";
+import {
+  marketplaceTaxonomy,
+  type MarketplaceTaxonomyNode,
+} from "../data/marketplaceTaxonomy.js";
 
 export type DefaultCategory = {
   slug: string;
@@ -733,33 +736,67 @@ const _legacyMarketplaceCategories: DefaultCategory[] = [
   },
 ];
 
-export const defaultMarketplaceCategories: DefaultCategory[] = [
-  ...marketplaceTaxonomy.flatMap((category, categoryIndex) => [
-    {
-      slug: category.slug,
-      name: category.name,
-      description: category.description,
-      icon: category.icon,
-      sortOrder: (categoryIndex + 1) * 100,
-      seoTitle: `${category.name} | Ysello`,
-      seoDescription: category.description,
-      isFeatured: true,
-      isTrending: categoryIndex < 4,
-    },
-    ...category.subcategories.map((subcategory, subcategoryIndex) => ({
-      slug: subcategory.slug,
-      parentSlug: category.slug,
-      name: subcategory.name,
-      description: subcategory.description,
-      icon: category.icon,
-      sortOrder: (categoryIndex + 1) * 100 + subcategoryIndex + 1,
-      seoTitle: `${subcategory.name} | Ysello`,
-      seoDescription: subcategory.description,
+function taxonomyRows(
+  nodes: MarketplaceTaxonomyNode[],
+  parentSlug: string,
+  icon: string,
+  baseOrder: number,
+  sequence: { value: number },
+): DefaultCategory[] {
+  return nodes.flatMap((node) => {
+    sequence.value += 1;
+    const row: DefaultCategory = {
+      slug: node.slug,
+      parentSlug,
+      name: node.name,
+      description: node.description,
+      icon,
+      sortOrder: baseOrder + sequence.value,
+      seoTitle: `Buy ${node.name} digital products | Ysello`,
+      seoDescription: node.description.slice(0, 170),
       isFeatured: false,
       isTrending: false,
-    })),
-  ]),
-];
+    };
+    return [
+      row,
+      ...(node.children
+        ? taxonomyRows(
+            node.children,
+            node.slug,
+            icon,
+            baseOrder,
+            sequence,
+          )
+        : []),
+    ];
+  });
+}
+
+export const defaultMarketplaceCategories: DefaultCategory[] =
+  marketplaceTaxonomy.flatMap((category, categoryIndex) => {
+    const baseOrder = (categoryIndex + 1) * 10_000;
+    const sequence = { value: 0 };
+    return [
+      {
+        slug: category.slug,
+        name: category.name,
+        description: category.description,
+        icon: category.icon,
+        sortOrder: baseOrder,
+        seoTitle: `Buy ${category.name} digital products | Ysello`,
+        seoDescription: category.description.slice(0, 170),
+        isFeatured: true,
+        isTrending: categoryIndex < 4,
+      },
+      ...taxonomyRows(
+        category.subcategories,
+        category.slug,
+        category.icon,
+        baseOrder,
+        sequence,
+      ),
+    ];
+  });
 
 let ensuredCategoriesAt = 0;
 

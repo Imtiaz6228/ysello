@@ -1450,7 +1450,7 @@ export function AccountDashboardPage() {
                               fallback={<PackageCheck size={22} />}
                             />
                             <div>
-                              <Link to={`/products/${item.product.slug}`}>
+                              <Link to={`/product/${item.product.slug}`}>
                                 {item.productName}
                               </Link>
                               <small>
@@ -1587,7 +1587,7 @@ export function AccountDashboardPage() {
                       ) : null}
                       {order.items[0] ? (
                         <Link
-                          to={`/products/${order.items[0].product.slug}`}
+                          to={`/product/${order.items[0].product.slug}`}
                           className="action-link"
                         >
                           <RefreshCw size={14} /> Buy again
@@ -1640,7 +1640,7 @@ export function AccountDashboardPage() {
                     >
                       <Link
                         className="dc-icon"
-                        to={`/products/${item.product.slug}`}
+                        to={`/product/${item.product.slug}`}
                         aria-label={`Open ${item.productName}`}
                       >
                         <BuyerMedia
@@ -1653,7 +1653,7 @@ export function AccountDashboardPage() {
                         <span className="buyer-library-badge">PURCHASED</span>
                         <Link
                           className="purchased-product-title"
-                          to={`/products/${item.product.slug}`}
+                          to={`/product/${item.product.slug}`}
                         >
                           {item.productName}
                         </Link>
@@ -2499,7 +2499,7 @@ export function AccountDashboardPage() {
                     </div>
                     <p>{review.body}</p>
                     <div className="review-meta">
-                      <Link to={`/products/${review.product.slug}`}>
+                      <Link to={`/product/${review.product.slug}`}>
                         <strong>{review.product.name}</strong>
                       </Link>
                       <small>

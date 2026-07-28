@@ -519,17 +519,20 @@ sellerRouter.post(
         );
       const inventoryLines = parseInventoryLines(input.inventoryLines);
       const base =
-        input.name
+        [input.name, input.platform, input.productKind, input.region]
+          .filter(Boolean)
+          .join(" ")
           .toLowerCase()
           .replace(/[^a-z0-9]+/g, "-")
-          .replace(/^-|-$/g, "") || "product";
+          .replace(/^-|-$/g, "")
+          .slice(0, 132) || "product";
       const coverImageUrl = publicUploadUrl(req.file.filename);
       const productData = productDataFromInput(input, coverImageUrl);
       const status = ProductStatus.PENDING;
       const product = await prisma.product.create({
         data: {
           ...productData,
-          slug: `${base}-${crypto.randomUUID().slice(0, 8)}`,
+          slug: `${base}-i${crypto.randomUUID().replaceAll("-", "").slice(0, 10)}`,
           sellerId: req.auth!.id,
           status,
           ...(inventoryLines.length

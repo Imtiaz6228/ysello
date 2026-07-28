@@ -44,7 +44,7 @@ export function MarketplaceProductCard({
       <div className="ys-product-card-top">
         <Link
           className="ys-product-glyph"
-          to={`/products/${product.slug}`}
+          to={`/product/${product.slug}`}
           aria-label={`View ${product.title}`}
         >
           <ProductIcon aria-hidden="true" />
@@ -61,11 +61,11 @@ export function MarketplaceProductCard({
           <div>
             <Link
               className="market-product-category"
-              to={`/categories/${product.categorySlug}`}
+              to={`/category/${product.categorySlug}`}
             >
               {categoryLabel}
             </Link>
-            <Link to={`/products/${product.slug}`}>
+            <Link to={`/product/${product.slug}`}>
               <h2>{product.title}</h2>
             </Link>
             <Link
@@ -98,7 +98,7 @@ export function MarketplaceProductCard({
             <small>Secure marketplace checkout</small>
           </div>
           <div className="market-card-actions">
-            <Link to={`/products/${product.slug}`}>
+            <Link to={`/product/${product.slug}`}>
               <Eye /> {t("details")}
             </Link>
             <button

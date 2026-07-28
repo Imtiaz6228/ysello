@@ -90,7 +90,7 @@ export function StorePage() {
                   <PackageCheck />
                 </div>
                 <span>{product.badge}</span>
-                <Link to={`/products/${product.slug}`}>
+                <Link to={`/product/${product.slug}`}>
                   <h2>{product.title}</h2>
                 </Link>
                 <p>{product.description}</p>

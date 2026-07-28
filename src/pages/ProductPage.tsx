@@ -64,12 +64,13 @@ export function ProductPage() {
             "@type": "Product",
             name: product.title,
             description: product.description,
-            url: `https://ysello.com/products/${product.slug}`,
+            url: `https://ysello.com/product/${product.slug}`,
             sku: product.sku || product.id,
             category: product.category,
+            ...(product.imageUrl ? { image: [product.imageUrl] } : {}),
             offers: {
               "@type": "Offer",
-              url: `https://ysello.com/products/${product.slug}`,
+              url: `https://ysello.com/product/${product.slug}`,
               price: (product.priceCents / 100).toFixed(2),
               priceCurrency: "USD",
               availability:
@@ -152,17 +153,49 @@ export function ProductPage() {
   return (
     <main className="commerce-page">
       <Seo
-        title={product.title}
-        description={product.description}
-        canonicalPath={`/products/${product.slug}`}
+        title={`Buy ${product.title} online`}
+        description={`${product.description} Compare the offer, delivery details, seller information and buyer protection before checkout.`}
+        canonicalPath={`/product/${product.slug}`}
+        image={product.imageUrl ?? undefined}
+        imageAlt={product.title}
         type="product"
-        schema={schema}
+        schema={
+          schema
+            ? [
+                schema,
+                {
+                  "@context": "https://schema.org",
+                  "@type": "BreadcrumbList",
+                  itemListElement: [
+                    {
+                      "@type": "ListItem",
+                      position: 1,
+                      name: "Marketplace",
+                      item: "https://ysello.com/catalog",
+                    },
+                    {
+                      "@type": "ListItem",
+                      position: 2,
+                      name: product.category,
+                      item: `https://ysello.com/category/${product.categorySlug}`,
+                    },
+                    {
+                      "@type": "ListItem",
+                      position: 3,
+                      name: product.title,
+                      item: `https://ysello.com/product/${product.slug}`,
+                    },
+                  ],
+                },
+              ]
+            : undefined
+        }
       />
       <MarketHeader />
       <div className="breadcrumbs">
         <Link to="/">Home</Link>
         <span aria-hidden="true">/</span>
-        <Link to={`/categories/${product.categorySlug}`}>
+        <Link to={`/category/${product.categorySlug}`}>
           {product.category}
         </Link>
         <span aria-hidden="true">/</span>
@@ -673,7 +706,7 @@ export function ProductPage() {
               <h2>Related products</h2>
               <p>More products with a similar category or delivery format.</p>
             </div>
-            <Link to={`/categories/${product.categorySlug}`}>
+            <Link to={`/category/${product.categorySlug}`}>
               View category <ArrowLink />
             </Link>
           </div>

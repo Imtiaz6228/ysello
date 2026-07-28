@@ -176,12 +176,46 @@ const taxonomyCategories: CatalogCategory[] = marketplaceTaxonomy.flatMap(
   },
 );
 
+const localCategories = [
+  ...new Map(
+    [...taxonomyCategories, ...catalogCategories].map((category) => [
+      category.slug,
+      category,
+    ]),
+  ).values(),
+];
+
 function mergeWithLocalProducts(remoteProducts: CatalogProduct[]) {
   const merged = new Map<string, CatalogProduct>();
   [...remoteProducts, ...localProducts].forEach((product) => {
     if (!merged.has(product.slug)) merged.set(product.slug, product);
   });
   return [...merged.values()];
+}
+
+function mergeWithLocalCategories(remoteCategories: CatalogCategory[]) {
+  const merged = new Map(
+    localCategories.map((category) => [category.slug, category]),
+  );
+  remoteCategories.forEach((remote) => {
+    const local = merged.get(remote.slug);
+    merged.set(remote.slug, {
+      ...local,
+      ...remote,
+      name: local?.name ?? remote.name,
+      description: local?.description || remote.description,
+      parentSlug: local?.parentSlug ?? remote.parentSlug,
+      icon: remote.icon || local?.icon || "◉",
+      isFeatured: remote.isFeatured ?? local?.isFeatured,
+      isTrending: remote.isTrending ?? local?.isTrending,
+      depth: local?.depth,
+    });
+  });
+  return [...merged.values()].sort(
+    (a, b) =>
+      (a.sortOrder ?? 0) - (b.sortOrder ?? 0) ||
+      a.name.localeCompare(b.name),
+  );
 }
 
 function badgeFor(product: ApiProduct) {
@@ -205,17 +239,25 @@ function mapProduct(
     product.translations?.[locale] ??
     (locale.startsWith("zh") ? product.translations?.["zh-CN"] : undefined) ??
     product.translations?.en;
+  const marketplaceCategorySlug =
+    typeof product.productAttributes?.marketplaceCategorySlug === "string"
+      ? product.productAttributes.marketplaceCategorySlug
+      : product.category.slug;
+  const marketplaceCategoryPath =
+    typeof product.productAttributes?.marketplaceCategoryPath === "string"
+      ? product.productAttributes.marketplaceCategoryPath
+      : [
+          product.category.parent?.parent?.name,
+          product.category.parent?.name,
+          product.category.name,
+        ]
+          .filter(Boolean)
+          .join(" / ");
   return {
     id: product.id,
     slug: product.slug,
-    category: [
-      product.category.parent?.parent?.name,
-      product.category.parent?.name,
-      product.category.name,
-    ]
-      .filter(Boolean)
-      .join(" / "),
-    categorySlug: product.category.slug,
+    category: marketplaceCategoryPath,
+    categorySlug: marketplaceCategorySlug,
     title: translation?.title ?? translation?.name ?? product.name,
     description: translation?.shortDescription ?? product.shortDescription,
     longDescription: translation?.description ?? product.description,
@@ -343,14 +385,13 @@ export function useMarketplaceProducts() {
 
 export function useMarketplaceCategories() {
   const [categories, setCategories] =
-    useState<CatalogCategory[]>(taxonomyCategories);
+    useState<CatalogCategory[]>(localCategories);
   useEffect(() => {
     void apiRequest<{ categories: ApiCategory[] }>(
       "/api/marketplace/categories",
     )
       .then((data) => {
-        if (data.categories.length)
-          setCategories(mapCategories(data.categories));
+        setCategories(mergeWithLocalCategories(mapCategories(data.categories)));
       })
       .catch(() => undefined);
   }, []);
@@ -499,11 +540,71 @@ export function useMarketplaceStores() {
 
 export function useMarketplaceStore(slug?: string) {
   const { locale } = useLocale();
-  const [store, setStore] = useState<PublicStore>();
-  const [products, setProducts] = useState<CatalogProduct[]>([]);
-  const [loading, setLoading] = useState(Boolean(slug));
+  const fallbackProducts = localProducts.filter(
+    (product) => product.sellerSlug === slug,
+  );
+  const fallbackStore = fallbackProducts.length
+    ? {
+        name: fallbackProducts[0].seller,
+        about:
+          "A verified marketplace seller offering clear product details, protected delivery and order-linked support.",
+        policy:
+          "Ysello buyer protection and the listing-specific delivery terms apply to every order.",
+        rating:
+          fallbackProducts.reduce((sum, product) => sum + product.rating, 0) /
+          fallbackProducts.length,
+        sales: fallbackProducts
+          .reduce((sum, product) => sum + product.reviews, 0)
+          .toLocaleString(),
+        joined: "2026",
+        mark: fallbackProducts[0].seller
+          .split(/\s+/)
+          .map((word) => word[0])
+          .join("")
+          .slice(0, 2)
+          .toUpperCase(),
+      }
+    : undefined;
+  const [store, setStore] = useState<PublicStore | undefined>(fallbackStore);
+  const [products, setProducts] =
+    useState<CatalogProduct[]>(fallbackProducts);
+  const [loading, setLoading] = useState(Boolean(slug && !fallbackStore));
   useEffect(() => {
     if (!slug) return;
+    const localStoreProducts = localProducts.filter(
+      (product) => product.sellerSlug === slug,
+    );
+    if (localStoreProducts.length) {
+      const localName = localStoreProducts[0].seller;
+      setStore({
+        name: localName,
+        about:
+          "A verified marketplace seller offering clear product details, protected delivery and order-linked support.",
+        policy:
+          "Ysello buyer protection and the listing-specific delivery terms apply to every order.",
+        rating:
+          localStoreProducts.reduce(
+            (sum, product) => sum + product.rating,
+            0,
+          ) / localStoreProducts.length,
+        sales: localStoreProducts
+          .reduce((sum, product) => sum + product.reviews, 0)
+          .toLocaleString(),
+        joined: "2026",
+        mark: localName
+          .split(/\s+/)
+          .map((word) => word[0])
+          .join("")
+          .slice(0, 2)
+          .toUpperCase(),
+      });
+      setProducts(localStoreProducts);
+      setLoading(false);
+    } else {
+      setStore(undefined);
+      setProducts([]);
+      setLoading(true);
+    }
     void apiRequest<{
       store: {
         storeName: string;

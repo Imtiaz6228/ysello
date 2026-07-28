@@ -17,14 +17,32 @@ test("prerenders public routes with unique metadata", () => {
   assert.doesNotMatch(about, /localhost|codex-preview/);
 });
 
-test("keeps crawler files and data-backed public HTML ahead of explicit private SPA routes", () => {
+test("keeps SEO inventory local and preserves explicit private SPA routes", () => {
   const vercel = JSON.parse(readFileSync("vercel.json", "utf8"));
   const rewriteSources = vercel.rewrites.map((rule) => rule.source);
-  assert.deepEqual(rewriteSources.slice(0, 2), ["/robots.txt", "/sitemap.xml"]);
-  assert.ok(rewriteSources.includes("/catalog"));
-  assert.ok(rewriteSources.includes("/products/:slug"));
+  assert.deepEqual(rewriteSources.slice(0, 2), [
+    "/api/:path*",
+    "/uploads/:path*",
+  ]);
+  assert.ok(!rewriteSources.includes("/robots.txt"));
+  assert.ok(!rewriteSources.includes("/sitemap.xml"));
+  assert.ok(!rewriteSources.includes("/catalog"));
   assert.ok(rewriteSources.includes("/dashboard"));
   assert.ok(!rewriteSources.includes("/(.*)"));
+  assert.ok(
+    vercel.redirects.some(
+      (rule) =>
+        rule.source === "/products/:slug" &&
+        rule.destination === "/product/:slug",
+    ),
+  );
+  assert.ok(
+    vercel.redirects.some(
+      (rule) =>
+        rule.source === "/categories/:slug" &&
+        rule.destination === "/category/:slug",
+    ),
+  );
   assert.ok(
     vercel.headers.some((rule) =>
       rule.headers.some((header) => header.key === "Content-Security-Policy"),

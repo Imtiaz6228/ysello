@@ -12,6 +12,7 @@ import {
   X,
 } from "lucide-react";
 import { ApiError, apiRequest, mediaUrl } from "../api/client";
+import { sellerCategorySelection } from "../commerce/sellerTaxonomy";
 import { catalogAttributePresets } from "../data/enterpriseCatalog";
 
 export type SellerCategoryOption = {
@@ -19,6 +20,8 @@ export type SellerCategoryOption = {
   name: string;
   slug?: string;
   parentId?: string | null;
+  backingId?: string | null;
+  isTaxonomyOption?: boolean;
 };
 type Translation = {
   title?: string;
@@ -110,7 +113,14 @@ export function SellerProductEditor({
   const [path, setPath] = useState<string[]>(() => {
     const byId = new Map(categories.map((category) => [category.id, category]));
     const result: string[] = [];
-    let current = byId.get(product.categoryId);
+    const marketplaceCategorySlug =
+      typeof product.productAttributes?.marketplaceCategorySlug === "string"
+        ? product.productAttributes.marketplaceCategorySlug
+        : "";
+    let current =
+      categories.find(
+        (category) => category.slug === marketplaceCategorySlug,
+      ) ?? byId.get(product.categoryId);
     while (current) {
       result.unshift(current.id);
       current = current.parentId ? byId.get(current.parentId) : undefined;
@@ -200,13 +210,21 @@ export function SellerProductEditor({
   const attributes = root?.slug
     ? (catalogAttributePresets[root.slug] ?? [])
     : [];
-  const selectedCategoryId = path[path.length - 1];
+  const selectedCategoryId = path[path.length - 1] ?? "";
+  const selectedCategory = sellerCategorySelection(
+    selectedCategoryId,
+    categories,
+  );
 
   async function save(event: FormEvent, submitForReview = false) {
     event.preventDefault();
     setError("");
     if (!selectedCategoryId || levels[path.length]?.length)
       return setError("Complete the category path before saving.");
+    if (!selectedCategory?.backingId)
+      return setError(
+        "The marketplace category could not be connected. Refresh the seller center and try again.",
+      );
     if (
       form.name.trim().length < 3 ||
       form.shortDescription.trim().length < 10 ||
@@ -216,16 +234,33 @@ export function SellerProductEditor({
         "Complete the English title, short description, and full description.",
       );
     setBusy(true);
+    const seoTitle =
+      form.seoTitle.trim() ||
+      [
+        `Buy ${form.name.trim()}`,
+        form.platform.trim(),
+        form.productKind.trim(),
+        form.region.trim(),
+      ]
+        .filter(Boolean)
+        .join(" ")
+        .slice(0, 70);
+    const seoDescription =
+      form.seoDescription.trim() ||
+      `${form.shortDescription.trim()} Compare delivery, seller details and buyer protection on Ysello.`.slice(
+        0,
+        170,
+      );
     try {
       await apiRequest(`/api/seller/products/${product.id}`, {
         method: "PATCH",
         body: {
-          categoryId: selectedCategoryId,
+          categoryId: selectedCategory.backingId,
           name: form.name.trim(),
           shortDescription: form.shortDescription.trim(),
           description: form.description.trim(),
-          seoTitle: form.seoTitle.trim(),
-          seoDescription: form.seoDescription.trim(),
+          seoTitle,
+          seoDescription,
           type: form.type,
           priceUsdCents: Math.round(Number(form.priceUsd) * 100),
           priceCnyCents: Math.round(Number(form.priceCny || 0) * 100),
@@ -273,14 +308,19 @@ export function SellerProductEditor({
           instantDelivery: form.instantDelivery,
           manualDelivery: form.manualDelivery,
           digitalDownload: form.digitalDownload,
-          productAttributes: form.productAttributes,
+          productAttributes: {
+            ...form.productAttributes,
+            marketplaceCategorySlug: selectedCategory.slug,
+            marketplaceCategoryName: selectedCategory.name,
+            marketplaceCategoryPath: selectedCategory.pathLabel,
+          },
           translations: {
             en: {
               title: form.name.trim(),
               shortDescription: form.shortDescription.trim(),
               description: form.description.trim(),
-              seoTitle: form.seoTitle.trim(),
-              seoDescription: form.seoDescription.trim(),
+              seoTitle,
+              seoDescription,
             },
             "zh-CN": {
               title: form.chineseTitle.trim(),

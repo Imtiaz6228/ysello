@@ -77,22 +77,22 @@ function MegaMenu({
           <p>Explore department</p>
           <h2>{category.name}</h2>
           <span>{category.description}</span>
-          <Link to={`/categories/${category.slug}`} onClick={onClose}>
+          <Link to={`/category/${category.slug}`} onClick={onClose}>
             Shop all {departmentLabels[category.slug] ?? category.name}
             <ArrowRight aria-hidden="true" />
           </Link>
         </div>
 
         <div className="g2-mega-catalog-grid">
-          {category.subcategories.slice(0, 8).map((group) => (
+          {category.subcategories.map((group) => (
             <section key={group.slug}>
-              <Link to={`/categories/${group.slug}`} onClick={onClose}>
+              <Link to={`/category/${group.slug}`} onClick={onClose}>
                 {group.name}
               </Link>
-              {group.children?.slice(0, 6).map((item) => (
+              {group.children?.map((item) => (
                 <Link
                   key={item.slug}
-                  to={`/categories/${item.slug}`}
+                  to={`/category/${item.slug}`}
                   onClick={onClose}
                 >
                   {item.name}
@@ -104,7 +104,7 @@ function MegaMenu({
 
         <Link
           className={`g2-mega-promo tone-${category.accent}`}
-          to={`/categories/${category.slug}`}
+          to={`/category/${category.slug}`}
           onClick={onClose}
         >
           <span>Curated marketplace</span>
@@ -416,7 +416,7 @@ export function MarketHeader() {
                       <div className="g2-mobile-category-panel">
                         <Link
                           className="g2-mobile-view-all"
-                          to={`/categories/${category.slug}`}
+                          to={`/category/${category.slug}`}
                         >
                           View all
                         </Link>
@@ -442,14 +442,14 @@ export function MarketHeader() {
                                   {groupExpanded ? (
                                     <div className="g2-mobile-leaves">
                                       <Link
-                                        to={`/categories/${group.slug}`}
+                                        to={`/category/${group.slug}`}
                                       >
                                         All {group.name}
                                       </Link>
                                       {group.children.map((item) => (
                                         <Link
                                           key={item.slug}
-                                          to={`/categories/${item.slug}`}
+                                          to={`/category/${item.slug}`}
                                         >
                                           {item.name}
                                         </Link>
@@ -458,7 +458,7 @@ export function MarketHeader() {
                                   ) : null}
                                 </>
                               ) : (
-                                <Link to={`/categories/${group.slug}`}>
+                                <Link to={`/category/${group.slug}`}>
                                   <Grid2X2 aria-hidden="true" />
                                   <span>{group.name}</span>
                                 </Link>

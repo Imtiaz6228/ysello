@@ -265,13 +265,13 @@ app.get(
         priority: 0.6,
       })),
       ...products.map((item) => ({
-        path: `/products/${item.slug}`,
+        path: `/product/${item.slug}`,
         updatedAt: item.updatedAt,
         changeFrequency: "weekly",
         priority: 0.8,
       })),
       ...categories.map((item) => ({
-        path: `/categories/${item.slug}`,
+        path: `/category/${item.slug}`,
         updatedAt: item.updatedAt,
         changeFrequency: "weekly",
         priority: 0.7,
@@ -408,8 +408,8 @@ if (isProduction && fs.existsSync(frontendIndex)) {
         }),
       ]);
       const content = [
-        `<section><h2>Browse by category</h2>${links(categories.map((item) => ({ path: `/categories/${item.slug}`, title: item.name, description: item.description })))}</section>`,
-        `<section><h2>Approved marketplace listings</h2>${products.length ? links(products.map((item) => ({ path: `/products/${item.slug}`, title: item.name, description: item.shortDescription }))) : "<p>No public listings are available yet.</p>"}</section>`,
+        `<section><h2>Browse by category</h2>${links(categories.map((item) => ({ path: `/category/${item.slug}`, title: item.name, description: item.description })))}</section>`,
+        `<section><h2>Approved marketplace listings</h2>${products.length ? links(products.map((item) => ({ path: `/product/${item.slug}`, title: item.name, description: item.shortDescription }))) : "<p>No public listings are available yet.</p>"}</section>`,
         stores.length
           ? `<section><h2>Verified seller stores</h2>${links(stores.map((item) => ({ path: `/stores/${item.slug}`, title: item.storeName, description: item.about })))}</section>`
           : "",
@@ -440,8 +440,15 @@ if (isProduction && fs.existsSync(frontendIndex)) {
     }),
   );
 
+  app.get("/categories/:slug", (req, res) => {
+    const slug = Array.isArray(req.params.slug)
+      ? req.params.slug[0]
+      : req.params.slug;
+    res.redirect(308, `/category/${encodeURIComponent(slug)}`);
+  });
+
   app.get(
-    "/categories/:slug",
+    "/category/:slug",
     asyncHandler(async (req, res) => {
       const requestedSlug = publicSlug(
         Array.isArray(req.params.slug) ? req.params.slug[0] : req.params.slug,
@@ -496,7 +503,7 @@ if (isProduction && fs.existsSync(frontendIndex)) {
       const childLinks = categories.filter(
         (item) => item.parentId === category.id,
       );
-      const url = canonicalUrl(`/categories/${category.slug}`);
+      const url = canonicalUrl(`/category/${category.slug}`);
       const customTitle = category.seoTitle?.trim();
       const title = customTitle
         ? customTitle.toLowerCase().includes("ysello")
@@ -508,10 +515,10 @@ if (isProduction && fs.existsSync(frontendIndex)) {
       const itemList = products.map((item, index) => ({
         "@type": "ListItem",
         position: index + 1,
-        url: canonicalUrl(`/products/${item.slug}`),
+        url: canonicalUrl(`/product/${item.slug}`),
         name: item.name,
       }));
-      const content = `${childLinks.length ? `<section><h2>${escapeHtml(category.name)} specialties</h2>${links(childLinks.map((item) => ({ path: `/categories/${item.slug}`, title: item.name, description: item.description })))}</section>` : ""}<section><h2>Available listings</h2>${products.length ? links(products.map((item) => ({ path: `/products/${item.slug}`, title: item.name, description: item.shortDescription }))) : "<p>No public listings are currently available in this category.</p>"}</section>`;
+      const content = `${childLinks.length ? `<section><h2>${escapeHtml(category.name)} specialties</h2>${links(childLinks.map((item) => ({ path: `/category/${item.slug}`, title: item.name, description: item.description })))}</section>` : ""}<section><h2>Available listings</h2>${products.length ? links(products.map((item) => ({ path: `/product/${item.slug}`, title: item.name, description: item.shortDescription }))) : "<p>Seller listings can be published directly in this category. Browse the linked specialties and related marketplace departments while more offers are added.</p>"}</section>`;
       sendHtml(
         res,
         renderSeoDocument(frontendTemplate, {
@@ -538,8 +545,15 @@ if (isProduction && fs.existsSync(frontendIndex)) {
     }),
   );
 
+  app.get("/products/:slug", (req, res) => {
+    const slug = Array.isArray(req.params.slug)
+      ? req.params.slug[0]
+      : req.params.slug;
+    res.redirect(308, `/product/${encodeURIComponent(slug)}`);
+  });
+
   app.get(
-    "/products/:slug",
+    "/product/:slug",
     asyncHandler(async (req, res) => {
       const requestedSlug = publicSlug(
         Array.isArray(req.params.slug) ? req.params.slug[0] : req.params.slug,
@@ -582,7 +596,7 @@ if (isProduction && fs.existsSync(frontendIndex)) {
         product.type === "SERVICE" ||
         product._count.files > 0 ||
         product._count.inventoryItems > 0;
-      const url = canonicalUrl(`/products/${product.slug}`);
+      const url = canonicalUrl(`/product/${product.slug}`);
       const imageUrl = absolutePublicUrl(siteUrl, product.coverImageUrl);
       const seller = product.seller.sellerProfile;
       const customTitle = product.seoTitle?.trim();
@@ -638,7 +652,7 @@ if (isProduction && fs.existsSync(frontendIndex)) {
       ]
         .filter(Boolean)
         .join("");
-      const content = `<section><h2>Product details</h2><p>${escapeHtml(product.description)}</p><ul>${facts}</ul></section><section><h2>Seller and category</h2><p>Sold by <a href="/stores/${escapeHtml(seller.slug)}">${escapeHtml(seller.storeName)}</a> in <a href="/categories/${escapeHtml(product.category.slug)}">${escapeHtml(product.category.name)}</a>.</p><p><strong>Price:</strong> $${(priceCents / 100).toFixed(2)} USD</p></section>`;
+      const content = `<section><h2>Product details</h2><p>${escapeHtml(product.description)}</p><ul>${facts}</ul></section><section><h2>Seller and category</h2><p>Sold by <a href="/stores/${escapeHtml(seller.slug)}">${escapeHtml(seller.storeName)}</a> in <a href="/category/${escapeHtml(product.category.slug)}">${escapeHtml(product.category.name)}</a>.</p><p><strong>Price:</strong> $${(priceCents / 100).toFixed(2)} USD</p></section>`;
       sendHtml(
         res,
         renderSeoDocument(frontendTemplate, {
@@ -695,7 +709,7 @@ if (isProduction && fs.existsSync(frontendIndex)) {
       });
       const url = canonicalUrl(`/stores/${store.slug}`);
       const imageUrl = absolutePublicUrl(siteUrl, store.logoUrl);
-      const content = `<section><h2>Products from ${escapeHtml(store.storeName)}</h2>${products.length ? links(products.map((item) => ({ path: `/products/${item.slug}`, title: item.name, description: item.shortDescription }))) : "<p>This verified store has no public listings at the moment.</p>"}</section>`;
+      const content = `<section><h2>Products from ${escapeHtml(store.storeName)}</h2>${products.length ? links(products.map((item) => ({ path: `/product/${item.slug}`, title: item.name, description: item.shortDescription }))) : "<p>This verified store has no public listings at the moment.</p>"}</section>`;
       sendHtml(
         res,
         renderSeoDocument(frontendTemplate, {

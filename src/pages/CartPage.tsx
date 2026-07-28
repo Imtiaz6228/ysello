@@ -80,7 +80,7 @@ export function CartPage() {
                 </div>
                 <div>
                   <span>{product.category}</span>
-                  <Link to={`/products/${product.slug}`}>{product.title}</Link>
+                  <Link to={`/product/${product.slug}`}>{product.title}</Link>
                   <small>
                     {product.delivery} · {product.seller}
                   </small>

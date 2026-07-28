@@ -68,6 +68,35 @@ test("404 and deployment configuration prevent soft-404 indexing", () => {
   assert.ok(!vercel.rewrites.some((rewrite) => rewrite.source === "/(.*)"));
 });
 
+test("category and product routes ship crawlable G2A-style marketplace SEO", () => {
+  const category = readFileSync("dist/category/steam-games.html", "utf8");
+  const product = readFileSync(
+    "dist/product/halo-infinite-campaign-pc.html",
+    "utf8",
+  );
+  const sitemap = readFileSync("dist/sitemap.xml", "utf8");
+  const robots = readFileSync("dist/robots.txt", "utf8");
+
+  assert.match(
+    category,
+    /canonical" href="https:\/\/ysello\.com\/category\/steam-games"/,
+  );
+  assert.match(category, /"@type":"CollectionPage"/);
+  assert.match(category, /"@type":"ItemList"/);
+  assert.match(category, /href="\/product\/halo-infinite-campaign-pc"/);
+  assert.match(
+    product,
+    /canonical" href="https:\/\/ysello\.com\/product\/halo-infinite-campaign-pc"/,
+  );
+  assert.match(product, /property="og:type" content="product"/);
+  assert.match(product, /"@type":"Product"/);
+  assert.match(product, /"@type":"BreadcrumbList"/);
+  assert.match(sitemap, /\/category\/gaming<\/loc>/);
+  assert.match(sitemap, /\/category\/steam-games<\/loc>/);
+  assert.match(sitemap, /\/product\/halo-infinite-campaign-pc<\/loc>/);
+  assert.match(robots, /Sitemap: https:\/\/ysello\.com\/sitemap\.xml/);
+});
+
 test("crawler endpoints include only public inventory and current content dates", () => {
   const api = readFileSync("src/api-app.ts", "utf8");
   assert.match(api, /Disallow: \/api\//);

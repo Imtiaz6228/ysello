@@ -379,7 +379,7 @@ export function MarketplaceHomePage() {
               ? product.facts.region
               : "GLOBAL";
           return (
-            <Link key={product.id} to={`/products/${product.slug}`}>
+            <Link key={product.id} to={`/product/${product.slug}`}>
               {product.imageUrl ? (
                 <img src={product.imageUrl} alt="" loading="eager" />
               ) : null}
@@ -442,7 +442,7 @@ export function MarketplaceHomePage() {
             return (
               <Link
                 key={category.slug}
-                to={`/categories/${category.slug}`}
+                to={`/category/${category.slug}`}
                 className={`market-category-card tone-${category.accent}`}
                 onFocus={() => setFocusedCategorySlug(category.slug)}
                 onMouseEnter={() => setFocusedCategorySlug(category.slug)}
@@ -467,11 +467,11 @@ export function MarketplaceHomePage() {
         >
           <strong>{focusedCategory.name}</strong>
           {focusedCategory.subcategories.slice(0, 8).map((subcategory) => (
-            <Link key={subcategory.slug} to={`/categories/${subcategory.slug}`}>
+            <Link key={subcategory.slug} to={`/category/${subcategory.slug}`}>
               {subcategory.name}
             </Link>
           ))}
-          <Link to={`/categories/${focusedCategory.slug}`}>
+          <Link to={`/category/${focusedCategory.slug}`}>
             View all <ArrowRight aria-hidden="true" />
           </Link>
         </div>
@@ -501,7 +501,7 @@ export function MarketplaceHomePage() {
               {bundleProducts.map((product, index) => (
                 <div key={product.id} className="g2-bundle-item">
                   {index ? <b aria-hidden="true">+</b> : null}
-                  <Link to={`/products/${product.slug}`}>
+                  <Link to={`/product/${product.slug}`}>
                     <span>
                       {product.imageUrl ? (
                         <img src={product.imageUrl} alt="" />
@@ -560,7 +560,7 @@ export function MarketplaceHomePage() {
         />
         <div className="g2-category-art-grid">
           {marketplaceTaxonomy.slice(0, 4).map((category) => (
-            <Link key={category.slug} to={`/categories/${category.slug}`}>
+            <Link key={category.slug} to={`/category/${category.slug}`}>
               <span>
                 <img src={categoryArt[category.slug]} alt="" loading="lazy" />
               </span>
@@ -603,7 +603,7 @@ export function MarketplaceHomePage() {
         <SectionHeading
           title="Creative studio picks"
           text="Design systems, web assets, motion packs and creator resources."
-          href="/categories/creative-software"
+          href="/category/creative-software"
         />
         <ProductRail
           products={creativePicks.slice(0, 6)}
@@ -616,7 +616,7 @@ export function MarketplaceHomePage() {
         <SectionHeading
           title="Tools for work and business"
           text="Productivity systems, commercial templates and specialist learning resources."
-          href="/categories/software"
+          href="/category/software"
         />
         <ProductRail
           products={workPicks.slice(0, 6)}

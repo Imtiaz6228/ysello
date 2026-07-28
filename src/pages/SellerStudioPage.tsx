@@ -67,6 +67,10 @@ import { LocaleSwitcher } from "../components/LocaleSwitcher";
 import { useLocale } from "../i18n/LocaleContext";
 import { catalogAttributePresets } from "../data/enterpriseCatalog";
 import {
+  mergeSellerTaxonomy,
+  sellerCategorySelection,
+} from "../commerce/sellerTaxonomy";
+import {
   SellerProductEditor,
   type SellerEditableProduct,
 } from "../components/SellerProductEditor";
@@ -77,6 +81,8 @@ type Category = {
   slug?: string;
   description?: string;
   parentId?: string | null;
+  backingId?: string | null;
+  isTaxonomyOption?: boolean;
   parent?: Category | null;
 };
 
@@ -422,7 +428,12 @@ function errorText(error: unknown, fallback: string) {
   );
 }
 
-function categoryLabel(category?: Product["category"]) {
+function categoryLabel(
+  category?: Product["category"],
+  productAttributes?: Record<string, unknown>,
+) {
+  if (typeof productAttributes?.marketplaceCategoryPath === "string")
+    return productAttributes.marketplaceCategoryPath;
   if (!category) return "Uncategorised";
   const names = [
     category.parent?.parent?.name,
@@ -456,7 +467,9 @@ export function SellerStudioPage() {
   });
   const [products, setProducts] = useState<Product[]>([]);
   const [orders, setOrders] = useState<SellerOrder[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
+  const [categories, setCategories] = useState<Category[]>(() =>
+    mergeSellerTaxonomy([] as Category[]),
+  );
   const [profile, setProfile] = useState<SellerProfile | null>(null);
   const [profileForm, setProfileForm] = useState({ about: "", policy: "" });
   const [open, setOpen] = useState(false);
@@ -523,9 +536,12 @@ export function SellerStudioPage() {
   }, [categories, form.categoryPathIds]);
   const selectedCategoryId =
     form.categoryPathIds[form.categoryPathIds.length - 1] ?? "";
-  const selectedPath = form.categoryPathIds
-    .map((id) => categories.find((category) => category.id === id)?.name)
-    .filter(Boolean);
+  const selectedCategory = sellerCategorySelection(
+    selectedCategoryId,
+    categories,
+  );
+  const selectedPath =
+    selectedCategory?.path.map((category) => category.name) ?? [];
   const selectedRoot = categories.find(
     (category) => category.id === form.categoryPathIds[0],
   );
@@ -593,7 +609,10 @@ export function SellerStudioPage() {
   const filteredProducts = products.filter((product) => {
     const queryMatch =
       !searchQuery ||
-      `${product.name} ${categoryLabel(product.category)}`
+      `${product.name} ${categoryLabel(
+        product.category,
+        product.productAttributes,
+      )}`
         .toLowerCase()
         .includes(searchQuery.toLowerCase());
     const statusMatch =
@@ -725,10 +744,11 @@ export function SellerStudioPage() {
       ),
       apiRequest<{ categories: Category[] }>("/api/seller/categories").then(
         (data) => {
-          setCategories(data.categories);
+          const mergedCategories = mergeSellerTaxonomy(data.categories);
+          setCategories(mergedCategories);
           setForm((current) => {
             if (current.categoryPathIds.length) return current;
-            const firstRoot = data.categories.find(
+            const firstRoot = mergedCategories.find(
               (category) => !category.parentId,
             );
             return firstRoot
@@ -835,6 +855,13 @@ export function SellerStudioPage() {
       );
       return;
     }
+    if (!selectedCategory?.backingId) {
+      showMessage(
+        "Marketplace categories are ready, but the seller catalog connection could not be resolved. Refresh and try again.",
+        "error",
+      );
+      return;
+    }
     const lastLevel = categoryLevels[form.categoryPathIds.length];
     if (lastLevel?.length) {
       showMessage(
@@ -869,7 +896,7 @@ export function SellerStudioPage() {
     setBusy(true);
     setMessage("");
     const data = new FormData();
-    data.append("categoryId", selectedCategoryId);
+    data.append("categoryId", selectedCategory.backingId);
     data.append("name", form.name.trim());
     data.append("shortDescription", form.shortDescription.trim());
     data.append("description", form.description.trim());
@@ -913,7 +940,26 @@ export function SellerStudioPage() {
     data.append("instantDelivery", String(form.instantDelivery));
     data.append("manualDelivery", String(form.manualDelivery));
     data.append("digitalDownload", String(form.digitalDownload));
-    data.append("productAttributes", JSON.stringify(form.productAttributes));
+    const productAttributes = {
+      ...form.productAttributes,
+      marketplaceCategorySlug: selectedCategory.slug,
+      marketplaceCategoryName: selectedCategory.name,
+      marketplaceCategoryPath: selectedCategory.pathLabel,
+    };
+    data.append("productAttributes", JSON.stringify(productAttributes));
+    const seoTitle = [
+      `Buy ${form.name.trim()}`,
+      form.platform.trim(),
+      form.productKind.trim(),
+      form.region.trim(),
+    ]
+      .filter(Boolean)
+      .join(" ")
+      .slice(0, 70);
+    const seoDescription = `${form.shortDescription.trim()} Compare delivery, seller details and buyer protection on Ysello.`.slice(
+      0,
+      170,
+    );
     data.append(
       "translations",
       JSON.stringify({
@@ -921,8 +967,8 @@ export function SellerStudioPage() {
           title: form.name.trim(),
           shortDescription: form.shortDescription.trim(),
           description: form.description.trim(),
-          seoTitle: form.name.trim().slice(0, 70),
-          seoDescription: form.shortDescription.trim().slice(0, 170),
+          seoTitle,
+          seoDescription,
         },
         "zh-CN": {
           title: form.chineseTitle.trim(),
@@ -934,8 +980,8 @@ export function SellerStudioPage() {
       }),
     );
     // SEO limits are intentionally smaller than the visible product fields.
-    data.append("seoTitle", form.name.trim().slice(0, 70));
-    data.append("seoDescription", form.shortDescription.trim().slice(0, 170));
+    data.append("seoTitle", seoTitle);
+    data.append("seoDescription", seoDescription);
     data.append("coverImage", coverImage);
 
     try {
@@ -1848,7 +1894,10 @@ export function SellerStudioPage() {
             <div className="seller-collection-grid">
               {rootCategories.map((category) => {
                 const count = products.filter((product) =>
-                  categoryLabel(product.category).startsWith(category.name),
+                  categoryLabel(
+                    product.category,
+                    product.productAttributes,
+                  ).startsWith(category.name),
                 ).length;
                 return (
                   <article key={category.id}>
@@ -2092,7 +2141,12 @@ export function SellerStudioPage() {
                       </div>
                       <div className="seller-product-copy">
                         <strong>{product.name}</strong>
-                        <small>{categoryLabel(product.category)}</small>
+                        <small>
+                          {categoryLabel(
+                            product.category,
+                            product.productAttributes,
+                          )}
+                        </small>
                         <div>
                           <b>
                             {formatMoney(
@@ -2132,7 +2186,7 @@ export function SellerStudioPage() {
                       ) : null}
                     </div>
                     <div className="seller-product-actions">
-                      <Link to={`/products/${product.slug}`}>
+                      <Link to={`/product/${product.slug}`}>
                         <Eye /> Preview
                       </Link>
                       <button

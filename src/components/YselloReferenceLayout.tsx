@@ -308,7 +308,7 @@ export function YselloReferenceProductCard({
       <div className="ys-ref-product-media g2-product-media">
         <Link
           className="g2-product-image-link"
-          to={`/products/${product.slug}`}
+          to={`/product/${product.slug}`}
           aria-label={`View ${product.title}`}
         >
           {product.imageUrl ? (
@@ -322,7 +322,7 @@ export function YselloReferenceProductCard({
         </Link>
         <Link
           className="g2-product-badge"
-          to={`/categories/${product.categorySlug}`}
+          to={`/category/${product.categorySlug}`}
         >
           {product.badge || categoryLabel}
         </Link>
@@ -337,7 +337,7 @@ export function YselloReferenceProductCard({
         </button>
       </div>
       <div className="ys-ref-product-copy g2-product-copy">
-        <Link className="ys-ref-product-title" to={`/products/${product.slug}`}>
+        <Link className="ys-ref-product-title" to={`/product/${product.slug}`}>
           {product.title}
         </Link>
         <p className="g2-product-description">{product.description}</p>
@@ -369,7 +369,7 @@ export function YselloReferenceProductCard({
           </span>
         </div>
         <div className="ys-ref-product-card-actions g2-product-actions">
-          <Link to={`/products/${product.slug}`}>View details</Link>
+          <Link to={`/product/${product.slug}`}>View details</Link>
           {onBuy ? (
             <button
               type="button"

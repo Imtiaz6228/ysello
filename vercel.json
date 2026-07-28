@@ -71,17 +71,19 @@
       "source": "/index.html",
       "destination": "/",
       "permanent": true
+    },
+    {
+      "source": "/categories/:slug",
+      "destination": "/category/:slug",
+      "permanent": true
+    },
+    {
+      "source": "/products/:slug",
+      "destination": "/product/:slug",
+      "permanent": true
     }
   ],
   "rewrites": [
-    {
-      "source": "/robots.txt",
-      "destination": "https://api.ysello.com/robots.txt"
-    },
-    {
-      "source": "/sitemap.xml",
-      "destination": "https://api.ysello.com/sitemap.xml"
-    },
     {
       "source": "/api/:path*",
       "destination": "https://api.ysello.com/api/:path*"
@@ -89,18 +91,6 @@
     {
       "source": "/uploads/:path*",
       "destination": "https://api.ysello.com/uploads/:path*"
-    },
-    {
-      "source": "/catalog",
-      "destination": "https://api.ysello.com/catalog"
-    },
-    {
-      "source": "/categories/:slug",
-      "destination": "https://api.ysello.com/categories/:slug"
-    },
-    {
-      "source": "/products/:slug",
-      "destination": "https://api.ysello.com/products/:slug"
     },
     {
       "source": "/stores/:slug",
