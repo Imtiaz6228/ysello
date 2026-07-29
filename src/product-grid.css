@@ -78,7 +78,8 @@
 }
 
 .ys-product-badges .badge,
-.ys-product-kind {
+.ys-product-kind,
+.ys-product-official {
   position: static !important;
   min-height: 26px;
   padding: 5px 9px !important;
@@ -92,6 +93,17 @@
   font-weight: 800;
   line-height: 1;
   letter-spacing: 0.02em;
+}
+
+.ys-product-official {
+  border-color: #c4b5fd;
+  color: #5b21b6;
+  background: #f5f3ff;
+}
+
+.ys-product-official svg {
+  width: 13px;
+  height: 13px;
 }
 
 .ys-product-badges .badge.green {
@@ -149,6 +161,16 @@
   width: 14px;
   height: 14px;
   color: #2563eb;
+}
+
+.ys-product-card .market-product-seller small {
+  padding: 2px 6px;
+  border-radius: 999px;
+  color: #5b21b6;
+  background: #ede9fe;
+  font-size: 9px;
+  font-weight: 800;
+  text-transform: uppercase;
 }
 
 .ys-product-card .market-product-body > p {

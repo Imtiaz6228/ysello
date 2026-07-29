@@ -1,4 +1,5 @@
-import { Router } from "express";
+import { createHash, randomBytes } from "node:crypto";
+import { Router, type Request } from "express";
 import { z } from "zod";
 import { Role } from "@prisma/client";
 import { prisma } from "../lib/prisma.js";
@@ -13,6 +14,115 @@ import {
 export const nexusRouter = Router();
 const staff = requireRole(Role.MODERATOR, Role.ADMIN, Role.SUPER_ADMIN);
 const earnings = new EarningsAnalyticsService();
+
+const guestMessageInput = z.object({
+  body: z.string().trim().min(1).max(4000),
+});
+
+function guestTokenHash(token: string) {
+  return createHash("sha256").update(token).digest("hex");
+}
+
+function readGuestToken(req: Request) {
+  const token = req.get("x-guest-chat-token")?.trim() ?? "";
+  if (!/^[a-f0-9]{64}$/i.test(token)) {
+    throw new ApiError(
+      401,
+      "This support conversation could not be verified.",
+      "GUEST_CHAT_UNAUTHORIZED",
+    );
+  }
+  return token;
+}
+
+nexusRouter.post(
+  "/chat/guest",
+  asyncHandler(async (req, res) => {
+    const input = z
+      .object({
+        name: z.string().trim().min(2).max(120),
+        email: z.string().trim().email().max(254),
+        message: z.string().trim().min(1).max(4000),
+      })
+      .parse(req.body);
+    const guestToken = randomBytes(32).toString("hex");
+    const session = await prisma.chatSession.create({
+      data: {
+        guestName: input.name,
+        guestEmail: input.email.toLowerCase(),
+        guestTokenHash: guestTokenHash(guestToken),
+        subject: input.message.slice(0, 80),
+        status: "HUMAN",
+        messages: {
+          create: {
+            role: "user",
+            body: input.message,
+          },
+        },
+      },
+      include: { messages: { orderBy: { createdAt: "asc" } } },
+    });
+
+    res.status(201).json({
+      sessionId: session.id,
+      guestToken,
+      session,
+    });
+  }),
+);
+
+nexusRouter.get(
+  "/chat/guest/:id",
+  asyncHandler(async (req, res) => {
+    const token = readGuestToken(req);
+    const session = await prisma.chatSession.findFirst({
+      where: {
+        id: z.string().uuid().parse(String(req.params.id)),
+        userId: null,
+        guestTokenHash: guestTokenHash(token),
+      },
+      include: { messages: { orderBy: { createdAt: "asc" } } },
+    });
+    if (!session) {
+      throw new ApiError(
+        404,
+        "Support conversation not found.",
+        "CHAT_NOT_FOUND",
+      );
+    }
+    res.json({ session });
+  }),
+);
+
+nexusRouter.post(
+  "/chat/guest/:id/messages",
+  asyncHandler(async (req, res) => {
+    const token = readGuestToken(req);
+    const { body } = guestMessageInput.parse(req.body);
+    const session = await prisma.chatSession.findFirst({
+      where: {
+        id: z.string().uuid().parse(String(req.params.id)),
+        userId: null,
+        guestTokenHash: guestTokenHash(token),
+      },
+    });
+    if (!session) {
+      throw new ApiError(
+        404,
+        "Support conversation not found.",
+        "CHAT_NOT_FOUND",
+      );
+    }
+    const message = await prisma.chatMessage.create({
+      data: { sessionId: session.id, role: "user", body },
+    });
+    await prisma.chatSession.update({
+      where: { id: session.id },
+      data: { status: "HUMAN", resolved: false, updatedAt: new Date() },
+    });
+    res.status(201).json({ message });
+  }),
+);
 
 nexusRouter.use(requireAuth);
 
@@ -50,6 +160,10 @@ nexusRouter.post(
         body: answer.reply,
         metadata: { quickActions: answer.quickActions },
       },
+    });
+    await prisma.chatSession.update({
+      where: { id: session.id },
+      data: { updatedAt: new Date() },
     });
     res.json({
       sessionId: session.id,
@@ -95,7 +209,7 @@ nexusRouter.post(
           where: { id: input.sessionId, userId: req.auth!.id },
         })
       : null;
-    if (!session) {
+    if (!session)
       session = await prisma.chatSession.create({
         data: {
           userId: req.auth!.id,
@@ -103,23 +217,26 @@ nexusRouter.post(
           status: "HUMAN",
         },
       });
-      await prisma.chatMessage.create({
-        data: {
-          sessionId: session.id,
-          authorId: req.auth!.id,
-          role: "user",
-          body: input.message,
-        },
-      });
-    } else {
-      await prisma.chatSession.update({
-        where: { id: session.id },
-        data: { status: "HUMAN", resolved: false },
-      });
-    }
+    const chatMessage = await prisma.chatMessage.create({
+      data: {
+        sessionId: session.id,
+        authorId: req.auth!.id,
+        role: "user",
+        body: input.message,
+      },
+    });
+    await prisma.chatSession.update({
+      where: { id: session.id },
+      data: {
+        status: "HUMAN",
+        resolved: false,
+        updatedAt: new Date(),
+      },
+    });
     res.json({
       sessionId: session.id,
       message: "An administrator has been notified.",
+      chatMessage,
     });
   }),
 );
@@ -135,7 +252,7 @@ nexusRouter.post(
       throw new ApiError(404, "Chat session not found.", "CHAT_NOT_FOUND");
     await prisma.chatSession.update({
       where: { id: session.id },
-      data: { status: "HUMAN" },
+      data: { status: "HUMAN", resolved: false },
     });
     res.json({ message: "A human support request has been sent to admin." });
   }),
@@ -163,7 +280,7 @@ nexusRouter.post(
     });
     await prisma.chatSession.update({
       where: { id: session.id },
-      data: { updatedAt: new Date() },
+      data: { status: "HUMAN", resolved: false, updatedAt: new Date() },
     });
     res.status(201).json({ message });
   }),
@@ -228,7 +345,13 @@ nexusRouter.get(
     const sessions = await prisma.chatSession.findMany({
       include: {
         user: {
-          select: { firstName: true, lastName: true, email: true, role: true },
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+            role: true,
+          },
         },
         messages: { orderBy: { createdAt: "asc" } },
       },
@@ -304,7 +427,7 @@ nexusRouter.post(
     });
     await prisma.chatSession.update({
       where: { id: session.id },
-      data: { status: "HUMAN", updatedAt: new Date() },
+      data: { status: "HUMAN", resolved: false, updatedAt: new Date() },
     });
     res.status(201).json({ message });
   }),

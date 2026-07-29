@@ -303,7 +303,9 @@ export function YselloReferenceProductCard({
       className={`ys-ref-product-card g2-product-card ${layout} tone-${productTone(product)}`}
     >
       <span className="g2-card-offer">
-        <BadgeCheck aria-hidden="true" /> Verified seller · {product.seller}
+        <BadgeCheck aria-hidden="true" />{" "}
+        {product.isOfficial ? "Official listing" : "Verified seller"} ·{" "}
+        {product.seller}
       </span>
       <div className="ys-ref-product-media g2-product-media">
         <Link

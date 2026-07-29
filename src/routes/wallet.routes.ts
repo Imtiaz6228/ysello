@@ -138,7 +138,7 @@ walletRouter.post(
     try {
       const id = z.string().uuid().parse(req.params.id);
       const input = z
-        .object({ txHash: z.string().trim().min(64).max(66) })
+        .object({ txHash: z.string().trim().min(64).max(300) })
         .parse(req.body);
       if (!req.file)
         throw new ApiError(

@@ -25,6 +25,7 @@ export type CatalogProduct = {
   longDescription: string;
   seller: string;
   sellerSlug: string;
+  isOfficial?: boolean;
   priceCents: number;
   originalPriceCents?: number;
   priceCnyCents?: number;

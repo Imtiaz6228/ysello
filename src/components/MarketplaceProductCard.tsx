@@ -53,6 +53,11 @@ export function MarketplaceProductCard({
           <span className="ys-product-kind">
             {product.type === "SERVICE" ? "Service" : "Digital product"}
           </span>
+          {product.isOfficial ? (
+            <span className="ys-product-official">
+              <BadgeCheck aria-hidden="true" /> Official
+            </span>
+          ) : null}
         </div>
       </div>
       <div className="market-product-body">
@@ -72,6 +77,7 @@ export function MarketplaceProductCard({
               to={`/stores/${product.sellerSlug}`}
             >
               {product.seller} <BadgeCheck aria-hidden="true" />
+              {product.isOfficial ? <small>Official listing</small> : null}
             </Link>
           </div>
         </div>

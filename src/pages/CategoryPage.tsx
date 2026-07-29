@@ -49,7 +49,7 @@ export function CategoryPage() {
   const { slug } = useParams();
   const navigate = useNavigate();
   const { add } = useCart();
-  const products = useMarketplaceProducts();
+  const products = useMarketplaceProducts(slug);
   const categories = useMarketplaceCategories();
   const { category, loading } = useMarketplaceCategory(slug);
   const [query, setQuery] = useState("");

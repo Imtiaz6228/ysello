@@ -419,6 +419,50 @@
   white-space: nowrap;
 }
 
+.topup-fee-breakdown {
+  display: grid;
+  gap: 8px;
+  margin: 16px 0 0;
+  padding: 14px 16px;
+  border: 1px solid #dbe5f4;
+  border-radius: 14px;
+  background: #f7faff;
+}
+
+.topup-fee-breakdown > div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.topup-fee-breakdown dt {
+  color: #52627a;
+  font-size: 13px;
+}
+
+.topup-fee-breakdown dd {
+  margin: 0;
+  color: #172033;
+  font-weight: 800;
+}
+
+.topup-fee-breakdown > div:nth-child(3) {
+  padding-top: 8px;
+  border-top: 1px solid #dbe5f4;
+}
+
+.topup-fee-breakdown > small {
+  color: #6b778c;
+  line-height: 1.55;
+}
+
+.topup-fee-breakdown.confirmed {
+  margin: 0 0 16px;
+  background: #f4fbf8;
+  border-color: #bfe6d5;
+}
+
 @media (max-width: 1180px) {
   .wallet-tab .wallet-summary-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));

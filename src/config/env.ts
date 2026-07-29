@@ -189,6 +189,26 @@ const envSchema = z.object({
     z.string().default("0x5fe0bc617b00812396560e00a47b68a4d19933df"),
   ),
   TOPUP_SOL_ADDRESS: z.preprocess(emptyToUndefined, z.string().optional()),
+  TOPUP_TRC20_FEE_CENTS: z.coerce
+    .number()
+    .int()
+    .min(0)
+    .max(100_000)
+    .default(100),
+  TOPUP_ERC20_FEE_CENTS: z.coerce
+    .number()
+    .int()
+    .min(0)
+    .max(100_000)
+    .default(400),
+  TOPUP_BEP20_FEE_CENTS: z.coerce
+    .number()
+    .int()
+    .min(0)
+    .max(100_000)
+    .default(25),
+  TOPUP_BTC_FEE_CENTS: z.coerce.number().int().min(0).max(100_000).default(250),
+  TOPUP_ETH_FEE_CENTS: z.coerce.number().int().min(0).max(100_000).default(250),
   COMMISSION_SALE_PERCENT: z.coerce.number().int().min(0).max(50).default(10),
   COMMISSION_WITHDRAW_PERCENT: z.coerce
     .number()

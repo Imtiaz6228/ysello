@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { discoverCategoryProducts } from "../src/commerce/catalogDiscovery";
+import { categoryMatches } from "../src/commerce/catalogHierarchy";
 import {
   mergeSellerTaxonomy,
   sellerCategorySelection,
@@ -77,7 +78,7 @@ test("every hamburger category is available in the seller listing flow", () => {
   }
 });
 
-test("every valid category URL has relevant products instead of an empty page", () => {
+test("category URLs never show products from an unrelated category", () => {
   const categories = catalogCategories();
   for (const slug of marketplaceTaxonomySlugs) {
     const discovery = discoverCategoryProducts(
@@ -85,9 +86,13 @@ test("every valid category URL has relevant products instead of an empty page", 
       categories,
       g2aDemoProducts,
     );
-    assert.ok(
-      discovery.products.length > 0,
-      `${slug} should show products or related department picks`,
-    );
+    assert.equal(discovery.isFallback, false);
+    for (const product of discovery.products) {
+      assert.equal(
+        categoryMatches(product.categorySlug, slug, categories),
+        true,
+        `${product.title} must belong to ${slug}`,
+      );
+    }
   }
 });

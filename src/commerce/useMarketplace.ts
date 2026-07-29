@@ -42,6 +42,7 @@ type ApiProduct = {
   averageRating: number | string;
   reviewCount: number;
   salesCount: number;
+  isOfficial?: boolean;
   deliveryNote?: string | null;
   coverImageUrl?: string | null;
   category: {
@@ -252,8 +253,11 @@ function mapProduct(
     title: translation?.title ?? translation?.name ?? product.name,
     description: translation?.shortDescription ?? product.shortDescription,
     longDescription: translation?.description ?? product.description,
-    seller: product.seller.sellerProfile?.storeName ?? "Marketplace seller",
+    seller: product.isOfficial
+      ? "Ysello Official"
+      : (product.seller.sellerProfile?.storeName ?? "Marketplace seller"),
     sellerSlug: product.seller.sellerProfile?.slug ?? "",
+    isOfficial: Boolean(product.isOfficial),
     priceCents:
       product.salePriceCents && product.salePriceCents > 0
         ? Math.min(product.priceCents, product.salePriceCents)
@@ -355,12 +359,15 @@ function mapCategories(categories: ApiCategory[]): CatalogCategory[] {
     );
 }
 
-export function useMarketplaceProducts() {
+export function useMarketplaceProducts(categorySlug?: string) {
   const { locale } = useLocale();
   const [products, setProducts] = useState<CatalogProduct[]>(localProducts);
   useEffect(() => {
+    const categoryQuery = categorySlug
+      ? `&category=${encodeURIComponent(categorySlug)}`
+      : "";
     void apiRequest<{ products: ApiProduct[] }>(
-      "/api/marketplace/products?take=500&sort=newest",
+      `/api/marketplace/products?take=500&sort=newest${categoryQuery}`,
     )
       .then((data) => {
         const remoteProducts = data.products.map((product, index) =>
@@ -372,7 +379,7 @@ export function useMarketplaceProducts() {
         setProducts(remoteProducts);
       })
       .catch(() => undefined);
-  }, [locale]);
+  }, [categorySlug, locale]);
   return products;
 }
 

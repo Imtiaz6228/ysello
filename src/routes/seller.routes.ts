@@ -1380,7 +1380,7 @@ sellerRouter.get(
   asyncHandler(async (req, res) => {
     const items = await prisma.orderItem.findMany({
       where: { sellerId: req.auth!.id },
-      orderBy: { order: { createdAt: "desc" } },
+      orderBy: { order: { updatedAt: "desc" } },
       include: {
         order: {
           include: {

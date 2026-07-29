@@ -133,6 +133,7 @@ type AdminUser = {
 type Product = {
   id: string;
   name: string;
+  isOfficial?: boolean;
   status: string;
   priceCents: number;
   priceUsdCents?: number;
@@ -180,6 +181,8 @@ type Order = {
 type Deposit = {
   id: string;
   amountCents: number;
+  networkFeeCents?: number;
+  totalPayableCents?: number;
   method: string;
   status: string;
   reference?: string | null;
@@ -305,7 +308,14 @@ type ChatSession = {
   subject?: string | null;
   status: string;
   updatedAt: string;
-  user: { firstName: string; lastName: string; email: string; role: string };
+  guestName?: string | null;
+  guestEmail?: string | null;
+  user: {
+    firstName: string;
+    lastName: string;
+    email: string;
+    role: string;
+  } | null;
   messages: Array<{
     id: string;
     role: string;
@@ -313,6 +323,25 @@ type ChatSession = {
     createdAt: string;
   }>;
 };
+
+function chatParticipantName(session: ChatSession) {
+  if (session.user) {
+    return `${session.user.firstName} ${session.user.lastName}`.trim();
+  }
+  return session.guestName?.trim() || "Guest visitor";
+}
+
+function chatParticipantEmail(session: ChatSession) {
+  return session.user?.email ?? session.guestEmail ?? "No email supplied";
+}
+
+function chatParticipantInitials(session: ChatSession) {
+  return chatParticipantName(session)
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase())
+    .join("");
+}
 type AdminSearchResult = {
   id: string;
   type: string;
@@ -644,6 +673,17 @@ export function OperationsAdminPage() {
   useEffect(() => {
     void load();
   }, [load]);
+
+  useEffect(() => {
+    if (tab !== "chats") return;
+    const refreshChats = () => {
+      void apiRequest<{ sessions: ChatSession[] }>("/api/nexus/admin/chats")
+        .then((data) => setChatSessions(data.sessions))
+        .catch(() => undefined);
+    };
+    const timer = window.setInterval(refreshChats, 4000);
+    return () => window.clearInterval(timer);
+  }, [tab]);
 
   useEffect(() => {
     const query = globalSearch.trim();
@@ -1463,8 +1503,10 @@ export function OperationsAdminPage() {
                         · {money(product.priceUsdCents ?? product.priceCents)}
                       </p>
                       <small>
-                        {product.seller.sellerProfile?.storeName ??
-                          product.seller.username}{" "}
+                        {product.isOfficial
+                          ? "Ysello Official"
+                          : (product.seller.sellerProfile?.storeName ??
+                            product.seller.username)}{" "}
                         · {product.seller.email}
                       </small>
                       <small>
@@ -1648,6 +1690,14 @@ export function OperationsAdminPage() {
                   <small>
                     {deposit.method.replaceAll("_", " ")} ·{" "}
                     {deposit.reference ?? "No reference"}
+                  </small>
+                  <small>
+                    Buyer-paid fee estimate:{" "}
+                    {money(deposit.networkFeeCents ?? 0)} · estimated total:{" "}
+                    {money(
+                      deposit.totalPayableCents ??
+                        deposit.amountCents + (deposit.networkFeeCents ?? 0),
+                    )}
                   </small>
                   <small>TXID: {deposit.txHash ?? "Proof not submitted"}</small>
                   <small>{new Date(deposit.createdAt).toLocaleString()}</small>
@@ -1974,13 +2024,10 @@ export function OperationsAdminPage() {
                       onClick={() => setActiveChatId(session.id)}
                     >
                       <span className="chat-user-avatar">
-                        {session.user.firstName[0]}
-                        {session.user.lastName[0]}
+                        {chatParticipantInitials(session)}
                       </span>
                       <span>
-                        <strong>
-                          {session.user.firstName} {session.user.lastName}
-                        </strong>
+                        <strong>{chatParticipantName(session)}</strong>
                         <small>
                           {session.messages[session.messages.length - 1]
                             ?.body ?? "No messages"}
@@ -1996,16 +2043,15 @@ export function OperationsAdminPage() {
                     <article className="admin-chat-focus" key={session.id}>
                       <header>
                         <div className="chat-user-avatar">
-                          {session.user.firstName[0]}
-                          {session.user.lastName[0]}
+                          {chatParticipantInitials(session)}
                         </div>
                         <div>
-                          <strong>
-                            {session.user.firstName} {session.user.lastName}
-                          </strong>
+                          <strong>{chatParticipantName(session)}</strong>
                           <small>
-                            {session.user.email} ·{" "}
-                            {session.user.role.toLowerCase()}
+                            {chatParticipantEmail(session)} ·{" "}
+                            {session.user
+                              ? session.user.role.toLowerCase()
+                              : "guest"}
                           </small>
                         </div>
                         <Status value={session.status} />
@@ -2021,7 +2067,7 @@ export function OperationsAdminPage() {
                                 ? "Admin"
                                 : entry.role === "assistant"
                                   ? "AI assistant"
-                                  : session.user.firstName}
+                                  : chatParticipantName(session)}
                             </small>
                             <p>{entry.body}</p>
                           </div>
@@ -2034,7 +2080,7 @@ export function OperationsAdminPage() {
                         <textarea
                           value={chatReply}
                           onChange={(event) => setChatReply(event.target.value)}
-                          placeholder={`Reply to ${session.user.firstName}…`}
+                          placeholder={`Reply to ${chatParticipantName(session)}…`}
                           rows={3}
                         />
                         <button

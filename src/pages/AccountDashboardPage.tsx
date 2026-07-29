@@ -3332,6 +3332,8 @@ export function AccountDashboardPage() {
 type Deposit = {
   id: string;
   amountCents: number;
+  networkFeeCents?: number;
+  totalPayableCents?: number;
   method: string;
   status: string;
   reference?: string;
@@ -3348,6 +3350,7 @@ type TopupMethodConfig = {
   network: string;
   asset: string;
   address: string;
+  networkFeeCents: number;
   feePolicy?: string;
   amountPolicy?: string;
 };
@@ -3606,6 +3609,12 @@ function WalletTabContent({
   }));
   const selectedMethod =
     methods.find((method) => method.value === depositMethod) ?? null;
+  const enteredAmountCents = Math.max(
+    0,
+    Math.round((Number.parseFloat(depositAmount) || 0) * 100),
+  );
+  const estimatedNetworkFeeCents = selectedMethod?.networkFeeCents ?? 0;
+  const estimatedBuyerCostCents = enteredAmountCents + estimatedNetworkFeeCents;
   const chains = [
     "USDT TRC20",
     "USDT ERC20",
@@ -3801,6 +3810,27 @@ function WalletTabContent({
                 {busy ? t("creatingPayment") : t("createPayment")}
               </button>
             </div>
+            {selectedMethod && enteredAmountCents > 0 ? (
+              <dl className="topup-fee-breakdown" aria-label="Top-up fee quote">
+                <div>
+                  <dt>Wallet credit</dt>
+                  <dd>{formatMoney(enteredAmountCents)}</dd>
+                </div>
+                <div>
+                  <dt>Estimated {selectedMethod.network} fee</dt>
+                  <dd>{formatMoney(estimatedNetworkFeeCents)}</dd>
+                </div>
+                <div>
+                  <dt>Estimated buyer cost</dt>
+                  <dd>{formatMoney(estimatedBuyerCostCents)}</dd>
+                </div>
+                <small>
+                  The network fee is paid separately by you. Your wallet’s live
+                  fee quote is final; Ysello credits the wallet-credit amount
+                  after approval.
+                </small>
+              </dl>
+            ) : null}
             <div className="wallet-safety-note">
               <ShieldAlert size={16} />
               <span>{t("topupFeeWarning")}</span>
@@ -3877,6 +3907,26 @@ function WalletTabContent({
               {t("awaitingPayment").toUpperCase()}
             </span>
           </header>
+          <dl className="topup-fee-breakdown confirmed">
+            <div>
+              <dt>Amount sent to Ysello</dt>
+              <dd>{formatMoney(activeTopup.amountCents)}</dd>
+            </div>
+            <div>
+              <dt>Estimated buyer-paid network fee</dt>
+              <dd>{formatMoney(activeTopup.networkFeeCents ?? 0)}</dd>
+            </div>
+            <div>
+              <dt>Estimated total buyer cost</dt>
+              <dd>
+                {formatMoney(
+                  activeTopup.totalPayableCents ??
+                    activeTopup.amountCents +
+                      (activeTopup.networkFeeCents ?? 0),
+                )}
+              </dd>
+            </div>
+          </dl>
           <div className="topup-address-box">
             <small>{t("sendOnlyAddress")}</small>
             <code>{activeTopup.depositAddress}</code>
@@ -3897,9 +3947,9 @@ function WalletTabContent({
               <input
                 value={proofTx}
                 minLength={64}
-                maxLength={66}
+                maxLength={300}
                 onChange={(event) => setProofTx(event.target.value)}
-                placeholder="Paste the complete on-chain transaction hash"
+                placeholder="Paste the full transaction hash or explorer URL"
               />
             </label>
             <label className="topup-upload">
@@ -4069,6 +4119,15 @@ function WalletTabContent({
                     <small>
                       {deposit.method.replaceAll("_", " ")} ·{" "}
                       {deposit.reference}
+                    </small>
+                    <small>
+                      Network fee estimate:{" "}
+                      {formatMoney(deposit.networkFeeCents ?? 0)} · estimated
+                      buyer cost:{" "}
+                      {formatMoney(
+                        deposit.totalPayableCents ??
+                          deposit.amountCents + (deposit.networkFeeCents ?? 0),
+                      )}
                     </small>
                     {deposit.txHash ? (
                       <small>
