@@ -1,3 +1,5 @@
+import { retiredSocialMediaCategorySlugs } from "./marketplaceTaxonomy";
+
 export type CatalogCategory = {
   id: string;
   slug: string;
@@ -26,6 +28,8 @@ export type CatalogProduct = {
   seller: string;
   sellerSlug: string;
   isOfficial?: boolean;
+  categoryPathSlugs?: string[];
+  seoPath?: string;
   priceCents: number;
   originalPriceCents?: number;
   priceCnyCents?: number;
@@ -697,7 +701,9 @@ const legacyCatalogCategories: CatalogCategory[] = [
 
 export const catalogCategories: CatalogCategory[] = [
   ...new Map(
-    legacyCatalogCategories.map((category) => [category.slug, category]),
+    legacyCatalogCategories
+      .filter((category) => !retiredSocialMediaCategorySlugs.has(category.slug))
+      .map((category) => [category.slug, category]),
   ).values(),
 ];
 

@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { useCart } from "../commerce/CartContext";
+import { productPath } from "../commerce/marketplaceUrls";
 import { MarketFooter, MarketHeader } from "../components/MarketHeader";
 import { Seo } from "../components/Seo";
 import { useMarketplaceStore } from "../commerce/useMarketplace";
@@ -87,7 +88,7 @@ export function StorePage() {
                 <div className="store-product-icon" aria-hidden="true">
                   <PackageCheck />
                 </div>
-                <Link to={`/product/${product.slug}`}>
+                <Link to={productPath(product)}>
                   <h2>{product.title}</h2>
                 </Link>
                 <p>{product.description}</p>

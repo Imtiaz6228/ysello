@@ -1003,3 +1003,465 @@
     padding: 14px 11px;
   }
 }
+
+/* Social-account catalog: platform first, then one clear account choice. */
+.ys-ref-social-account-tabs {
+  gap: 14px;
+  padding: 18px;
+  border-color: #e2e5ec;
+  border-radius: 16px;
+  box-shadow: 0 10px 28px rgba(24, 29, 43, 0.06);
+}
+
+.ys-ref-social-account-tabs > header {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+}
+
+.ys-ref-social-account-tabs > header > span {
+  width: 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+  color: #fff;
+  background: var(--ys-panel-gradient);
+}
+
+.ys-ref-social-account-tabs > header svg {
+  width: 20px;
+  height: 20px;
+}
+
+.ys-ref-social-account-tabs > header strong,
+.ys-ref-social-account-tabs > header small {
+  display: block;
+}
+
+.ys-ref-social-account-tabs > header strong {
+  color: #191c27;
+  font-size: 0.98rem;
+}
+
+.ys-ref-social-account-tabs > header small {
+  margin-top: 3px;
+  color: #747a89;
+  font-size: 0.7rem;
+}
+
+.ys-ref-social-account-tabs > header small b {
+  padding: 0 4px;
+  color: #8a65dc;
+}
+
+.ys-ref-social-account-tabs > header > a {
+  color: #6748c9;
+  font-size: 0.75rem;
+  font-weight: 850;
+  text-decoration: none;
+}
+
+.ys-ref-social-account-tabs > .ys-ref-social-platforms {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+
+.ys-ref-social-account-tabs .ys-ref-social-platforms button {
+  min-height: 42px;
+  padding: 0 13px 0 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border-radius: 12px;
+  font-size: 0.72rem;
+}
+
+.ys-ref-social-platforms button b {
+  width: 27px;
+  height: 27px;
+  display: grid;
+  place-items: center;
+  border-radius: 8px;
+  color: #6444c5;
+  background: #ebe7fa;
+  font-size: 0.58rem;
+}
+
+.ys-ref-social-platforms button.active b,
+.ys-ref-social-platforms button:hover b {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.ys-ref-social-account-tabs > .ys-ref-social-account-types {
+  padding: 10px;
+  display: flex;
+  gap: 7px;
+  overflow-x: auto;
+  border: 1px solid #e9eaf0;
+  border-radius: 13px;
+  background: #f6f7fa;
+  scrollbar-width: thin;
+}
+
+.ys-ref-social-account-tabs .ys-ref-social-account-types button {
+  min-height: 36px;
+  padding: 0 12px;
+  border-radius: 9px;
+  background: #fff;
+  font-size: 0.68rem;
+}
+
+.social-account-showcase {
+  padding-top: 34px !important;
+  padding-bottom: 34px !important;
+}
+
+.social-account-platform-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.social-account-platform-grid > a {
+  min-height: 118px;
+  padding: 16px;
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr) 18px;
+  align-items: center;
+  gap: 12px;
+  border: 1px solid #e3e6ed;
+  border-radius: 15px;
+  color: #1f2230;
+  background: #fff;
+  box-shadow: 0 8px 22px rgba(27, 31, 48, 0.05);
+  text-decoration: none;
+  transition:
+    border-color 160ms ease,
+    transform 160ms ease,
+    box-shadow 160ms ease;
+}
+
+.social-account-platform-grid > a:hover {
+  border-color: #baa9ea;
+  box-shadow: 0 14px 28px rgba(55, 45, 110, 0.1);
+  transform: translateY(-2px);
+}
+
+.social-account-platform-grid > a > span {
+  width: 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+  color: #fff;
+  background: var(--ys-panel-gradient);
+  font-size: 0.68rem;
+  font-weight: 900;
+}
+
+.social-account-platform-grid strong,
+.social-account-platform-grid small,
+.social-account-platform-grid p {
+  display: block;
+}
+
+.social-account-platform-grid strong {
+  font-size: 0.87rem;
+}
+
+.social-account-platform-grid small {
+  margin-top: 2px;
+  color: #7a55d5;
+  font-size: 0.66rem;
+  font-weight: 850;
+}
+
+.social-account-platform-grid p {
+  margin: 7px 0 0;
+  color: #737988;
+  font-size: 0.62rem;
+  line-height: 1.45;
+}
+
+.social-account-platform-grid > a > svg {
+  width: 17px;
+  color: #999eaa;
+}
+
+.seller-derived-account-summary {
+  padding: 15px;
+  display: grid;
+  gap: 12px;
+  border: 1px solid #cfe7df;
+  border-radius: 15px;
+  background: #f1fbf7;
+}
+
+.seller-derived-account-summary > div {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.seller-derived-account-summary > div > svg {
+  width: 34px;
+  height: 34px;
+  padding: 8px;
+  border-radius: 10px;
+  color: #fff;
+  background: #17a378;
+}
+
+.seller-derived-account-summary strong,
+.seller-derived-account-summary small {
+  display: block;
+}
+
+.seller-derived-account-summary strong {
+  color: #17493b;
+  font-size: 0.82rem;
+}
+
+.seller-derived-account-summary small {
+  margin-top: 2px;
+  color: #5d7b72;
+  font-size: 0.7rem;
+}
+
+.seller-derived-account-summary > p {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.seller-derived-account-summary > p span {
+  color: #6c7f79;
+  font-size: 0.65rem;
+}
+
+.seller-derived-account-summary > p b {
+  padding: 6px 9px;
+  border-radius: 8px;
+  color: #165c48;
+  background: #dcf4eb;
+  font-size: 0.68rem;
+}
+
+.g2-mobile-first-impression {
+  display: none;
+}
+
+/* Medium-density cards: four across in catalog, balanced 4:3 media. */
+.ys-ref-catalog-grid.grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+  gap: 18px !important;
+}
+
+.ys-ref-catalog-grid.grid .g2-product-media,
+.market-product-grid.g2-product-rail .g2-product-media {
+  aspect-ratio: 4 / 3 !important;
+}
+
+.market-product-grid.g2-product-rail {
+  grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
+  gap: 18px !important;
+}
+
+@media (max-width: 1180px) {
+  .social-account-platform-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .ys-ref-catalog-grid.grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  }
+
+  .market-product-grid.g2-product-rail {
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+  }
+}
+
+@media (max-width: 760px) {
+  .ys-ref-social-account-tabs {
+    margin: 10px 0 16px;
+    padding: 14px;
+    gap: 11px;
+  }
+
+  .ys-ref-social-account-tabs > header {
+    grid-template-columns: 38px minmax(0, 1fr) auto;
+    gap: 9px;
+  }
+
+  .ys-ref-social-account-tabs > header > span {
+    width: 38px;
+    height: 38px;
+    border-radius: 11px;
+  }
+
+  .ys-ref-social-account-tabs > header strong {
+    font-size: 0.84rem;
+  }
+
+  .ys-ref-social-account-tabs > header small {
+    font-size: 0.62rem;
+  }
+
+  .ys-ref-social-account-tabs > header > a {
+    font-size: 0.66rem;
+  }
+
+  .ys-ref-social-account-tabs .ys-ref-social-platforms button {
+    min-width: max-content;
+  }
+
+  .social-account-platform-grid {
+    display: flex;
+    gap: 10px;
+    overflow-x: auto;
+    scroll-snap-type: x proximity;
+  }
+
+  .social-account-platform-grid > a {
+    width: 250px;
+    min-width: 250px;
+    min-height: 104px;
+    scroll-snap-align: start;
+  }
+
+  .ys-ref-catalog-grid.grid,
+  .market-product-grid.g2-product-rail {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 12px !important;
+  }
+}
+
+@media (max-width: 680px) {
+  .g2-mobile-first-impression {
+    padding: 14px 16px 12px;
+    display: grid;
+    gap: 10px;
+    background: #f6f6f7;
+  }
+
+  .g2-mobile-first-impression > header {
+    min-height: 78px;
+    padding: 13px;
+    display: grid;
+    grid-template-columns: 38px minmax(0, 1fr) 34px;
+    align-items: center;
+    gap: 10px;
+    border: 1px solid #e2e4e9;
+    border-radius: 15px;
+    background: #fff;
+    box-shadow: 0 8px 22px rgba(20, 24, 36, 0.05);
+  }
+
+  .g2-mobile-first-impression > header > span,
+  .g2-mobile-first-impression > header > a {
+    width: 38px;
+    height: 38px;
+    display: grid;
+    place-items: center;
+    border-radius: 11px;
+  }
+
+  .g2-mobile-first-impression > header > span {
+    color: #fff;
+    background: var(--ys-panel-gradient);
+  }
+
+  .g2-mobile-first-impression > header > a {
+    width: 34px;
+    height: 34px;
+    color: #6647ca;
+    background: #f0edfa;
+  }
+
+  .g2-mobile-first-impression > header svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  .g2-mobile-first-impression > header strong,
+  .g2-mobile-first-impression > header small {
+    display: block;
+  }
+
+  .g2-mobile-first-impression > header strong {
+    color: #1c1f2a;
+    font-size: 0.82rem;
+    line-height: 1.25;
+  }
+
+  .g2-mobile-first-impression > header small {
+    margin-top: 3px;
+    color: #747a87;
+    font-size: 0.65rem;
+    line-height: 1.35;
+  }
+
+  .g2-mobile-first-impression > div {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .g2-mobile-first-impression > div > a {
+    min-height: 61px;
+    padding: 9px;
+    display: grid;
+    grid-template-columns: 30px minmax(0, 1fr);
+    align-items: center;
+    gap: 8px;
+    border: 1px solid #e4e6eb;
+    border-radius: 13px;
+    color: #242731;
+    background: #fff;
+    text-decoration: none;
+  }
+
+  .g2-mobile-first-impression > div > a > b {
+    width: 30px;
+    height: 30px;
+    display: grid;
+    place-items: center;
+    border-radius: 9px;
+    color: #6948ca;
+    background: #eeeafa;
+    font-size: 0.56rem;
+  }
+
+  .g2-mobile-first-impression > div strong,
+  .g2-mobile-first-impression > div small {
+    display: block;
+  }
+
+  .g2-mobile-first-impression > div strong {
+    overflow: hidden;
+    font-size: 0.7rem;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .g2-mobile-first-impression > div small {
+    margin-top: 3px;
+    overflow: hidden;
+    color: #7b7f89;
+    font-size: 0.53rem;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .seller-derived-account-summary > p {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}

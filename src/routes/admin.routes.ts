@@ -108,19 +108,13 @@ async function uniqueProductSlug(name: string) {
 async function ensureAdminSellerProfile(userId: string) {
   const existing = await prisma.sellerProfile.findUnique({ where: { userId } });
   if (existing) {
-    return prisma.sellerProfile.update({
-      where: { userId },
-      data: {
-        storeName: "Ysello Official",
-        about:
-          "Official marketplace catalog managed by the Ysello administration team.",
-        policy:
-          "Products are reviewed and supported through the marketplace order system.",
-        isVerified: true,
-        isSuspended: false,
-        suspensionReason: null,
-      },
-    });
+    if (!existing.isVerified || existing.isSuspended) {
+      return prisma.sellerProfile.update({
+        where: { userId },
+        data: { isVerified: true, isSuspended: false, suspensionReason: null },
+      });
+    }
+    return existing;
   }
 
   const user = await prisma.user.findUnique({
@@ -752,7 +746,7 @@ adminRouter.post(
         );
       const category = await prisma.category.findFirst({
         where: { id: input.categoryId, isActive: true },
-        select: { id: true, slug: true },
+        select: { id: true },
       });
       if (!category)
         throw new ApiError(
@@ -771,17 +765,17 @@ adminRouter.post(
           sellerId: req.auth!.id,
           categoryId: input.categoryId,
           name: input.name,
-          slug: await uniqueProductSlug(`${input.name} ${category.slug}`),
+          slug: await uniqueProductSlug(input.name),
           shortDescription: input.shortDescription,
           description: input.description,
           type: input.type,
           status: canPublish ? ProductStatus.APPROVED : ProductStatus.DRAFT,
-          isOfficial: true,
           priceCents: input.priceUsdCents,
           priceUsdCents: input.priceUsdCents,
           priceCnyCents: input.priceCnyCents ?? 0,
           priceRubCents: input.priceRubCents ?? 0,
           currency: "USD",
+          isOfficial: true,
           coverImageUrl: publicUploadUrl(req.file.filename),
           afterSalesServiceHours: input.afterSalesServiceHours,
           deliveryNote: input.deliveryNote,
@@ -824,8 +818,8 @@ adminRouter.post(
       res.status(201).json({
         product,
         message: canPublish
-          ? "Official catalog product created and published."
-          : "Official product saved as a draft. Add inventory before publishing a downloadable item.",
+          ? "Catalog product created and published."
+          : "Product saved as a draft. Add inventory before publishing a downloadable item.",
       });
     } catch (error) {
       await discardPublicImage(req.file);

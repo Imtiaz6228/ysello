@@ -89,20 +89,10 @@ TOPUP_BEP20_ADDRESS=0x5fe0bc617b00812396560e00a47b68a4d19933df
 TOPUP_ERC20_ADDRESS=0x5fe0bc617b00812396560e00a47b68a4d19933df
 TOPUP_BTC_ADDRESS=1CRoGe5BKjSTYBjxjPaS5NRCP8eyZ8cSpA
 TOPUP_ETH_ADDRESS=0x5fe0bc617b00812396560e00a47b68a4d19933df
-TOPUP_TRC20_FEE_CENTS=100
-TOPUP_ERC20_FEE_CENTS=400
-TOPUP_BEP20_FEE_CENTS=25
-TOPUP_BTC_FEE_CENTS=250
-TOPUP_ETH_FEE_CENTS=250
 COMMISSION_SALE_PERCENT=10
 COMMISSION_WITHDRAW_PERCENT=0
 FROZEN_HOLD_HOURS=72
 ```
-
-The fee values are configurable USD estimates displayed and stored with each
-top-up quote. The buyer sends the requested deposit amount to Ysello and pays
-their wallet/provider network fee separately; the wallet's live fee remains
-authoritative. Admin approval credits only the requested deposit amount.
 
 `COOKIE_DOMAIN` must remain blank. Keep `APP_URL=https://ysello.com`, `API_URL=https://api.ysello.com`, and `CORS_ORIGIN=https://ysello.com,https://www.ysello.com`. These values are required for browser authentication after the custom-domain move.
 

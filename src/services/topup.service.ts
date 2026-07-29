@@ -50,35 +50,35 @@ const topupAddressBook: Partial<
     network: "Tron (TRC20)",
     asset: "USDT",
     address: env.TOPUP_TRC20_ADDRESS ?? "",
-    networkFeeCents: env.TOPUP_TRC20_FEE_CENTS,
+    networkFeeCents: env.TOPUP_FEE_TRC20_CENTS,
   },
   CRYPTO_BEP20: {
     label: "USDT · BEP20",
     network: "BNB Smart Chain (BEP20)",
     asset: "USDT",
     address: env.TOPUP_BEP20_ADDRESS ?? "",
-    networkFeeCents: env.TOPUP_BEP20_FEE_CENTS,
+    networkFeeCents: env.TOPUP_FEE_BEP20_CENTS,
   },
   CRYPTO_ERC20: {
     label: "USDT · ERC20",
     network: "Ethereum (ERC20)",
     asset: "USDT",
     address: env.TOPUP_ERC20_ADDRESS ?? "",
-    networkFeeCents: env.TOPUP_ERC20_FEE_CENTS,
+    networkFeeCents: env.TOPUP_FEE_ERC20_CENTS,
   },
   BTC: {
     label: "Bitcoin",
     network: "Bitcoin",
     asset: "BTC",
     address: env.TOPUP_BTC_ADDRESS ?? "",
-    networkFeeCents: env.TOPUP_BTC_FEE_CENTS,
+    networkFeeCents: env.TOPUP_FEE_BTC_CENTS,
   },
   ETH: {
     label: "Ethereum",
     network: "Ethereum",
     asset: "ETH",
     address: env.TOPUP_ETH_ADDRESS ?? "",
-    networkFeeCents: env.TOPUP_ETH_FEE_CENTS,
+    networkFeeCents: env.TOPUP_FEE_ETH_CENTS,
   },
 };
 
@@ -105,8 +105,7 @@ export function getTopupMethods() {
     .map(([method, details]) => ({
       method: method as TopupMethod,
       ...details!,
-      feePolicy:
-        "The buyer pays the wallet/provider network fee separately. The live wallet quote is final.",
+      feePolicy: "Network and exchange fees are paid by the buyer.",
       amountPolicy:
         details!.asset === "USDT"
           ? "Send the exact USDT amount shown."
@@ -164,21 +163,17 @@ function getTopupInstructions(topup: any): string {
     TopupMethod.CRYPTO_ERC20,
   ]);
   const stablecoin = stablecoinMethods.has(topup.method);
-  return `${stablecoin ? `Send exactly ${amount} in USDT` : `Send crypto worth ${amount}`} via ${methodLabel} to the displayed address. The estimated wallet/network fee is ${fee}, so the estimated buyer cost is ${total}; the wallet's live quote is final and the fee is paid separately by the buyer. After sending, submit the TXID or explorer URL and a screenshot that visibly contains the same TXID. Never send on another network. Funds are credited only after admin approval.`;
+  return `${stablecoin ? `The wallet credit is ${amount} in USDT` : `The wallet credit is crypto worth ${amount}`} via ${methodLabel}. The estimated blockchain fee is ${fee}, so the buyer's estimated total cost is ${total}. Fees are paid in addition to the wallet credit and can vary with network conditions. After sending, submit the TXID and a screenshot that visibly contains the same TXID. Never send on another network. Funds are credited only after admin approval.`;
 }
 
 function normalizeTxHash(method: TopupMethod, raw: string) {
-  const submitted = raw.trim().toLowerCase();
+  const txHash = raw.trim().toLowerCase();
   const evmMethods = new Set<TopupMethod>([
     TopupMethod.CRYPTO_BEP20,
     TopupMethod.CRYPTO_ERC20,
     TopupMethod.ETH,
   ]);
   const evmMethod = evmMethods.has(method);
-  const match = submitted.match(/0x[a-f0-9]{64}|[a-f0-9]{64}/);
-  let txHash = match?.[0] ?? "";
-  if (evmMethod && txHash && !txHash.startsWith("0x")) txHash = `0x${txHash}`;
-  if (!evmMethod && txHash.startsWith("0x")) txHash = txHash.slice(2);
   const valid = evmMethod
     ? /^0x[a-f0-9]{64}$/.test(txHash)
     : /^[a-f0-9]{64}$/.test(txHash);
@@ -186,8 +181,8 @@ function normalizeTxHash(method: TopupMethod, raw: string) {
     throw new ApiError(
       400,
       evmMethod
-        ? "Enter the complete 0x transaction hash or explorer URL for the selected EVM network."
-        : "Enter the complete 64-character transaction ID or explorer URL for the selected network.",
+        ? "Enter the complete 0x transaction hash for the selected EVM network."
+        : "Enter the complete 64-character transaction ID for the selected network.",
       "TOPUP_TXID_INVALID",
     );
   }

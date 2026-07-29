@@ -17,6 +17,7 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import { useCart } from "../commerce/CartContext";
 import { discoverCategoryProducts } from "../commerce/catalogDiscovery";
 import { categoryMatches } from "../commerce/catalogHierarchy";
+import { categoryPath, productPath } from "../commerce/marketplaceUrls";
 import {
   useMarketplaceCategories,
   useMarketplaceCategory,
@@ -49,14 +50,14 @@ export function CategoryPage() {
   const { slug } = useParams();
   const navigate = useNavigate();
   const { add } = useCart();
-  const products = useMarketplaceProducts(slug);
+  const products = useMarketplaceProducts();
   const categories = useMarketplaceCategories();
   const { category, loading } = useMarketplaceCategory(slug);
   const [query, setQuery] = useState("");
   const [subFilter, setSubFilter] = useState("all");
   const [kind, setKind] = useState<"all" | "DOWNLOAD" | "SERVICE">("all");
   const [sort, setSort] = useState<SortMode>("popular");
-  const [view, setView] = useState<ViewMode>("list");
+  const [view, setView] = useState<ViewMode>("grid");
   const [priceBand, setPriceBand] = useState<
     "all" | "under_25" | "25_50" | "over_50"
   >("all");
@@ -175,6 +176,7 @@ export function CategoryPage() {
     );
   if (!category || !slug) return <NotFoundPage />;
 
+  const canonicalCategoryPath = categoryPath(category, categories);
   const instantCount = categoryProducts.products.filter(
     (product) => product.type === "DOWNLOAD",
   ).length;
@@ -184,7 +186,7 @@ export function CategoryPage() {
       "@type": "CollectionPage",
       name: `${category.name} digital marketplace`,
       description: category.description,
-      url: `https://ysello.com/category/${slug}`,
+      url: `https://ysello.com${canonicalCategoryPath}`,
     },
     {
       "@context": "https://schema.org",
@@ -196,7 +198,7 @@ export function CategoryPage() {
           "@type": "ListItem",
           position: index + 1,
           name: product.title,
-          url: `https://ysello.com/product/${product.slug}`,
+          url: `https://ysello.com${productPath(product)}`,
         })),
     },
     {
@@ -215,7 +217,7 @@ export function CategoryPage() {
                 "@type": "ListItem",
                 position: 2,
                 name: rootCategory.name,
-                item: `https://ysello.com/category/${rootCategory.slug}`,
+                item: `https://ysello.com${categoryPath(rootCategory, categories)}`,
               },
             ]
           : []),
@@ -223,7 +225,7 @@ export function CategoryPage() {
           "@type": "ListItem",
           position: rootCategory && rootCategory.slug !== category.slug ? 3 : 2,
           name: category.name,
-          item: `https://ysello.com/category/${slug}`,
+          item: `https://ysello.com${canonicalCategoryPath}`,
         },
       ],
     },
@@ -237,7 +239,7 @@ export function CategoryPage() {
       <Seo
         title={`Buy ${category.name} digital products and deals`}
         description={`${category.description} Compare verified sellers, clear delivery terms and current marketplace pricing on Ysello.`}
-        canonicalPath={`/category/${slug}`}
+        canonicalPath={canonicalCategoryPath}
         schema={categorySchema}
       />
       <MarketHeader />
@@ -247,7 +249,7 @@ export function CategoryPage() {
           to={
             rootCategory?.slug === category.slug
               ? "/catalog"
-              : `/category/${rootCategory?.slug ?? "gaming"}`
+              : categoryPath(rootCategory ?? "gaming", categories)
           }
         >
           <ArrowRight aria-hidden="true" /> Back to{" "}
@@ -308,7 +310,7 @@ export function CategoryPage() {
                 categoryMatches(product.categorySlug, child.slug, categories),
               ).length;
               return (
-                <Link to={`/category/${child.slug}`} key={child.slug}>
+                <Link to={categoryPath(child, categories)} key={child.slug}>
                   <span>{child.icon || <PackageOpen />}</span>
                   <div>
                     <strong>{child.name}</strong>
@@ -488,18 +490,6 @@ export function CategoryPage() {
           </aside>
 
           <section className="ys-ref-category-products">
-            {categoryProducts.isFallback ? (
-              <div className="ys-ref-category-fallback-note">
-                <Sparkles aria-hidden="true" />
-                <span>
-                  <strong>Popular picks for {category.name}</strong>
-                  <small>
-                    This focused category is ready for seller listings. Until
-                    more arrive, explore relevant products from its department.
-                  </small>
-                </span>
-              </div>
-            ) : null}
             <div className="ys-ref-category-toolbar">
               <div>
                 <strong>{filteredProducts.length}</strong>
@@ -643,7 +633,7 @@ export function CategoryPage() {
             </div>
             <div>
               {siblings.map((item) => (
-                <Link key={item.slug} to={`/category/${item.slug}`}>
+                <Link key={item.slug} to={categoryPath(item, categories)}>
                   <span>{item.icon || <PackageOpen />}</span>
                   <div>
                     <strong>{item.name}</strong>

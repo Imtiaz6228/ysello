@@ -40,10 +40,10 @@ test("serves a prerendered public page without falling through to the SPA", asyn
 test("serves canonical category and product documents from local assets", async () => {
   const worker = await workerUnderTest();
   const category = await worker.fetch(
-    new Request("https://ysello.com/category/steam-games"),
+    new Request("https://ysello.com/category/gaming/steam-games"),
     {
       ASSETS: assets({
-        "/category/steam-games.html": new Response(
+        "/category/gaming/steam-games.html": new Response(
           "<!doctype html><h1>Steam games</h1>",
           { headers: { "content-type": "text/html" } },
         ),
@@ -51,10 +51,12 @@ test("serves canonical category and product documents from local assets", async 
     },
   );
   const product = await worker.fetch(
-    new Request("https://ysello.com/product/halo-infinite-campaign-pc"),
+    new Request(
+      "https://ysello.com/product/gaming/steam-games/halo-infinite-campaign-pc",
+    ),
     {
       ASSETS: assets({
-        "/product/halo-infinite-campaign-pc.html": new Response(
+        "/product/gaming/steam-games/halo-infinite-campaign-pc.html": new Response(
           "<!doctype html><h1>Halo Infinite Campaign PC</h1>",
           { headers: { "content-type": "text/html" } },
         ),

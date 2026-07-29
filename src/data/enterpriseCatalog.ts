@@ -13,39 +13,7 @@ const deliveryOptions = [
 
 export const catalogAttributePresets: Record<string, CatalogAttributePreset[]> =
   {
-    "social-media": [
-      {
-        key: "platform",
-        label: "Platform",
-        options: [
-          "Instagram",
-          "Facebook",
-          "TikTok",
-          "YouTube",
-          "LinkedIn",
-          "Pinterest",
-          "X",
-          "Other",
-        ],
-      },
-      {
-        key: "productKind",
-        label: "Resource type",
-        options: [
-          "Template",
-          "Content system",
-          "Brand kit",
-          "Analytics tool",
-          "Moderation workflow",
-          "Consulting service",
-        ],
-      },
-      {
-        key: "deliveryMethod",
-        label: "Delivery method",
-        options: deliveryOptions,
-      },
-    ],
+    "social-media": [],
     "email-services": [
       {
         key: "platform",

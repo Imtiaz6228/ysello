@@ -138,7 +138,19 @@ export function App() {
           <Routes>
             <Route path="/" element={<MarketplaceHomePage />} />
             <Route path="/catalog" element={<CatalogPage />} />
+            <Route
+              path="/category/:rootSlug/:slug"
+              element={<CategoryPage />}
+            />
             <Route path="/category/:slug" element={<CategoryPage />} />
+            <Route
+              path="/product/:rootSlug/:categorySlug/:slug"
+              element={<ProductPage />}
+            />
+            <Route
+              path="/product/:categorySlug/:slug"
+              element={<ProductPage />}
+            />
             <Route path="/product/:slug" element={<ProductPage />} />
             <Route path="/categories/:slug" element={<CategoryPage />} />
             <Route path="/products/:slug" element={<ProductPage />} />

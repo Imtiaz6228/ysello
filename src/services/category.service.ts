@@ -1,6 +1,7 @@
 import { prisma } from "../lib/prisma.js";
 import {
   marketplaceTaxonomy,
+  retiredSocialMediaCategorySlugs,
   type MarketplaceTaxonomyNode,
 } from "../data/marketplaceTaxonomy.js";
 
@@ -810,10 +811,13 @@ export async function ensureDefaultMarketplaceCategories(force = false) {
 
   await prisma.category.updateMany({
     where: {
-      OR: retiredCategoryPrefixes.flatMap((slug) => [
-        { slug },
-        { slug: { startsWith: `${slug}-` } },
-      ]),
+      OR: [
+        ...retiredCategoryPrefixes.flatMap((slug) => [
+          { slug },
+          { slug: { startsWith: `${slug}-` } },
+        ]),
+        { slug: { in: [...retiredSocialMediaCategorySlugs] } },
+      ],
     },
     data: { isActive: false },
   });

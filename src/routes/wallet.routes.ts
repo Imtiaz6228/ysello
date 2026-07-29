@@ -125,7 +125,7 @@ walletRouter.post(
     );
     res.status(201).json({
       message:
-        "Payment request created. Send the exact amount only on the selected network, then submit the TXID and screenshot.",
+        "Payment request created. Transfer the exact wallet-credit amount on the selected network; your wallet or exchange charges the displayed buyer-paid network fee in addition. Then submit the TXID and screenshot.",
       ...result,
     });
   }),
@@ -138,7 +138,7 @@ walletRouter.post(
     try {
       const id = z.string().uuid().parse(req.params.id);
       const input = z
-        .object({ txHash: z.string().trim().min(64).max(300) })
+        .object({ txHash: z.string().trim().min(64).max(66) })
         .parse(req.body);
       if (!req.file)
         throw new ApiError(

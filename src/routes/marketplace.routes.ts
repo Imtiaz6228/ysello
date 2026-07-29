@@ -14,6 +14,7 @@ function publicListingPolicyWhere() {
   return {
     category: {
       isActive: true,
+      slug: { in: publicCategorySlugs },
     },
   };
 }

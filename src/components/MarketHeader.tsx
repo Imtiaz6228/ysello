@@ -52,6 +52,12 @@ const departmentLabels: Record<string, string> = {
   outlet: "OUTLET",
 };
 
+function taxonomyCategoryPath(rootSlug: string, leafSlug = rootSlug) {
+  return rootSlug === leafSlug
+    ? `/category/${rootSlug}`
+    : `/category/${rootSlug}/${leafSlug}`;
+}
+
 function DepartmentIcon({ category }: { category: MarketplaceTaxonomyItem }) {
   const Icon = categoryIcons[category.slug] ?? Grid2X2;
   return <Icon aria-hidden="true" />;
@@ -79,7 +85,7 @@ function MegaMenu({
           <p>{t("exploreDepartment")}</p>
           <h2>{category.name}</h2>
           <span>{category.description}</span>
-          <Link to={`/category/${category.slug}`} onClick={onClose}>
+          <Link to={taxonomyCategoryPath(category.slug)} onClick={onClose}>
             Shop all {departmentLabels[category.slug] ?? category.name}
             <ArrowRight aria-hidden="true" />
           </Link>
@@ -88,13 +94,16 @@ function MegaMenu({
         <div className="g2-mega-catalog-grid">
           {category.subcategories.map((group) => (
             <section key={group.slug}>
-              <Link to={`/category/${group.slug}`} onClick={onClose}>
+              <Link
+                to={taxonomyCategoryPath(category.slug, group.slug)}
+                onClick={onClose}
+              >
                 {group.name}
               </Link>
               {group.children?.map((item) => (
                 <Link
                   key={item.slug}
-                  to={`/category/${item.slug}`}
+                  to={taxonomyCategoryPath(category.slug, item.slug)}
                   onClick={onClose}
                 >
                   {item.name}
@@ -106,7 +115,7 @@ function MegaMenu({
 
         <Link
           className={`g2-mega-promo tone-${category.accent}`}
-          to={`/category/${category.slug}`}
+          to={taxonomyCategoryPath(category.slug)}
           onClick={onClose}
         >
           <span>Curated marketplace</span>
@@ -424,7 +433,7 @@ export function MarketHeader() {
                       <div className="g2-mobile-category-panel">
                         <Link
                           className="g2-mobile-view-all"
-                          to={`/category/${category.slug}`}
+                          to={taxonomyCategoryPath(category.slug)}
                         >
                           {t("viewAll")}
                         </Link>
@@ -449,13 +458,21 @@ export function MarketHeader() {
                                   </button>
                                   {groupExpanded ? (
                                     <div className="g2-mobile-leaves">
-                                      <Link to={`/category/${group.slug}`}>
+                                      <Link
+                                        to={taxonomyCategoryPath(
+                                          category.slug,
+                                          group.slug,
+                                        )}
+                                      >
                                         All {group.name}
                                       </Link>
                                       {group.children.map((item) => (
                                         <Link
                                           key={item.slug}
-                                          to={`/category/${item.slug}`}
+                                          to={taxonomyCategoryPath(
+                                            category.slug,
+                                            item.slug,
+                                          )}
                                         >
                                           {item.name}
                                         </Link>
@@ -464,7 +481,12 @@ export function MarketHeader() {
                                   ) : null}
                                 </>
                               ) : (
-                                <Link to={`/category/${group.slug}`}>
+                                <Link
+                                  to={taxonomyCategoryPath(
+                                    category.slug,
+                                    group.slug,
+                                  )}
+                                >
                                   <Grid2X2 aria-hidden="true" />
                                   <span>{group.name}</span>
                                 </Link>

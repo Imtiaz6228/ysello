@@ -233,6 +233,27 @@ export function SellerProductEditor({
     selectedCategoryId,
     categories,
   );
+  const selectedCategoryPath = selectedCategory?.path ?? [];
+  const isSocialAccountListing = root?.slug === "social-media";
+  const socialAccountPlatform = isSocialAccountListing
+    ? (selectedCategoryPath[1]?.name ?? "")
+    : "";
+  const socialAccountType = isSocialAccountListing
+    ? (selectedCategoryPath[selectedCategoryPath.length - 1]?.name ?? "")
+    : "";
+  const resolvedPlatform = isSocialAccountListing
+    ? socialAccountPlatform
+    : form.platform.trim();
+  const resolvedProductKind = isSocialAccountListing
+    ? "Social media account"
+    : form.productKind.trim();
+  const resolvedCondition = isSocialAccountListing
+    ? socialAccountType === "New accounts"
+      ? "New"
+      : socialAccountType === "Old accounts"
+        ? "Old"
+        : socialAccountType
+    : form.condition.trim();
 
   async function translateListing() {
     if (
@@ -320,8 +341,8 @@ export function SellerProductEditor({
       form.seoTitle.trim() ||
       [
         `Buy ${form.name.trim()}`,
-        form.platform.trim(),
-        form.productKind.trim(),
+        resolvedPlatform,
+        resolvedProductKind,
         form.region.trim(),
       ]
         .filter(Boolean)
@@ -382,14 +403,14 @@ export function SellerProductEditor({
             .filter(Boolean),
           videoUrl: form.videoUrl || null,
           brand: form.brand,
-          platform: form.platform,
+          platform: resolvedPlatform,
           region: form.region,
           country: form.country,
           server: form.server,
           language: form.language,
           deliveryMethod: form.deliveryMethod,
-          productKind: form.productKind,
-          condition: form.condition,
+          productKind: resolvedProductKind,
+          condition: resolvedCondition,
           stockType: form.stockType,
           duration: form.duration,
           warranty: form.warranty,
@@ -412,6 +433,12 @@ export function SellerProductEditor({
             marketplaceCategorySlug: selectedCategory.slug,
             marketplaceCategoryName: selectedCategory.name,
             marketplaceCategoryPath: selectedCategory.pathLabel,
+            ...(isSocialAccountListing
+              ? {
+                  socialAccountPlatform,
+                  socialAccountType,
+                }
+              : {}),
           },
           translations: {
             en: {
@@ -544,13 +571,23 @@ export function SellerProductEditor({
               {levels.map((choices, depth) => (
                 <label key={`${depth}-${path[depth - 1] ?? "root"}`}>
                   <span>
-                    {depth === 0
-                      ? "Main category"
-                      : depth === 1
-                        ? "Subcategory"
-                        : depth === 2
-                          ? "Product / game"
-                          : `Category level ${depth + 1}`}
+                    {isSocialAccountListing
+                      ? depth === 0
+                        ? "Marketplace category"
+                        : depth === 1
+                          ? "Platform"
+                          : depth === 2
+                            ? "Product"
+                            : depth === 3
+                              ? "Account type"
+                              : `Category level ${depth + 1}`
+                      : depth === 0
+                        ? "Main category"
+                        : depth === 1
+                          ? "Subcategory"
+                          : depth === 2
+                            ? "Product / game"
+                            : `Category level ${depth + 1}`}
                   </span>
                   <select
                     required
@@ -573,6 +610,32 @@ export function SellerProductEditor({
                 </label>
               ))}
             </div>
+            {isSocialAccountListing &&
+            socialAccountPlatform &&
+            socialAccountType &&
+            !levels[path.length]?.length ? (
+              <div className="seller-derived-account-summary">
+                <div>
+                  <PackageCheck aria-hidden="true" />
+                  <span>
+                    <strong>
+                      Account details come from this category path
+                    </strong>
+                    <small>
+                      Platform and account type stay synchronized automatically.
+                    </small>
+                  </span>
+                </div>
+                <p>
+                  <span>Platform</span>
+                  <b>{socialAccountPlatform}</b>
+                  <span>Product</span>
+                  <b>Account</b>
+                  <span>Account type</span>
+                  <b>{socialAccountType}</b>
+                </p>
+              </div>
+            ) : null}
             {attributes.length ? (
               <div className="seller-editor-attributes">
                 <strong>
@@ -986,17 +1049,25 @@ export function SellerProductEditor({
                   ["stockType", "Stock type"],
                   ["duration", "Duration"],
                 ] as const
-              ).map(([key, label]) => (
-                <label key={key}>
-                  <span>{label}</span>
-                  <input
-                    value={form[key]}
-                    onChange={(event) =>
-                      setForm({ ...form, [key]: event.target.value })
-                    }
-                  />
-                </label>
-              ))}
+              )
+                .filter(
+                  ([key]) =>
+                    !isSocialAccountListing ||
+                    (key !== "platform" &&
+                      key !== "productKind" &&
+                      key !== "condition"),
+                )
+                .map(([key, label]) => (
+                  <label key={key}>
+                    <span>{label}</span>
+                    <input
+                      value={form[key]}
+                      onChange={(event) =>
+                        setForm({ ...form, [key]: event.target.value })
+                      }
+                    />
+                  </label>
+                ))}
               <label>
                 <span>Delivery method</span>
                 <select

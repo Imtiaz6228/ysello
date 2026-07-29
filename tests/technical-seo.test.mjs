@@ -69,9 +69,12 @@ test("404 and deployment configuration prevent soft-404 indexing", () => {
 });
 
 test("category and product routes ship crawlable G2A-style marketplace SEO", () => {
-  const category = readFileSync("dist/category/steam-games.html", "utf8");
+  const category = readFileSync(
+    "dist/category/gaming/steam-games.html",
+    "utf8",
+  );
   const product = readFileSync(
-    "dist/product/halo-infinite-campaign-pc.html",
+    "dist/product/gaming/steam-games/halo-infinite-campaign-pc.html",
     "utf8",
   );
   const sitemap = readFileSync("dist/sitemap.xml", "utf8");
@@ -79,21 +82,27 @@ test("category and product routes ship crawlable G2A-style marketplace SEO", () 
 
   assert.match(
     category,
-    /canonical" href="https:\/\/ysello\.com\/category\/steam-games"/,
+    /canonical" href="https:\/\/ysello\.com\/category\/gaming\/steam-games"/,
   );
   assert.match(category, /"@type":"CollectionPage"/);
   assert.match(category, /"@type":"ItemList"/);
-  assert.match(category, /href="\/product\/halo-infinite-campaign-pc"/);
+  assert.match(
+    category,
+    /href="\/product\/gaming\/steam-games\/halo-infinite-campaign-pc"/,
+  );
   assert.match(
     product,
-    /canonical" href="https:\/\/ysello\.com\/product\/halo-infinite-campaign-pc"/,
+    /canonical" href="https:\/\/ysello\.com\/product\/gaming\/steam-games\/halo-infinite-campaign-pc"/,
   );
   assert.match(product, /property="og:type" content="product"/);
   assert.match(product, /"@type":"Product"/);
   assert.match(product, /"@type":"BreadcrumbList"/);
   assert.match(sitemap, /\/category\/gaming<\/loc>/);
-  assert.match(sitemap, /\/category\/steam-games<\/loc>/);
-  assert.match(sitemap, /\/product\/halo-infinite-campaign-pc<\/loc>/);
+  assert.match(sitemap, /\/category\/gaming\/steam-games<\/loc>/);
+  assert.match(
+    sitemap,
+    /\/product\/gaming\/steam-games\/halo-infinite-campaign-pc<\/loc>/,
+  );
   assert.match(robots, /Sitemap: https:\/\/ysello\.com\/sitemap\.xml/);
 });
 

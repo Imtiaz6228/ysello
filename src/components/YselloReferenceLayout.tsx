@@ -18,6 +18,7 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { STAFF_ROLES } from "../api/client";
 import { useAuth } from "../auth/AuthContext";
 import { useCart } from "../commerce/CartContext";
+import { productPath } from "../commerce/marketplaceUrls";
 import type { CatalogProduct } from "../data/catalog";
 import { useLocale } from "../i18n/LocaleContext";
 
@@ -304,13 +305,13 @@ export function YselloReferenceProductCard({
     >
       <span className="g2-card-offer">
         <BadgeCheck aria-hidden="true" />{" "}
-        {product.isOfficial ? "Official listing" : "Verified seller"} ·{" "}
+        {product.isOfficial ? "Official Ysello product" : "Verified seller"} ·{" "}
         {product.seller}
       </span>
       <div className="ys-ref-product-media g2-product-media">
         <Link
           className="g2-product-image-link"
-          to={`/product/${product.slug}`}
+          to={productPath(product)}
           aria-label={`View ${product.title}`}
         >
           {product.imageUrl ? (
@@ -340,7 +341,7 @@ export function YselloReferenceProductCard({
         </button>
       </div>
       <div className="ys-ref-product-copy g2-product-copy">
-        <Link className="ys-ref-product-title" to={`/product/${product.slug}`}>
+        <Link className="ys-ref-product-title" to={productPath(product)}>
           {product.title}
         </Link>
         <p className="g2-product-description">{product.description}</p>
@@ -372,7 +373,7 @@ export function YselloReferenceProductCard({
           </span>
         </div>
         <div className="ys-ref-product-card-actions g2-product-actions">
-          <Link to={`/product/${product.slug}`}>View details</Link>
+          <Link to={productPath(product)}>View details</Link>
           {onBuy ? (
             <button
               type="button"

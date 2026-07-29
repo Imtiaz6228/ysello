@@ -277,7 +277,7 @@ commerceRouter.get(
   "/chats",
   asyncHandler(async (req, res) => {
     const orders = await prisma.order.findMany({
-      where: { buyerId: req.auth!.id },
+      where: { buyerId: req.auth!.id, status: { not: "CANCELLED" } },
       orderBy: { updatedAt: "desc" },
       include: {
         items: {
@@ -878,10 +878,6 @@ commerceRouter.post(
       include: {
         author: { select: { id: true, firstName: true, role: true } },
       },
-    });
-    await prisma.order.update({
-      where: { id: orderId },
-      data: { updatedAt: new Date() },
     });
     await markDisputeTurn(
       orderId,

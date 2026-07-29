@@ -14,7 +14,7 @@ import {
   ShieldCheck,
 } from "lucide-react";
 import { Link, useParams } from "react-router-dom";
-import { ApiError, apiDownloadUrl, apiRequest, mediaUrl } from "../api/client";
+import { ApiError, apiDownloadUrl, apiRequest } from "../api/client";
 import { useAuth } from "../auth/AuthContext";
 import { MarketFooter, MarketHeader } from "../components/MarketHeader";
 import { Seo } from "../components/Seo";
@@ -757,12 +757,12 @@ export function OrderDeliveryPage() {
                 {message.attachmentUrl ? (
                   <a
                     className="chat-attachment"
-                    href={mediaUrl(message.attachmentUrl)}
+                    href={message.attachmentUrl}
                     target="_blank"
                     rel="noreferrer"
                   >
                     <img
-                      src={mediaUrl(message.attachmentUrl)}
+                      src={message.attachmentUrl}
                       alt={message.attachmentName ?? "attachment"}
                     />
                     <small>{message.attachmentName ?? "View screenshot"}</small>

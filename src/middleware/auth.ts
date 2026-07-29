@@ -28,54 +28,62 @@ declare global {
   }
 }
 
+async function authenticateRequest(req: Request) {
+  const token = req.cookies?.[ACCESS_TOKEN_COOKIE] as string | undefined;
+  if (!token) return null;
+
+  const payload = jwt.verify(token, env.JWT_SECRET) as AccessPayload;
+  if (!payload.sub) return null;
+
+  const user = await prisma.user.findUnique({
+    where: { id: payload.sub },
+    select: {
+      id: true,
+      email: true,
+      username: true,
+      role: true,
+      isSuspended: true,
+      emailVerifiedAt: true,
+    },
+  });
+  if (!user || user.isSuspended) return null;
+
+  return {
+    id: user.id,
+    email: user.email,
+    username: user.username,
+    role: user.role,
+    emailVerified: Boolean(user.emailVerifiedAt),
+  } satisfies AuthUser;
+}
+
+export const optionalAuth: RequestHandler = async (req, _res, next) => {
+  try {
+    req.auth = (await authenticateRequest(req)) ?? undefined;
+  } catch {
+    req.auth = undefined;
+  }
+  next();
+};
+
 export const requireAuth: RequestHandler = async (
   req: Request,
   _res: Response,
   next: NextFunction,
 ) => {
   try {
-    const token = req.cookies?.[ACCESS_TOKEN_COOKIE] as string | undefined;
-
-    if (!token) {
+    if (!req.cookies?.[ACCESS_TOKEN_COOKIE]) {
       throw new ApiError(401, "Authentication required.", "AUTH_REQUIRED");
     }
-
-    const payload = jwt.verify(token, env.JWT_SECRET) as AccessPayload;
-    if (!payload.sub) {
-      throw new ApiError(401, "Invalid session.", "SESSION_INVALID");
-    }
-
-    const user = await prisma.user.findUnique({
-      where: { id: payload.sub },
-      select: {
-        id: true,
-        email: true,
-        username: true,
-        role: true,
-        isSuspended: true,
-        emailVerifiedAt: true,
-      },
-    });
-
+    const user = await authenticateRequest(req);
     if (!user) {
-      throw new ApiError(401, "Invalid session.", "SESSION_INVALID");
-    }
-
-    if (user.isSuspended) {
       throw new ApiError(
-        403,
-        "This account is suspended. Contact support if you believe this is a mistake.",
-        "ACCOUNT_SUSPENDED",
+        401,
+        "Invalid or expired session.",
+        "SESSION_INVALID",
       );
     }
-
-    req.auth = {
-      id: user.id,
-      email: user.email,
-      username: user.username,
-      role: user.role,
-      emailVerified: true,
-    };
+    req.auth = user;
 
     next();
   } catch (error) {

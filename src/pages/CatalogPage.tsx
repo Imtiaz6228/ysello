@@ -78,6 +78,23 @@ function findRoot(
   );
 }
 
+const socialAccountDepartment = marketplaceTaxonomy.find(
+  (item) => item.slug === "social-media",
+);
+
+const socialAccountPlatforms = (socialAccountDepartment?.subcategories ?? [])
+  .map((platform) => {
+    const accounts = platform.children?.find(
+      (child) => child.name === "Accounts",
+    );
+    return {
+      ...platform,
+      accounts,
+      accountTypes: accounts?.children ?? [],
+    };
+  })
+  .filter((platform) => platform.accounts);
+
 export function CatalogPage() {
   const navigate = useNavigate();
   const { add } = useCart();
@@ -91,7 +108,7 @@ export function CatalogPage() {
   const [sort, setSort] = useState<SortMode>(
     (searchParams.get("sort") as SortMode) ?? "popular",
   );
-  const [view, setView] = useState<ViewMode>("list");
+  const [view, setView] = useState<ViewMode>("grid");
   const [stockOnly, setStockOnly] = useState(false);
   const [kind, setKind] = useState<ProductKind>(
     (searchParams.get("kind") as ProductKind) ?? "all",
@@ -100,6 +117,9 @@ export function CatalogPage() {
   const [minimumRating, setMinimumRating] = useState("all");
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
   const [visibleCount, setVisibleCount] = useState(24);
+  const [socialPlatformSlug, setSocialPlatformSlug] = useState(
+    socialAccountPlatforms[0]?.slug ?? "",
+  );
   const requestedMaxPrice = Number(searchParams.get("max"));
   const maxPrice =
     Number.isFinite(requestedMaxPrice) && requestedMaxPrice > 0
@@ -119,19 +139,20 @@ export function CatalogPage() {
       })),
     [rootCategories],
   );
-  const socialAccountCategories = useMemo(() => {
-    const social = marketplaceTaxonomy.find(
-      (item) => item.slug === "social-media",
+  const activeSocialPlatform =
+    socialAccountPlatforms.find(
+      (platform) => platform.slug === socialPlatformSlug,
+    ) ?? socialAccountPlatforms[0];
+
+  useEffect(() => {
+    const matchingPlatform = socialAccountPlatforms.find(
+      (platform) =>
+        platform.slug === category ||
+        platform.accounts?.slug === category ||
+        platform.accountTypes.some((type) => type.slug === category),
     );
-    return (social?.subcategories ?? []).flatMap((platform) =>
-      (platform.children ?? [])
-        .filter((item) => item.name === "Accounts")
-        .map((item) => ({
-          label: `${platform.name} Accounts`,
-          slug: item.slug,
-        })),
-    );
-  }, []);
+    if (matchingPlatform) setSocialPlatformSlug(matchingPlatform.slug);
+  }, [category]);
 
   const filteredProducts = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
@@ -295,19 +316,64 @@ export function CatalogPage() {
           className="ys-ref-social-account-tabs"
           aria-label="Social media account categories"
         >
-          <strong>Social Media Accounts</strong>
-          <div>
-            {socialAccountCategories.map((item) => (
+          <header>
+            <span>
+              <ShieldCheck aria-hidden="true" />
+            </span>
+            <div>
+              <strong>Social Media Accounts</strong>
+              <small>
+                Platform <b>→</b> Accounts <b>→</b> Account type
+              </small>
+            </div>
+            <Link to="/category/social-media">View all</Link>
+          </header>
+          <div className="ys-ref-social-platforms" aria-label="Platforms">
+            {socialAccountPlatforms.map((platform) => (
               <button
                 type="button"
-                key={item.slug}
-                className={category === item.slug ? "active" : ""}
-                onClick={() => setCategory(item.slug)}
+                key={platform.slug}
+                className={socialPlatformSlug === platform.slug ? "active" : ""}
+                onClick={() => {
+                  setSocialPlatformSlug(platform.slug);
+                  setCategory(platform.slug);
+                }}
               >
-                {item.label}
+                <b>{platform.name.slice(0, 2).toUpperCase()}</b>
+                {platform.name}
               </button>
             ))}
           </div>
+          {activeSocialPlatform ? (
+            <div className="ys-ref-social-account-types">
+              <button
+                type="button"
+                className={
+                  category === activeSocialPlatform.accounts?.slug
+                    ? "active"
+                    : ""
+                }
+                onClick={() =>
+                  setCategory(
+                    activeSocialPlatform.accounts?.slug ??
+                      activeSocialPlatform.slug,
+                  )
+                }
+              >
+                All accounts
+              </button>
+              {activeSocialPlatform.accountTypes.map((type) => (
+                <button
+                  type="button"
+                  key={type.slug}
+                  className={category === type.slug ? "active" : ""}
+                  onClick={() => setCategory(type.slug)}
+                >
+                  {type.name}
+                </button>
+              ))}
+            </div>
+          ) : null}
         </section>
 
         <button

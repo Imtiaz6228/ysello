@@ -78,8 +78,7 @@
 }
 
 .ys-product-badges .badge,
-.ys-product-kind,
-.ys-product-official {
+.ys-product-kind {
   position: static !important;
   min-height: 26px;
   padding: 5px 9px !important;
@@ -93,17 +92,6 @@
   font-weight: 800;
   line-height: 1;
   letter-spacing: 0.02em;
-}
-
-.ys-product-official {
-  border-color: #c4b5fd;
-  color: #5b21b6;
-  background: #f5f3ff;
-}
-
-.ys-product-official svg {
-  width: 13px;
-  height: 13px;
 }
 
 .ys-product-badges .badge.green {
@@ -161,16 +149,6 @@
   width: 14px;
   height: 14px;
   color: #2563eb;
-}
-
-.ys-product-card .market-product-seller small {
-  padding: 2px 6px;
-  border-radius: 999px;
-  color: #5b21b6;
-  background: #ede9fe;
-  font-size: 9px;
-  font-weight: 800;
-  text-transform: uppercase;
 }
 
 .ys-product-card .market-product-body > p {
@@ -443,6 +421,55 @@
   background: rgba(255, 255, 255, 0.8);
   font-size: 10px;
   text-align: center;
+}
+
+.admin-enterprise .admin-product-filter label {
+  margin-left: auto;
+}
+
+.admin-enterprise .admin-product-filter select {
+  min-height: 38px;
+  padding: 0 34px 0 12px;
+  border: 1px solid #d9e0ea;
+  border-radius: 10px;
+  background: #fff;
+  color: #172033;
+}
+
+.admin-existing-category-products {
+  margin: 4px 0 18px;
+  padding: 14px;
+  border: 1px solid #dfe6f0;
+  border-radius: 12px;
+  background: #f8fafc;
+}
+
+.admin-existing-category-products header,
+.admin-existing-category-products article {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.admin-existing-category-products header {
+  margin-bottom: 10px;
+}
+
+.admin-existing-category-products > div {
+  display: grid;
+  gap: 6px;
+}
+
+.admin-existing-category-products article {
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: #fff;
+}
+
+.admin-existing-category-products p,
+.admin-existing-category-products small {
+  margin: 0;
+  color: #667085;
 }
 
 .admin-enterprise .admin-product-grid {

@@ -3332,8 +3332,8 @@ export function AccountDashboardPage() {
 type Deposit = {
   id: string;
   amountCents: number;
-  networkFeeCents?: number;
-  totalPayableCents?: number;
+  networkFeeCents: number;
+  totalPayableCents: number;
   method: string;
   status: string;
   reference?: string;
@@ -3609,12 +3609,11 @@ function WalletTabContent({
   }));
   const selectedMethod =
     methods.find((method) => method.value === depositMethod) ?? null;
-  const enteredAmountCents = Math.max(
-    0,
-    Math.round((Number.parseFloat(depositAmount) || 0) * 100),
-  );
-  const estimatedNetworkFeeCents = selectedMethod?.networkFeeCents ?? 0;
-  const estimatedBuyerCostCents = enteredAmountCents + estimatedNetworkFeeCents;
+  const quotedAmountCents = Number.isFinite(Number(depositAmount))
+    ? Math.max(0, Math.round(Number(depositAmount) * 100))
+    : 0;
+  const quotedFeeCents = selectedMethod?.networkFeeCents ?? 0;
+  const quotedTotalCents = quotedAmountCents + quotedFeeCents;
   const chains = [
     "USDT TRC20",
     "USDT ERC20",
@@ -3737,7 +3736,13 @@ function WalletTabContent({
 
       {mode === "wallet" ? (
         <div className="wallet-action-grid">
-          <div className="wallet-deposit-form">
+          <form
+            className="wallet-deposit-form"
+            onSubmit={(event) => {
+              event.preventDefault();
+              void submitDeposit();
+            }}
+          >
             <h2>{t("cryptoTopup")}</h2>
             <p>{t("cryptoTopupHelp")}</p>
             {methods.length ? (
@@ -3801,41 +3806,39 @@ function WalletTabContent({
                 />
               </div>
               <button
-                type="button"
+                type="submit"
                 className="primary-button"
                 disabled={busy || !selectedMethod}
-                onClick={() => void submitDeposit()}
               >
                 <PlusCircle size={16} />{" "}
                 {busy ? t("creatingPayment") : t("createPayment")}
               </button>
             </div>
-            {selectedMethod && enteredAmountCents > 0 ? (
-              <dl className="topup-fee-breakdown" aria-label="Top-up fee quote">
+            {selectedMethod && quotedAmountCents > 0 ? (
+              <dl className="topup-fee-breakdown" aria-label="Top-up quote">
                 <div>
                   <dt>Wallet credit</dt>
-                  <dd>{formatMoney(enteredAmountCents)}</dd>
+                  <dd>{formatMoney(quotedAmountCents)}</dd>
                 </div>
                 <div>
-                  <dt>Estimated {selectedMethod.network} fee</dt>
-                  <dd>{formatMoney(estimatedNetworkFeeCents)}</dd>
+                  <dt>Estimated blockchain fee (buyer pays)</dt>
+                  <dd>{formatMoney(quotedFeeCents)}</dd>
                 </div>
                 <div>
-                  <dt>Estimated buyer cost</dt>
-                  <dd>{formatMoney(estimatedBuyerCostCents)}</dd>
+                  <dt>Estimated total buyer cost</dt>
+                  <dd>{formatMoney(quotedTotalCents)}</dd>
                 </div>
-                <small>
-                  The network fee is paid separately by you. Your wallet’s live
-                  fee quote is final; Ysello credits the wallet-credit amount
-                  after approval.
-                </small>
               </dl>
             ) : null}
             <div className="wallet-safety-note">
               <ShieldAlert size={16} />
-              <span>{t("topupFeeWarning")}</span>
+              <span>
+                Transfer the exact wallet-credit amount. Your wallet or
+                exchange charges the network fee in addition; live fees may
+                vary from this estimate.
+              </span>
             </div>
-          </div>
+          </form>
 
           {user.role === "SELLER" ? (
             <div className="wallet-deposit-form withdrawal-form">
@@ -3896,7 +3899,7 @@ function WalletTabContent({
                 {t("paymentRequest").toUpperCase()}
               </span>
               <h2>
-                {t("sendExactly")} {formatMoney(activeTopup.amountCents)}
+                Wallet credit {formatMoney(activeTopup.amountCents)}
               </h2>
               <p>
                 {activeTopup.method.replaceAll("_", " ")} · request{" "}
@@ -3907,24 +3910,18 @@ function WalletTabContent({
               {t("awaitingPayment").toUpperCase()}
             </span>
           </header>
-          <dl className="topup-fee-breakdown confirmed">
+          <dl className="topup-fee-breakdown" aria-label="Saved top-up quote">
             <div>
-              <dt>Amount sent to Ysello</dt>
+              <dt>Wallet credit</dt>
               <dd>{formatMoney(activeTopup.amountCents)}</dd>
             </div>
             <div>
-              <dt>Estimated buyer-paid network fee</dt>
-              <dd>{formatMoney(activeTopup.networkFeeCents ?? 0)}</dd>
+              <dt>Estimated blockchain fee (buyer pays)</dt>
+              <dd>{formatMoney(activeTopup.networkFeeCents)}</dd>
             </div>
             <div>
               <dt>Estimated total buyer cost</dt>
-              <dd>
-                {formatMoney(
-                  activeTopup.totalPayableCents ??
-                    activeTopup.amountCents +
-                      (activeTopup.networkFeeCents ?? 0),
-                )}
-              </dd>
+              <dd>{formatMoney(activeTopup.totalPayableCents)}</dd>
             </div>
           </dl>
           <div className="topup-address-box">
@@ -3947,9 +3944,9 @@ function WalletTabContent({
               <input
                 value={proofTx}
                 minLength={64}
-                maxLength={300}
+                maxLength={66}
                 onChange={(event) => setProofTx(event.target.value)}
-                placeholder="Paste the full transaction hash or explorer URL"
+                placeholder="Paste the complete on-chain transaction hash"
               />
             </label>
             <label className="topup-upload">
@@ -4119,15 +4116,6 @@ function WalletTabContent({
                     <small>
                       {deposit.method.replaceAll("_", " ")} ·{" "}
                       {deposit.reference}
-                    </small>
-                    <small>
-                      Network fee estimate:{" "}
-                      {formatMoney(deposit.networkFeeCents ?? 0)} · estimated
-                      buyer cost:{" "}
-                      {formatMoney(
-                        deposit.totalPayableCents ??
-                          deposit.amountCents + (deposit.networkFeeCents ?? 0),
-                      )}
                     </small>
                     {deposit.txHash ? (
                       <small>

@@ -12,6 +12,10 @@ import {
 import { Link } from "react-router-dom";
 import type { CatalogProduct } from "../data/catalog";
 import { useLocale } from "../i18n/LocaleContext";
+import {
+  productCategoryPath,
+  productPath,
+} from "../commerce/marketplaceUrls";
 
 type Props = {
   product: CatalogProduct;
@@ -44,7 +48,7 @@ export function MarketplaceProductCard({
       <div className="ys-product-card-top">
         <Link
           className="ys-product-glyph"
-          to={`/product/${product.slug}`}
+          to={productPath(product)}
           aria-label={`View ${product.title}`}
         >
           <ProductIcon aria-hidden="true" />
@@ -53,11 +57,6 @@ export function MarketplaceProductCard({
           <span className="ys-product-kind">
             {product.type === "SERVICE" ? "Service" : "Digital product"}
           </span>
-          {product.isOfficial ? (
-            <span className="ys-product-official">
-              <BadgeCheck aria-hidden="true" /> Official
-            </span>
-          ) : null}
         </div>
       </div>
       <div className="market-product-body">
@@ -65,11 +64,11 @@ export function MarketplaceProductCard({
           <div>
             <Link
               className="market-product-category"
-              to={`/category/${product.categorySlug}`}
+              to={productCategoryPath(product)}
             >
               {categoryLabel}
             </Link>
-            <Link to={`/product/${product.slug}`}>
+            <Link to={productPath(product)}>
               <h2>{product.title}</h2>
             </Link>
             <Link
@@ -77,7 +76,6 @@ export function MarketplaceProductCard({
               to={`/stores/${product.sellerSlug}`}
             >
               {product.seller} <BadgeCheck aria-hidden="true" />
-              {product.isOfficial ? <small>Official listing</small> : null}
             </Link>
           </div>
         </div>
@@ -104,7 +102,7 @@ export function MarketplaceProductCard({
             <small>Secure marketplace checkout</small>
           </div>
           <div className="market-card-actions">
-            <Link to={`/product/${product.slug}`}>
+            <Link to={productPath(product)}>
               <Eye /> {t("details")}
             </Link>
             <button

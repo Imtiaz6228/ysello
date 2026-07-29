@@ -6,10 +6,8 @@ export function discoverCategoryProducts(
   categories: CatalogCategory[],
   products: CatalogProduct[],
 ) {
-  return {
-    products: products.filter((product) =>
-      categoryMatches(product.categorySlug, slug, categories),
-    ),
-    isFallback: false,
-  };
+  const direct = products.filter((product) =>
+    categoryMatches(product.categorySlug, slug, categories),
+  );
+  return { products: direct, isFallback: false };
 }

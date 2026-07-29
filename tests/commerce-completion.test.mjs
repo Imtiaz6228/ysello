@@ -110,8 +110,10 @@ test("seller listing accepts long translations and bulk account inventory", asyn
   assert.match(studio, /Import TXT or CSV/);
   assert.match(studio, /accept="\.txt,\.csv,text\/plain,text\/csv"/);
   assert.match(studio, /\[\.\.\.new Set\(merged\)\]\.join\("\\n"\)/);
-  assert.match(taxonomy, /\["instagram-accounts", "Accounts"\]/);
-  assert.match(taxonomy, /\["community-accounts", "Accounts"\]/);
+  assert.match(taxonomy, /const socialAccountInventory/);
+  assert.match(taxonomy, /"Accounts with followers"/);
+  assert.match(taxonomy, /"Accounts with posts"/);
+  assert.doesNotMatch(taxonomy, /"Reels templates"/);
   assert.match(
     styles,
     /bottom: calc\(104px \+ env\(safe-area-inset-bottom\)\) !important/,
@@ -148,20 +150,29 @@ test("approved account products publish and seller tools translate and convert o
   );
   assert.match(editor, /Translate English to Chinese & Russian/);
   assert.match(editor, /convertedSellerPrices\(priceUsd\)/);
-  for (const slug of [
-    "facebook-accounts",
-    "instagram-accounts",
-    "threads-accounts",
-    "x-accounts",
-    "tiktok-accounts",
-    "telegram-accounts",
-    "discord-accounts",
-    "snapchat-accounts",
-    "whatsapp-accounts",
-    "youtube-accounts",
+  for (const platform of [
+    "facebook",
+    "instagram",
+    "threads",
+    "x",
+    "tiktok",
+    "telegram",
+    "discord",
+    "snapchat",
+    "whatsapp",
+    "youtube",
   ])
-    assert.match(taxonomy, new RegExp(`"${slug}"`));
+    assert.match(
+      taxonomy,
+      new RegExp(`socialAccountInventory\\("${platform}"`),
+    );
+  assert.match(taxonomy, /"New accounts"/);
+  assert.match(taxonomy, /"Old accounts"/);
+  assert.match(taxonomy, /"Accounts with followers"/);
+  assert.match(taxonomy, /"Accounts with posts"/);
   assert.match(home, /homepageFeatured/);
-  assert.match(home, /social-account-category-link/);
+  assert.match(home, /social-account-showcase/);
+  assert.match(home, /g2-mobile-first-impression/);
   assert.match(catalog, /Social Media Accounts/);
+  assert.match(catalog, /ys-ref-social-account-types/);
 });

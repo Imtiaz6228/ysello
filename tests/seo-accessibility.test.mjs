@@ -64,7 +64,9 @@ test("provides route recovery and accessible support dialog controls", () => {
   assert.match(support, /role="dialog"/);
   assert.match(support, /aria-labelledby="support-dialog-title"/);
   assert.match(support, /aria-label="Send support message"/);
-  assert.match(support, /clearTimeout\(guestReplyTimerRef\.current\)/);
+  assert.match(support, /\/api\/nexus\/support\/start/);
+  assert.match(support, /\/api\/nexus\/support\/\$\{sessionId\}\/messages/);
+  assert.match(support, /clearInterval\(timer\)/);
 });
 
 test("removes abandoned framework, dashboard, and starter assets", () => {

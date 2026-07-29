@@ -11,6 +11,7 @@ import {
 import { Link } from "react-router-dom";
 import { mediaUrl } from "../api/client";
 import { useCart } from "../commerce/CartContext";
+import { productPath } from "../commerce/marketplaceUrls";
 import { MarketFooter, MarketHeader } from "../components/MarketHeader";
 import { Seo } from "../components/Seo";
 import { useLocale } from "../i18n/LocaleContext";
@@ -83,7 +84,7 @@ export function CartPage() {
                 </div>
                 <div>
                   <span>{product.category}</span>
-                  <Link to={`/product/${product.slug}`}>{product.title}</Link>
+                  <Link to={productPath(product)}>{product.title}</Link>
                   <small>
                     {product.delivery} · {product.seller}
                   </small>

@@ -78,7 +78,7 @@ test("every hamburger category is available in the seller listing flow", () => {
   }
 });
 
-test("category URLs never show products from an unrelated category", () => {
+test("category discovery never fills an empty category with unrelated products", () => {
   const categories = catalogCategories();
   for (const slug of marketplaceTaxonomySlugs) {
     const discovery = discoverCategoryProducts(
@@ -87,12 +87,23 @@ test("category URLs never show products from an unrelated category", () => {
       g2aDemoProducts,
     );
     assert.equal(discovery.isFallback, false);
-    for (const product of discovery.products) {
-      assert.equal(
+    assert.ok(
+      discovery.products.every((product) =>
         categoryMatches(product.categorySlug, slug, categories),
-        true,
-        `${product.title} must belong to ${slug}`,
-      );
-    }
+      ),
+      `${slug} must only show products assigned to its category branch`,
+    );
   }
+
+  const steam = discoverCategoryProducts(
+    "steam-games",
+    categories,
+    g2aDemoProducts,
+  );
+  assert.ok(steam.products.length > 0, "Steam should have a focused catalog");
+  assert.ok(
+    steam.products.every((product) =>
+      categoryMatches(product.categorySlug, "steam-games", categories),
+    ),
+  );
 });

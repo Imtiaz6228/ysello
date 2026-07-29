@@ -44,6 +44,59 @@ function normalizeOrigin(value: string) {
   }
 }
 
+type SeoCategoryNode = {
+  id?: string;
+  parentId?: string | null;
+  slug: string;
+  parent?: {
+    slug: string;
+    parent?: { slug: string } | null;
+  } | null;
+};
+
+function compactSlugs(slugs: Array<string | null | undefined>) {
+  return slugs.filter(
+    (slug, index, values): slug is string =>
+      Boolean(slug) && values.indexOf(slug) === index,
+  );
+}
+
+function categorySeoPath(category: SeoCategoryNode) {
+  const slugs = compactSlugs([
+    category.parent?.parent?.slug,
+    category.parent?.slug,
+    category.slug,
+  ]);
+  return `/category/${compactSlugs([slugs[0], slugs[slugs.length - 1]]).join("/")}`;
+}
+
+function categorySeoPathFromFlat(
+  category: SeoCategoryNode,
+  categories: SeoCategoryNode[],
+) {
+  let current = category;
+  const ancestry = [category.slug];
+  const visited = new Set([category.slug]);
+  while (current.parentId) {
+    const parent = categories.find((item) => item.id === current.parentId);
+    if (!parent || visited.has(parent.slug)) break;
+    ancestry.unshift(parent.slug);
+    visited.add(parent.slug);
+    current = parent;
+  }
+  return `/category/${compactSlugs([
+    ancestry[0],
+    ancestry[ancestry.length - 1],
+  ]).join("/")}`;
+}
+
+function productSeoPath(product: {
+  slug: string;
+  category: SeoCategoryNode;
+}) {
+  return `${categorySeoPath(product.category).replace("/category/", "/product/")}/${product.slug}`;
+}
+
 const allowedOriginRules = [
   ...TRUSTED_APP_ORIGINS,
   env.APP_URL,
@@ -233,11 +286,34 @@ app.get(
           category: { isActive: true },
           seller: publicSellerFilter,
         },
-        select: { slug: true, updatedAt: true },
+        select: {
+          slug: true,
+          updatedAt: true,
+          category: {
+            select: {
+              slug: true,
+              parent: {
+                select: {
+                  slug: true,
+                  parent: { select: { slug: true } },
+                },
+              },
+            },
+          },
+        },
       }),
       prisma.category.findMany({
         where: { isActive: true },
-        select: { slug: true, updatedAt: true },
+        select: {
+          slug: true,
+          updatedAt: true,
+          parent: {
+            select: {
+              slug: true,
+              parent: { select: { slug: true } },
+            },
+          },
+        },
       }),
       prisma.sellerProfile.findMany({
         where: {
@@ -265,13 +341,13 @@ app.get(
         priority: 0.6,
       })),
       ...products.map((item) => ({
-        path: `/product/${item.slug}`,
+        path: productSeoPath(item),
         updatedAt: item.updatedAt,
         changeFrequency: "weekly",
         priority: 0.8,
       })),
       ...categories.map((item) => ({
-        path: `/category/${item.slug}`,
+        path: categorySeoPath(item),
         updatedAt: item.updatedAt,
         changeFrequency: "weekly",
         priority: 0.7,
@@ -384,7 +460,17 @@ if (isProduction && fs.existsSync(frontendIndex)) {
         prisma.category.findMany({
           where: { isActive: true },
           orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
-          select: { slug: true, name: true, description: true },
+          select: {
+            slug: true,
+            name: true,
+            description: true,
+            parent: {
+              select: {
+                slug: true,
+                parent: { select: { slug: true } },
+              },
+            },
+          },
         }),
         prisma.product.findMany({
           where: {
@@ -394,7 +480,22 @@ if (isProduction && fs.existsSync(frontendIndex)) {
           },
           orderBy: [{ salesCount: "desc" }, { publishedAt: "desc" }],
           take: 96,
-          select: { slug: true, name: true, shortDescription: true },
+          select: {
+            slug: true,
+            name: true,
+            shortDescription: true,
+            category: {
+              select: {
+                slug: true,
+                parent: {
+                  select: {
+                    slug: true,
+                    parent: { select: { slug: true } },
+                  },
+                },
+              },
+            },
+          },
         }),
         prisma.sellerProfile.findMany({
           where: {
@@ -408,8 +509,8 @@ if (isProduction && fs.existsSync(frontendIndex)) {
         }),
       ]);
       const content = [
-        `<section><h2>Browse by category</h2>${links(categories.map((item) => ({ path: `/category/${item.slug}`, title: item.name, description: item.description })))}</section>`,
-        `<section><h2>Approved marketplace listings</h2>${products.length ? links(products.map((item) => ({ path: `/product/${item.slug}`, title: item.name, description: item.shortDescription }))) : "<p>No public listings are available yet.</p>"}</section>`,
+        `<section><h2>Browse by category</h2>${links(categories.map((item) => ({ path: categorySeoPath(item), title: item.name, description: item.description })))}</section>`,
+        `<section><h2>Approved marketplace listings</h2>${products.length ? links(products.map((item) => ({ path: productSeoPath(item), title: item.name, description: item.shortDescription }))) : "<p>No public listings are available yet.</p>"}</section>`,
         stores.length
           ? `<section><h2>Verified seller stores</h2>${links(stores.map((item) => ({ path: `/stores/${item.slug}`, title: item.storeName, description: item.about })))}</section>`
           : "",
@@ -448,7 +549,7 @@ if (isProduction && fs.existsSync(frontendIndex)) {
   });
 
   app.get(
-    "/category/:slug",
+    ["/category/:rootSlug/:slug", "/category/:slug"],
     asyncHandler(async (req, res) => {
       const requestedSlug = publicSlug(
         Array.isArray(req.params.slug) ? req.params.slug[0] : req.params.slug,
@@ -498,12 +599,32 @@ if (isProduction && fs.existsSync(frontendIndex)) {
         },
         orderBy: [{ salesCount: "desc" }, { publishedAt: "desc" }],
         take: 96,
-        select: { slug: true, name: true, shortDescription: true },
+        select: {
+          slug: true,
+          name: true,
+          shortDescription: true,
+          category: {
+            select: {
+              slug: true,
+              parent: {
+                select: {
+                  slug: true,
+                  parent: { select: { slug: true } },
+                },
+              },
+            },
+          },
+        },
       });
       const childLinks = categories.filter(
         (item) => item.parentId === category.id,
       );
-      const url = canonicalUrl(`/category/${category.slug}`);
+      const canonicalPath = categorySeoPathFromFlat(category, categories);
+      if (req.path !== canonicalPath) {
+        res.redirect(308, canonicalPath);
+        return;
+      }
+      const url = canonicalUrl(canonicalPath);
       const customTitle = category.seoTitle?.trim();
       const title = customTitle
         ? customTitle.toLowerCase().includes("ysello")
@@ -515,10 +636,10 @@ if (isProduction && fs.existsSync(frontendIndex)) {
       const itemList = products.map((item, index) => ({
         "@type": "ListItem",
         position: index + 1,
-        url: canonicalUrl(`/product/${item.slug}`),
+        url: canonicalUrl(productSeoPath(item)),
         name: item.name,
       }));
-      const content = `${childLinks.length ? `<section><h2>${escapeHtml(category.name)} specialties</h2>${links(childLinks.map((item) => ({ path: `/category/${item.slug}`, title: item.name, description: item.description })))}</section>` : ""}<section><h2>Available listings</h2>${products.length ? links(products.map((item) => ({ path: `/product/${item.slug}`, title: item.name, description: item.shortDescription }))) : "<p>Seller listings can be published directly in this category. Browse the linked specialties and related marketplace departments while more offers are added.</p>"}</section>`;
+      const content = `${childLinks.length ? `<section><h2>${escapeHtml(category.name)} specialties</h2>${links(childLinks.map((item) => ({ path: categorySeoPathFromFlat(item, categories), title: item.name, description: item.description })))}</section>` : ""}<section><h2>Available listings</h2>${products.length ? links(products.map((item) => ({ path: productSeoPath(item), title: item.name, description: item.shortDescription }))) : "<p>No approved listings are available in this exact category yet.</p>"}</section>`;
       sendHtml(
         res,
         renderSeoDocument(frontendTemplate, {
@@ -553,7 +674,11 @@ if (isProduction && fs.existsSync(frontendIndex)) {
   });
 
   app.get(
-    "/product/:slug",
+    [
+      "/product/:rootSlug/:categorySlug/:slug",
+      "/product/:categorySlug/:slug",
+      "/product/:slug",
+    ],
     asyncHandler(async (req, res) => {
       const requestedSlug = publicSlug(
         Array.isArray(req.params.slug) ? req.params.slug[0] : req.params.slug,
@@ -570,7 +695,18 @@ if (isProduction && fs.existsSync(frontendIndex)) {
           seller: publicSellerFilter,
         },
         include: {
-          category: { select: { name: true, slug: true } },
+          category: {
+            select: {
+              name: true,
+              slug: true,
+              parent: {
+                select: {
+                  slug: true,
+                  parent: { select: { slug: true } },
+                },
+              },
+            },
+          },
           seller: {
             select: {
               sellerProfile: { select: { storeName: true, slug: true } },
@@ -596,7 +732,12 @@ if (isProduction && fs.existsSync(frontendIndex)) {
         product.type === "SERVICE" ||
         product._count.files > 0 ||
         product._count.inventoryItems > 0;
-      const url = canonicalUrl(`/product/${product.slug}`);
+      const canonicalPath = productSeoPath(product);
+      if (req.path !== canonicalPath) {
+        res.redirect(308, canonicalPath);
+        return;
+      }
+      const url = canonicalUrl(canonicalPath);
       const imageUrl = absolutePublicUrl(siteUrl, product.coverImageUrl);
       const seller = product.seller.sellerProfile;
       const customTitle = product.seoTitle?.trim();
@@ -652,7 +793,7 @@ if (isProduction && fs.existsSync(frontendIndex)) {
       ]
         .filter(Boolean)
         .join("");
-      const content = `<section><h2>Product details</h2><p>${escapeHtml(product.description)}</p><ul>${facts}</ul></section><section><h2>Seller and category</h2><p>Sold by <a href="/stores/${escapeHtml(seller.slug)}">${escapeHtml(seller.storeName)}</a> in <a href="/category/${escapeHtml(product.category.slug)}">${escapeHtml(product.category.name)}</a>.</p><p><strong>Price:</strong> $${(priceCents / 100).toFixed(2)} USD</p></section>`;
+      const content = `<section><h2>Product details</h2><p>${escapeHtml(product.description)}</p><ul>${facts}</ul></section><section><h2>Seller and category</h2><p>Sold by <a href="/stores/${escapeHtml(seller.slug)}">${escapeHtml(seller.storeName)}</a> in <a href="${escapeHtml(categorySeoPath(product.category))}">${escapeHtml(product.category.name)}</a>.</p><p><strong>Price:</strong> $${(priceCents / 100).toFixed(2)} USD</p></section>`;
       sendHtml(
         res,
         renderSeoDocument(frontendTemplate, {
@@ -705,11 +846,26 @@ if (isProduction && fs.existsSync(frontendIndex)) {
           category: { isActive: true },
         },
         orderBy: { publishedAt: "desc" },
-        select: { slug: true, name: true, shortDescription: true },
+        select: {
+          slug: true,
+          name: true,
+          shortDescription: true,
+          category: {
+            select: {
+              slug: true,
+              parent: {
+                select: {
+                  slug: true,
+                  parent: { select: { slug: true } },
+                },
+              },
+            },
+          },
+        },
       });
       const url = canonicalUrl(`/stores/${store.slug}`);
       const imageUrl = absolutePublicUrl(siteUrl, store.logoUrl);
-      const content = `<section><h2>Products from ${escapeHtml(store.storeName)}</h2>${products.length ? links(products.map((item) => ({ path: `/product/${item.slug}`, title: item.name, description: item.shortDescription }))) : "<p>This verified store has no public listings at the moment.</p>"}</section>`;
+      const content = `<section><h2>Products from ${escapeHtml(store.storeName)}</h2>${products.length ? links(products.map((item) => ({ path: productSeoPath(item), title: item.name, description: item.shortDescription }))) : "<p>This verified store has no public listings at the moment.</p>"}</section>`;
       sendHtml(
         res,
         renderSeoDocument(frontendTemplate, {

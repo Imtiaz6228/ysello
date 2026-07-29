@@ -70,34 +70,29 @@ function categoryContains(productCategorySlug, selectedSlug) {
   return productCategorySlug === selectedSlug;
 }
 
-function rotate(items, seed) {
-  if (items.length < 2) return items;
-  const offset =
-    [...seed].reduce((sum, character) => sum + character.charCodeAt(0), 0) %
-    items.length;
-  return [...items.slice(offset), ...items.slice(0, offset)];
+function categoryUrl(categoryOrSlug) {
+  const category =
+    typeof categoryOrSlug === "string"
+      ? taxonomyBySlug.get(categoryOrSlug)
+      : categoryOrSlug;
+  const slug =
+    typeof categoryOrSlug === "string" ? categoryOrSlug : categoryOrSlug.slug;
+  if (!category || category.rootSlug === slug) return `/category/${slug}`;
+  return `/category/${category.rootSlug}/${slug}`;
+}
+
+function productUrl(product) {
+  const category = taxonomyBySlug.get(product.categorySlug);
+  const categorySlugs = category
+    ? [...new Set([category.rootSlug, category.slug])]
+    : [product.categorySlug];
+  return `/product/${[...categorySlugs, product.slug].join("/")}`;
 }
 
 function productsForCategory(category) {
-  const direct = g2aDemoProducts.filter((product) =>
+  return g2aDemoProducts.filter((product) =>
     categoryContains(product.categorySlug, category.slug),
   );
-  if (direct.length) return { items: direct, isFallback: false };
-  let related =
-    category.rootSlug === "outlet"
-      ? g2aDemoProducts.filter(
-          (product) =>
-            product.originalPriceCents &&
-            product.originalPriceCents > product.priceCents,
-        )
-      : g2aDemoProducts.filter((product) =>
-          categoryContains(product.categorySlug, category.rootSlug),
-        );
-  if (!related.length) related = g2aDemoProducts;
-  return {
-    items: rotate(related, category.slug).slice(0, 24),
-    isFallback: true,
-  };
 }
 
 const commonLinks = [
@@ -127,9 +122,8 @@ const articlePages = blogPosts.map((post) => ({
 }));
 
 const categoryPages = taxonomyEntries.map((category) => {
-  const discovery = productsForCategory(category);
   return {
-    path: `/category/${category.slug}`,
+    path: categoryUrl(category),
     title: `Buy ${category.name} digital products and deals · Ysello`,
     description: `${category.description} Compare verified sellers, clear delivery terms and current marketplace pricing on Ysello.`,
     heading: `Buy ${category.name} digital products`,
@@ -139,13 +133,12 @@ const categoryPages = taxonomyEntries.map((category) => {
     priority: category.depth === 0 ? 0.9 : category.depth === 1 ? 0.8 : 0.7,
     kind: "category",
     category,
-    products: discovery.items,
-    isFallback: discovery.isFallback,
+    products: productsForCategory(category),
   };
 });
 
 const productPages = g2aDemoProducts.map((product) => ({
-  path: `/product/${product.slug}`,
+  path: productUrl(product),
   title: `Buy ${product.title} online · Ysello`,
   description: `${product.description} Compare delivery details, seller information and buyer protection before checkout.`,
   heading: product.title,
@@ -221,20 +214,17 @@ function categoryBody(page) {
   const categories = children.length
     ? `<section><h2>Explore ${escapeHtml(page.category.name)}</h2>${links(
         children.map((category) => ({
-          path: `/category/${category.slug}`,
+          path: categoryUrl(category),
           title: category.name,
           description: category.description,
         })),
       )}</section>`
     : "";
-  const fallback = page.isFallback
-    ? `<p>Seller listings can be published directly in this category. These relevant department picks keep the page useful while more focused offers are added.</p>`
-    : "";
   return `${categories}<section><h2>Popular ${escapeHtml(
     page.category.name,
-  )} offers</h2>${fallback}${links(
+  )} offers</h2>${links(
     page.products.map((product) => ({
-      path: `/product/${product.slug}`,
+      path: productUrl(product),
       title: product.title,
       description: product.description,
     })),
@@ -264,8 +254,8 @@ function productBody(page) {
     2,
   )} USD</p></section><section><h2>Seller and category</h2><p>Sold by <a href="/stores/${escapeHtml(
     product.sellerSlug,
-  )}">${escapeHtml(product.seller)}</a> in <a href="/category/${escapeHtml(
-    product.categorySlug,
+  )}">${escapeHtml(product.seller)}</a> in <a href="${escapeHtml(
+    categoryUrl(product.categorySlug),
   )}">${escapeHtml(product.category)}</a>.</p></section>`;
 }
 
@@ -297,13 +287,13 @@ function pageBody(page) {
   } else if (page.path === "/catalog") {
     content = `<section><h2>Browse every marketplace department</h2>${links(
       marketplaceTaxonomy.map((category) => ({
-        path: `/category/${category.slug}`,
+        path: categoryUrl(category),
         title: category.name,
         description: category.description,
       })),
     )}</section><section><h2>Popular products</h2>${links(
       g2aDemoProducts.map((product) => ({
-        path: `/product/${product.slug}`,
+        path: productUrl(product),
         title: product.title,
         description: product.description,
       })),
@@ -311,7 +301,7 @@ function pageBody(page) {
   } else if (page.path === "/") {
     content = `<section><h2>Explore games, software, subscriptions and gift cards</h2>${links(
       marketplaceTaxonomy.map((category) => ({
-        path: `/category/${category.slug}`,
+        path: categoryUrl(category),
         title: category.name,
         description: category.description,
       })),
@@ -341,7 +331,7 @@ function categoryStructuredData(page, canonical) {
       "@type": "ListItem",
       position: 2,
       name: root.name,
-      item: absolutePath(`/category/${root.slug}`),
+      item: absolutePath(categoryUrl(root)),
     });
   }
   breadcrumbItems.push({
@@ -365,7 +355,7 @@ function categoryStructuredData(page, canonical) {
         "@type": "ListItem",
         position: index + 1,
         name: product.title,
-        url: absolutePath(`/product/${product.slug}`),
+        url: absolutePath(productUrl(product)),
       })),
     },
     {
@@ -420,7 +410,7 @@ function productStructuredData(page, canonical) {
           "@type": "ListItem",
           position: 2,
           name: product.category,
-          item: absolutePath(`/category/${product.categorySlug}`),
+          item: absolutePath(categoryUrl(product.categorySlug)),
         },
         {
           "@type": "ListItem",

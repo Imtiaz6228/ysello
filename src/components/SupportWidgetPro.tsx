@@ -23,14 +23,33 @@ type Message = {
   quickActions?: string[];
 };
 
-type StoredGuestChat = {
-  sessionId: string;
-  guestToken: string;
-  name: string;
-  email: string;
-};
+const SUPPORT_VISITOR_KEY = "ysello-support-visitor";
 
-const guestChatStorageKey = "ysello-admin-support-chat-v1";
+function createVisitorId() {
+  if (typeof globalThis.crypto?.randomUUID === "function") {
+    return globalThis.crypto.randomUUID();
+  }
+
+  if (typeof globalThis.crypto?.getRandomValues === "function") {
+    const bytes = new Uint32Array(4);
+    globalThis.crypto.getRandomValues(bytes);
+    return Array.from(bytes, (value) => value.toString(36)).join("-");
+  }
+
+  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
+}
+
+function supportVisitorToken() {
+  try {
+    const existing = window.localStorage.getItem(SUPPORT_VISITOR_KEY);
+    if (existing) return existing;
+    const created = `${createVisitorId()}-${createVisitorId()}`;
+    window.localStorage.setItem(SUPPORT_VISITOR_KEY, created);
+    return created;
+  } catch {
+    return `${createVisitorId()}-${createVisitorId()}`;
+  }
+}
 
 export function SupportWidgetPro() {
   const { user } = useAuth();
@@ -39,24 +58,12 @@ export function SupportWidgetPro() {
   const [input, setInput] = useState("");
   const [typing, setTyping] = useState(false);
   const [sessionId, setSessionId] = useState<string | null>(null);
-  const [guestToken, setGuestToken] = useState("");
-  const [guestName, setGuestName] = useState("");
-  const [guestEmail, setGuestEmail] = useState("");
   const [handoffMessage, setHandoffMessage] = useState("");
+  const [visitorToken] = useState(supportVisitorToken);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const typingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const guestReplyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const dialogRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-
-  useEffect(
-    () => () => {
-      if (typingTimerRef.current) clearTimeout(typingTimerRef.current);
-      if (guestReplyTimerRef.current) clearTimeout(guestReplyTimerRef.current);
-    },
-    [],
-  );
 
   useEffect(() => {
     if (!open) return;
@@ -107,10 +114,13 @@ export function SupportWidgetPro() {
   }, [messages]);
 
   useEffect(() => {
-    if (!open || !user || sessionId) return;
+    if (!open || sessionId) return;
+    const query = user
+      ? ""
+      : `?visitorToken=${encodeURIComponent(visitorToken)}`;
     void apiRequest<{
       sessions: Array<{ id: string; status: string; messages: Message[] }>;
-    }>("/api/nexus/chat/sessions")
+    }>(`/api/nexus/support/sessions${query}`)
       .then((data) => {
         const latest = data.sessions[0];
         if (!latest) return;
@@ -118,186 +128,110 @@ export function SupportWidgetPro() {
         setMessages(latest.messages);
       })
       .catch(() => undefined);
-  }, [open, sessionId, user]);
+  }, [open, sessionId, user, visitorToken]);
 
   useEffect(() => {
-    if (!open || user || sessionId) return;
-    const raw = window.localStorage.getItem(guestChatStorageKey);
-    if (!raw) return;
-    try {
-      const stored = JSON.parse(raw) as StoredGuestChat;
-      if (!stored.sessionId || !/^[a-f0-9]{64}$/i.test(stored.guestToken)) {
-        window.localStorage.removeItem(guestChatStorageKey);
-        return;
-      }
-      setSessionId(stored.sessionId);
-      setGuestToken(stored.guestToken);
-      setGuestName(stored.name);
-      setGuestEmail(stored.email);
-      void apiRequest<{ session: { messages: Message[] } }>(
-        `/api/nexus/chat/guest/${stored.sessionId}`,
-        { headers: { "x-guest-chat-token": stored.guestToken } },
-        false,
-      )
-        .then((data) => setMessages(data.session.messages))
-        .catch(() => {
-          window.localStorage.removeItem(guestChatStorageKey);
-          setSessionId(null);
-          setGuestToken("");
-          setMessages([]);
-        });
-    } catch {
-      window.localStorage.removeItem(guestChatStorageKey);
-    }
-  }, [open, sessionId, user]);
-
-  useEffect(() => {
-    if (!open || !sessionId || (!user && !guestToken)) return;
+    if (!open || !sessionId) return;
     const refresh = async () => {
-      if (user) {
-        const data = await apiRequest<{
-          sessions: Array<{ id: string; messages: Message[] }>;
-        }>("/api/nexus/chat/sessions").catch(() => null);
-        const session = data?.sessions.find((item) => item.id === sessionId);
-        if (session) setMessages(session.messages);
-        return;
-      }
-      const data = await apiRequest<{ session: { messages: Message[] } }>(
-        `/api/nexus/chat/guest/${sessionId}`,
-        { headers: { "x-guest-chat-token": guestToken } },
-        false,
-      ).catch(() => null);
-      if (data) setMessages(data.session.messages);
+      const query = user
+        ? ""
+        : `?visitorToken=${encodeURIComponent(visitorToken)}`;
+      const data = await apiRequest<{
+        sessions: Array<{
+          id: string;
+          messages: Array<{
+            id: string;
+            role: "user" | "assistant" | "admin";
+            body: string;
+          }>;
+        }>;
+      }>(`/api/nexus/support/sessions${query}`).catch(() => null);
+      const session = data?.sessions.find((item) => item.id === sessionId);
+      if (session)
+        setMessages(
+          session.messages.map((item) => ({
+            id: item.id,
+            role: item.role,
+            body: item.body,
+          })),
+        );
     };
     void refresh();
-    const timer = window.setInterval(() => void refresh(), 4000);
+    const timer = window.setInterval(() => void refresh(), 5000);
     return () => window.clearInterval(timer);
-  }, [guestToken, open, sessionId, user]);
-
-  const debouncedTyping = useCallback(
-    (isTyping: boolean) => {
-      if (typingTimerRef.current) clearTimeout(typingTimerRef.current);
-      typingTimerRef.current = setTimeout(() => {
-        if (user && sessionId) {
-          void apiRequest("/api/nexus/live/typing", {
-            method: "POST",
-            body: { sessionId, isTyping },
-          }).catch(() => undefined);
-        }
-      }, 300);
-    },
-    [sessionId, user],
-  );
+  }, [open, sessionId, user, visitorToken]);
 
   const sendMessage = useCallback(
     async (text: string) => {
       if (!text.trim()) return;
-      if (
-        !user &&
-        !sessionId &&
-        (guestName.trim().length < 2 ||
-          !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(guestEmail.trim()))
-      ) {
-        setHandoffMessage(
-          "Enter your name and a valid email so the admin can identify your conversation.",
-        );
-        return;
-      }
+      const userMsg: Message = {
+        id: Date.now().toString(),
+        role: "user",
+        body: text,
+      };
+      setMessages((prev) => [...prev, userMsg]);
+      setInput("");
       setTyping(true);
-      setHandoffMessage("");
-      debouncedTyping(true);
 
       try {
-        let message: Message;
-        if (!user && sessionId && guestToken) {
-          const result = await apiRequest<{ message: Message }>(
-            `/api/nexus/chat/guest/${sessionId}/messages`,
-            {
-              method: "POST",
-              headers: { "x-guest-chat-token": guestToken },
-              body: { body: text.trim() },
+        if (sessionId) {
+          await apiRequest(`/api/nexus/support/${sessionId}/messages`, {
+            method: "POST",
+            body: {
+              body: text,
+              visitorToken: user ? undefined : visitorToken,
             },
-            false,
-          );
-          message = result.message;
-        } else if (!user) {
-          const result = await apiRequest<{
-            sessionId: string;
-            guestToken: string;
-            session: { messages: Message[] };
-          }>(
-            "/api/nexus/chat/guest",
-            {
-              method: "POST",
-              body: {
-                name: guestName.trim(),
-                email: guestEmail.trim(),
-                message: text.trim(),
-              },
-            },
-            false,
-          );
-          const stored: StoredGuestChat = {
-            sessionId: result.sessionId,
-            guestToken: result.guestToken,
-            name: guestName.trim(),
-            email: guestEmail.trim().toLowerCase(),
-          };
-          window.localStorage.setItem(
-            guestChatStorageKey,
-            JSON.stringify(stored),
-          );
-          setSessionId(result.sessionId);
-          setGuestToken(result.guestToken);
-          setMessages(result.session.messages);
-          message = result.session.messages[result.session.messages.length - 1];
-        } else if (sessionId) {
-          const result = await apiRequest<{ message: Message }>(
-            `/api/nexus/chat/${sessionId}/messages`,
-            {
-              method: "POST",
-              body: { body: text.trim() },
-            },
-          );
-          message = result.message;
+          });
         } else {
           const result = await apiRequest<{
-            sessionId: string;
-            chatMessage: Message;
-          }>("/api/nexus/chat/human", {
+            session: { id: string; messages: Message[] };
+            message: string;
+          }>("/api/nexus/support/start", {
             method: "POST",
-            body: { message: text.trim() },
+            body: {
+              message: text,
+              visitorToken: user ? undefined : visitorToken,
+            },
           });
-          setSessionId(result.sessionId);
-          message = result.chatMessage;
+          setSessionId(result.session.id);
+          setMessages(result.session.messages);
         }
-        if (!(!user && !sessionId)) {
-          setMessages((previous) => [...previous, message]);
-        }
-        setInput("");
-        setHandoffMessage(
-          "Sent to the admin inbox. Replies will appear here automatically.",
-        );
+        setHandoffMessage("Sent to the admin inbox.");
       } catch {
-        setHandoffMessage(
-          "Your message could not be sent. Check your connection and try again.",
-        );
+        const errMsg: Message = {
+          id: (Date.now() + 1).toString(),
+          role: "assistant",
+          body: "Your message could not reach the admin inbox. Please try once more.",
+        };
+        setMessages((prev) => [...prev, errMsg]);
       } finally {
         setTyping(false);
-        debouncedTyping(false);
       }
     },
-    [debouncedTyping, guestEmail, guestName, guestToken, sessionId, user],
+    [sessionId, user, visitorToken],
   );
 
-  const requestHuman = useCallback(() => {
-    setHandoffMessage(
-      sessionId
-        ? "Admin chat is active. Replies will appear here automatically."
-        : "Write a message below and it will go directly to an administrator.",
-    );
-    inputRef.current?.focus();
-  }, [sessionId]);
+  const requestHuman = useCallback(async () => {
+    try {
+      const result = await apiRequest<{
+        session: { id: string; messages: Message[] };
+      }>("/api/nexus/support/start", {
+        method: "POST",
+        body: {
+          sessionId: sessionId ?? undefined,
+          visitorToken: user ? undefined : visitorToken,
+          message: "I would like to chat with an administrator.",
+        },
+      });
+      setSessionId(result.session.id);
+      setMessages(result.session.messages);
+      setHandoffMessage(
+        "An administrator has been notified. Replies will appear here.",
+      );
+    } catch {
+      setHandoffMessage("Admin handoff could not start. Please try again.");
+    }
+  }, [sessionId, user, visitorToken]);
 
   const handleQuickAction = useCallback(
     (action: string) => {
@@ -390,10 +324,10 @@ export function SupportWidgetPro() {
               id="support-dialog-title"
               style={{ color: "#fafafa", fontSize: "14px" }}
             >
-              Admin support
+              Ysello admin support
             </strong>
             <div style={{ fontSize: "11px", color: "#34d399" }}>
-              ● Connected to the admin inbox
+              ● Secure admin conversation
             </div>
           </div>
         </div>
@@ -432,7 +366,7 @@ export function SupportWidgetPro() {
           disabled={Boolean(sessionId)}
         >
           <UserRoundCheck size={16} aria-hidden="true" />{" "}
-          {sessionId ? "Admin chat active" : "Messages go to an admin"}
+          {sessionId ? "Admin chat active" : "Start admin chat"}
         </button>
         {handoffMessage ? (
           <div className="admin-handoff-note" role="status">
@@ -461,10 +395,10 @@ export function SupportWidgetPro() {
                 marginBottom: "8px",
               }}
             >
-              Message an administrator
+              How can we help?
             </strong>{" "}
-            Ask about an order, selling, delivery, payments, deposits, or buyer
-            protection. You can continue here when an admin replies.
+            Send a message directly to the Ysello admin team. You can return
+            here to see the reply.
           </div>
         )}
         {messages.map((msg) => (
@@ -529,7 +463,7 @@ export function SupportWidgetPro() {
         {typing && (
           <div
             role="status"
-            aria-label="Sending message"
+            aria-label="Support is typing"
             style={{ display: "flex", gap: "4px", padding: "8px" }}
           >
             {[0, 1, 2].map((i) => (
@@ -559,66 +493,10 @@ export function SupportWidgetPro() {
           background: "#18181b",
           borderTop: "1px solid #27272a",
           display: "flex",
-          flexWrap: "wrap",
           gap: "8px",
           alignItems: "center",
         }}
       >
-        {!user && !sessionId ? (
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "1fr 1fr",
-              gap: "8px",
-              width: "100%",
-            }}
-          >
-            <label className="sr-only" htmlFor="support-guest-name">
-              Your name
-            </label>
-            <input
-              id="support-guest-name"
-              value={guestName}
-              onChange={(event) => setGuestName(event.target.value)}
-              placeholder="Your name"
-              autoComplete="name"
-              required
-              minLength={2}
-              maxLength={120}
-              style={{
-                minWidth: 0,
-                background: "#0A0A0B",
-                border: "1px solid #3f3f46",
-                borderRadius: "8px",
-                padding: "8px 10px",
-                color: "#fafafa",
-                fontSize: "13px",
-              }}
-            />
-            <label className="sr-only" htmlFor="support-guest-email">
-              Your email
-            </label>
-            <input
-              id="support-guest-email"
-              type="email"
-              value={guestEmail}
-              onChange={(event) => setGuestEmail(event.target.value)}
-              placeholder="Email address"
-              autoComplete="email"
-              required
-              maxLength={254}
-              style={{
-                minWidth: 0,
-                background: "#0A0A0B",
-                border: "1px solid #3f3f46",
-                borderRadius: "8px",
-                padding: "8px 10px",
-                color: "#fafafa",
-                fontSize: "13px",
-              }}
-            />
-          </div>
-        ) : null}
         <ShieldCheck size={17} color="#34d399" aria-hidden="true" />
         <label className="sr-only" htmlFor="support-message">
           Message to Ysello support
@@ -627,11 +505,8 @@ export function SupportWidgetPro() {
           ref={inputRef}
           id="support-message"
           value={input}
-          onChange={(e) => {
-            setInput(e.target.value);
-            debouncedTyping(true);
-          }}
-          placeholder="Write a message to an admin…"
+          onChange={(e) => setInput(e.target.value)}
+          placeholder="Write a message to admin…"
           style={{
             flex: 1,
             background: "#0A0A0B",

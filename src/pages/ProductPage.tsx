@@ -20,6 +20,10 @@ import {
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 import { useCart } from "../commerce/CartContext";
+import {
+  productCategoryPath,
+  productPath,
+} from "../commerce/marketplaceUrls";
 import { MarketFooter, MarketHeader } from "../components/MarketHeader";
 import { Seo } from "../components/Seo";
 import {
@@ -50,8 +54,7 @@ export function ProductPage() {
         .filter(
           (item) =>
             item.id !== product?.id &&
-            (item.categorySlug === product?.categorySlug ||
-              item.type === product?.type),
+            item.categorySlug === product?.categorySlug,
         )
         .slice(0, 4),
     [marketplaceProducts, product],
@@ -70,13 +73,13 @@ export function ProductPage() {
       "@type": "Product",
       name: product.title,
       description: product.description,
-      url: `https://ysello.com/product/${product.slug}`,
+      url: `https://ysello.com${productPath(product)}`,
       sku: product.sku || product.id,
       category: product.category,
       ...(product.imageUrl ? { image: [product.imageUrl] } : {}),
       offers: {
         "@type": "Offer",
-        url: `https://ysello.com/product/${product.slug}`,
+        url: `https://ysello.com${productPath(product)}`,
         price: (localizedOffer.cents / 100).toFixed(2),
         priceCurrency: localizedOffer.code,
         availability:
@@ -159,7 +162,7 @@ export function ProductPage() {
       <Seo
         title={`${t("buyOnline")} — ${product.title}`}
         description={`${product.description} ${t("productSeoSuffix")}`}
-        canonicalPath={`/product/${product.slug}`}
+        canonicalPath={productPath(product)}
         image={product.imageUrl ?? undefined}
         imageAlt={product.title}
         type="product"
@@ -181,13 +184,13 @@ export function ProductPage() {
                       "@type": "ListItem",
                       position: 2,
                       name: product.category,
-                      item: `https://ysello.com/category/${product.categorySlug}`,
+                      item: `https://ysello.com${productCategoryPath(product)}`,
                     },
                     {
                       "@type": "ListItem",
                       position: 3,
                       name: product.title,
-                      item: `https://ysello.com/product/${product.slug}`,
+                      item: `https://ysello.com${productPath(product)}`,
                     },
                   ],
                 },
@@ -199,7 +202,7 @@ export function ProductPage() {
       <div className="breadcrumbs">
         <Link to="/">Home</Link>
         <span aria-hidden="true">/</span>
-        <Link to={`/category/${product.categorySlug}`}>{product.category}</Link>
+        <Link to={productCategoryPath(product)}>{product.category}</Link>
         <span aria-hidden="true">/</span>
         <span aria-current="page">{product.title}</span>
       </div>
@@ -710,7 +713,7 @@ export function ProductPage() {
               <h2>Related products</h2>
               <p>More products with a similar category or delivery format.</p>
             </div>
-            <Link to={`/category/${product.categorySlug}`}>
+            <Link to={productCategoryPath(product)}>
               View category <ArrowLink />
             </Link>
           </div>

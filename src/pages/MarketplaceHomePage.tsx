@@ -25,6 +25,7 @@ import { FormEvent, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useCart } from "../commerce/CartContext";
 import { categoryMatches } from "../commerce/catalogHierarchy";
+import { categoryPath, productPath } from "../commerce/marketplaceUrls";
 import {
   useMarketplaceCategories,
   useMarketplaceProducts,
@@ -60,6 +61,23 @@ const categoryArt: Record<string, string> = {
   outlet: "/marketplace-assets/seller-growth.webp",
 };
 
+const socialAccountDepartment = marketplaceTaxonomy.find(
+  (category) => category.slug === "social-media",
+);
+
+const socialAccountPlatforms = (socialAccountDepartment?.subcategories ?? [])
+  .map((platform) => {
+    const accounts = platform.children?.find(
+      (child) => child.name === "Accounts",
+    );
+    return {
+      ...platform,
+      accounts,
+      accountTypes: accounts?.children ?? [],
+    };
+  })
+  .filter((platform) => platform.accounts);
+
 const serviceHighlights = [
   "Brand identity",
   "Website setup",
@@ -90,7 +108,7 @@ const faqs = [
   {
     question: "What can sellers upload?",
     answer:
-      "Ysello supports legitimate digital downloads and well-scoped professional services. Accounts, credentials, unauthorized keys, fake engagement and other prohibited products are not allowed.",
+      "Ysello supports digital products, professional services and transferable social-media accounts. Account listings must accurately disclose platform, age, followers, posting history and delivery terms; stolen access and fake engagement are prohibited.",
   },
   {
     question: "Where do I get help with an order?",
@@ -279,7 +297,7 @@ function FeaturedProductCard({
     <article className="reference-featured-product-card">
       <div className="reference-featured-product-media">
         <span>{stockLabel}</span>
-        <Link to={`/product/${product.slug}`} aria-label={product.title}>
+        <Link to={productPath(product)} aria-label={product.title}>
           {product.imageUrl ? (
             <img
               src={product.imageUrl}
@@ -295,10 +313,10 @@ function FeaturedProductCard({
         </Link>
       </div>
       <div className="reference-featured-product-copy">
-        <Link to={`/product/${product.slug}`}>{product.title}</Link>
+        <Link to={productPath(product)}>{product.title}</Link>
         <strong>{formatProductMoney(product)}</strong>
         <footer>
-          <Link to={`/product/${product.slug}`}>
+          <Link to={productPath(product)}>
             <Eye aria-hidden="true" /> View
           </Link>
           <button
@@ -416,18 +434,6 @@ export function MarketplaceHomePage() {
     [categories, newArrivals, products],
   );
 
-  const mobileHighlights = useMemo(() => {
-    const preferredSlugs = [
-      "halo-infinite-campaign-pc",
-      "steam-wallet-20",
-      "razer-gold-10",
-    ];
-    const preferred = preferredSlugs
-      .map((slug) => products.find((product) => product.slug === slug))
-      .filter((product): product is CatalogProduct => Boolean(product));
-    return mergeProductPicks(preferred, bestSellers, 3);
-  }, [bestSellers, products]);
-
   const bundleProducts = bestSellers.slice(0, 3);
   const bundleTotal = bundleProducts.reduce(
     (total, product) => total + product.priceCents,
@@ -492,42 +498,41 @@ export function MarketplaceHomePage() {
       <MarketHeader />
 
       <section
-        className="g2-mobile-feature-stack"
-        aria-label="Marketplace bestsellers"
+        className="g2-mobile-first-impression"
+        aria-label="Social media account marketplace"
       >
-        {mobileHighlights.map((product) => {
-          const platform =
-            typeof product.facts?.platform === "string"
-              ? product.facts.platform
-              : product.type === "SERVICE"
-                ? "Seller service"
-                : "Digital product";
-          const region =
-            typeof product.facts?.region === "string"
-              ? product.facts.region
-              : "GLOBAL";
-          return (
-            <Link key={product.id} to={`/product/${product.slug}`}>
-              {product.imageUrl ? (
-                <img
-                  src={product.imageUrl}
-                  alt=""
-                  loading="lazy"
-                  decoding="async"
-                  width="640"
-                  height="480"
-                />
-              ) : null}
+        <header>
+          <span>
+            <ShieldCheck aria-hidden="true" />
+          </span>
+          <div>
+            <strong>Browse account inventory with confidence</strong>
+            <small>
+              Choose a platform, then compare new or old accounts with clear
+              follower and posting history.
+            </small>
+          </div>
+          <Link
+            to={categoryPath("social-media", categories)}
+            aria-label="Browse all social media accounts"
+          >
+            <ArrowRight aria-hidden="true" />
+          </Link>
+        </header>
+        <div>
+          {socialAccountPlatforms.slice(0, 4).map((platform) => (
+            <Link
+              key={platform.slug}
+              to={categoryPath(platform.slug, categories)}
+            >
+              <b>{platform.name.slice(0, 2).toUpperCase()}</b>
               <span>
-                <strong>{product.title}</strong>
-                <small>
-                  {platform} · {product.type === "SERVICE" ? "Service" : "Key"}{" "}
-                  · {region}
-                </small>
+                <strong>{platform.name}</strong>
+                <small>New · Old · Followers · Posts</small>
               </span>
             </Link>
-          );
-        })}
+          ))}
+        </div>
       </section>
 
       <section
@@ -571,7 +576,7 @@ export function MarketplaceHomePage() {
             return (
               <Link
                 key={category.slug}
-                to={`/category/${category.slug}`}
+                to={categoryPath(category.slug, categories)}
                 className={`market-category-card tone-${category.accent}`}
                 onFocus={() => setFocusedCategorySlug(category.slug)}
                 onMouseEnter={() => setFocusedCategorySlug(category.slug)}
@@ -596,34 +601,43 @@ export function MarketplaceHomePage() {
         >
           <strong>{focusedCategory.name}</strong>
           {focusedCategory.subcategories.slice(0, 8).map((subcategory) => (
-            <Link key={subcategory.slug} to={`/category/${subcategory.slug}`}>
+            <Link
+              key={subcategory.slug}
+              to={categoryPath(subcategory.slug, categories)}
+            >
               {subcategory.name}
             </Link>
           ))}
-          {focusedCategory.slug === "social-media"
-            ? focusedCategory.subcategories
-                .flatMap((platform) =>
-                  (platform.children ?? [])
-                    .filter((item) => item.name === "Accounts")
-                    .map((item) => ({
-                      ...item,
-                      label: `${platform.name} Accounts`,
-                    })),
-                )
-                .slice(0, 10)
-                .map((account) => (
-                  <Link
-                    key={account.slug}
-                    to={`/category/${account.slug}`}
-                    className="social-account-category-link"
-                  >
-                    {account.label}
-                  </Link>
-                ))
-            : null}
-          <Link to={`/category/${focusedCategory.slug}`}>
+          <Link to={categoryPath(focusedCategory.slug, categories)}>
             {t("viewAll")} <ArrowRight aria-hidden="true" />
           </Link>
+        </div>
+      </section>
+
+      <section className="market-home-section g2-home-section social-account-showcase">
+        <SectionHeading
+          title="Social Media Accounts"
+          text="Choose the platform first, then browse accounts by age, followers or posting history."
+          href={categoryPath("social-media", categories)}
+          action="View all accounts"
+        />
+        <div className="social-account-platform-grid">
+          {socialAccountPlatforms.map((platform) => (
+            <Link
+              key={platform.slug}
+              to={categoryPath(platform.slug, categories)}
+            >
+              <span>{platform.name.slice(0, 2).toUpperCase()}</span>
+              <div>
+                <strong>{platform.name}</strong>
+                <small>Accounts</small>
+                <p>
+                  {platform.accountTypes.map((type) => type.name).join(" · ")}
+                </p>
+              </div>
+              <ArrowRight aria-hidden="true" />
+            </Link>
+          ))}
         </div>
       </section>
 
@@ -684,7 +698,7 @@ export function MarketplaceHomePage() {
               {bundleProducts.map((product, index) => (
                 <div key={product.id} className="g2-bundle-item">
                   {index ? <b aria-hidden="true">+</b> : null}
-                  <Link to={`/product/${product.slug}`}>
+                  <Link to={productPath(product)}>
                     <span>
                       {product.imageUrl ? (
                         <img
@@ -750,7 +764,10 @@ export function MarketplaceHomePage() {
         />
         <div className="g2-category-art-grid">
           {marketplaceTaxonomy.slice(0, 4).map((category) => (
-            <Link key={category.slug} to={`/category/${category.slug}`}>
+            <Link
+              key={category.slug}
+              to={categoryPath(category.slug, categories)}
+            >
               <span>
                 <img
                   src={categoryArt[category.slug]}
@@ -800,7 +817,7 @@ export function MarketplaceHomePage() {
         <SectionHeading
           title="Creative studio picks"
           text="Design systems, web assets, motion packs and creator resources."
-          href="/category/creative-software"
+          href="/category/software/creative-software"
         />
         <ProductRail
           products={creativePicks.slice(0, 6)}

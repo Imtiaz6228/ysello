@@ -573,11 +573,31 @@ export function SellerStudioPage() {
     selectedCategoryId,
     categories,
   );
-  const selectedPath =
-    selectedCategory?.path.map((category) => category.name) ?? [];
+  const selectedCategoryPath = selectedCategory?.path ?? [];
+  const selectedPath = selectedCategoryPath.map((category) => category.name);
   const selectedRoot = categories.find(
     (category) => category.id === form.categoryPathIds[0],
   );
+  const isSocialAccountListing = selectedRoot?.slug === "social-media";
+  const socialAccountPlatform = isSocialAccountListing
+    ? (selectedCategoryPath[1]?.name ?? "")
+    : "";
+  const socialAccountType = isSocialAccountListing
+    ? (selectedCategoryPath[selectedCategoryPath.length - 1]?.name ?? "")
+    : "";
+  const resolvedPlatform = isSocialAccountListing
+    ? socialAccountPlatform
+    : form.platform.trim();
+  const resolvedProductKind = isSocialAccountListing
+    ? "Social media account"
+    : form.productKind.trim();
+  const resolvedCondition = isSocialAccountListing
+    ? socialAccountType === "New accounts"
+      ? "New"
+      : socialAccountType === "Old accounts"
+        ? "Old"
+        : socialAccountType
+    : form.condition.trim();
   const dynamicAttributes = selectedRoot?.slug
     ? (catalogAttributePresets[selectedRoot.slug] ?? [])
     : [];
@@ -1080,14 +1100,14 @@ export function SellerStudioPage() {
     data.append("buyersGetUpdates", String(form.buyersGetUpdates));
     data.append("inventoryLines", form.inventoryLines.trim());
     data.append("brand", form.brand.trim());
-    data.append("platform", form.platform.trim());
+    data.append("platform", resolvedPlatform);
     data.append("region", form.region.trim());
     data.append("country", form.country.trim());
     data.append("server", form.server.trim());
     data.append("language", form.language.trim());
     data.append("deliveryMethod", form.deliveryMethod.trim());
-    data.append("productKind", form.productKind.trim());
-    data.append("condition", form.condition.trim());
+    data.append("productKind", resolvedProductKind);
+    data.append("condition", resolvedCondition);
     data.append("stockType", form.stockType.trim());
     data.append("duration", form.duration.trim());
     data.append("warranty", form.warranty.trim());
@@ -1114,12 +1134,18 @@ export function SellerStudioPage() {
       marketplaceCategorySlug: selectedCategory.slug,
       marketplaceCategoryName: selectedCategory.name,
       marketplaceCategoryPath: selectedCategory.pathLabel,
+      ...(isSocialAccountListing
+        ? {
+            socialAccountPlatform,
+            socialAccountType,
+          }
+        : {}),
     };
     data.append("productAttributes", JSON.stringify(productAttributes));
     const seoTitle = [
       `Buy ${form.name.trim()}`,
-      form.platform.trim(),
-      form.productKind.trim(),
+      resolvedPlatform,
+      resolvedProductKind,
       form.region.trim(),
     ]
       .filter(Boolean)
@@ -4238,8 +4264,8 @@ export function SellerStudioPage() {
             <span className="section-index">NEW PRODUCT</span>
             <h2>Create a smooth, buyer-friendly listing.</h2>
             <p className="modal-helper">
-              Follow the path from market category to platform and then listing
-              type.
+              Choose each catalog detail once. Social account listings follow
+              Category → Platform → Accounts → Account type.
             </p>
             <div className="seller-flow-steps">
               <span className={form.categoryPathIds[0] ? "done" : "active"}>
@@ -4247,20 +4273,21 @@ export function SellerStudioPage() {
               </span>
               <span
                 className={
-                  form.categoryPathIds[1]
+                  form.categoryPathIds[1] &&
+                  !categoryLevels[form.categoryPathIds.length]?.length
                     ? "done"
                     : form.categoryPathIds[0]
                       ? "active"
                       : ""
                 }
               >
-                <b>2</b>Subcategory
+                <b>2</b>Platform & type
               </span>
               <span
                 className={
                   selectedCategoryId &&
                   !categoryLevels[form.categoryPathIds.length]?.length
-                    ? "done"
+                    ? "active"
                     : ""
                 }
               >
@@ -4305,13 +4332,23 @@ export function SellerStudioPage() {
                   >
                     <span>
                       {depth + 1}.{" "}
-                      {depth === 0
-                        ? "Main category"
-                        : depth === 1
-                          ? "Subcategory"
-                          : depth === 2
-                            ? "Product / game"
-                            : `Level ${depth + 1}`}
+                      {isSocialAccountListing
+                        ? depth === 0
+                          ? "Marketplace category"
+                          : depth === 1
+                            ? "Platform"
+                            : depth === 2
+                              ? "Product"
+                              : depth === 3
+                                ? "Account type"
+                                : `Level ${depth + 1}`
+                        : depth === 0
+                          ? "Main category"
+                          : depth === 1
+                            ? "Subcategory"
+                            : depth === 2
+                              ? "Product / game"
+                              : `Level ${depth + 1}`}
                     </span>
                     <select
                       required
@@ -4339,6 +4376,30 @@ export function SellerStudioPage() {
                 ))}
               </div>
             </section>
+            {isSocialAccountListing &&
+            socialAccountPlatform &&
+            socialAccountType &&
+            !categoryLevels[form.categoryPathIds.length]?.length ? (
+              <section className="seller-derived-account-summary">
+                <div>
+                  <CheckCircle2 aria-hidden="true" />
+                  <span>
+                    <strong>Account details set from the category path</strong>
+                    <small>
+                      You will not be asked for platform or account type again.
+                    </small>
+                  </span>
+                </div>
+                <p>
+                  <span>Platform</span>
+                  <b>{socialAccountPlatform}</b>
+                  <span>Product</span>
+                  <b>Account</b>
+                  <span>Account type</span>
+                  <b>{socialAccountType}</b>
+                </p>
+              </section>
+            ) : null}
             {dynamicAttributes.length ? (
               <section className="seller-auto-attributes">
                 <header>
@@ -4898,17 +4959,25 @@ export function SellerStudioPage() {
                           ["duration", "Duration"],
                           ["warranty", "Warranty"],
                         ] as const
-                      ).map(([key, label]) => (
-                        <label key={key}>
-                          <span>{label}</span>
-                          <input
-                            value={form[key]}
-                            onChange={(event) =>
-                              setForm({ ...form, [key]: event.target.value })
-                            }
-                          />
-                        </label>
-                      ))}
+                      )
+                        .filter(
+                          ([key]) =>
+                            !isSocialAccountListing ||
+                            (key !== "platform" &&
+                              key !== "productKind" &&
+                              key !== "condition"),
+                        )
+                        .map(([key, label]) => (
+                          <label key={key}>
+                            <span>{label}</span>
+                            <input
+                              value={form[key]}
+                              onChange={(event) =>
+                                setForm({ ...form, [key]: event.target.value })
+                              }
+                            />
+                          </label>
+                        ))}
                     </div>
                   </section>
                   <section>

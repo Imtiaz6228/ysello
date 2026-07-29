@@ -133,8 +133,8 @@ type AdminUser = {
 type Product = {
   id: string;
   name: string;
-  isOfficial?: boolean;
   status: string;
+  isOfficial?: boolean;
   priceCents: number;
   priceUsdCents?: number;
   priceCnyCents?: number;
@@ -181,8 +181,6 @@ type Order = {
 type Deposit = {
   id: string;
   amountCents: number;
-  networkFeeCents?: number;
-  totalPayableCents?: number;
   method: string;
   status: string;
   reference?: string | null;
@@ -324,23 +322,23 @@ type ChatSession = {
   }>;
 };
 
-function chatParticipantName(session: ChatSession) {
+function chatDisplayName(session: ChatSession) {
   if (session.user) {
-    return `${session.user.firstName} ${session.user.lastName}`.trim();
+    return (
+      `${session.user.firstName} ${session.user.lastName}`.trim() ||
+      session.user.email
+    );
   }
-  return session.guestName?.trim() || "Guest visitor";
+  return session.guestName?.trim() || "Website visitor";
 }
 
-function chatParticipantEmail(session: ChatSession) {
-  return session.user?.email ?? session.guestEmail ?? "No email supplied";
-}
-
-function chatParticipantInitials(session: ChatSession) {
-  return chatParticipantName(session)
+function chatInitials(session: ChatSession) {
+  return chatDisplayName(session)
     .split(/\s+/)
+    .map((part) => part[0])
+    .join("")
     .slice(0, 2)
-    .map((part) => part[0]?.toUpperCase())
-    .join("");
+    .toUpperCase();
 }
 type AdminSearchResult = {
   id: string;
@@ -503,6 +501,7 @@ export function OperationsAdminPage() {
   const [categoryCreating, setCategoryCreating] = useState(false);
   const [productCreatorOpen, setProductCreatorOpen] = useState(false);
   const [productStatusFilter, setProductStatusFilter] = useState("PENDING");
+  const [productCategoryFilter, setProductCategoryFilter] = useState("");
   const [productCreating, setProductCreating] = useState(false);
   const [adminCoverImage, setAdminCoverImage] = useState<File | null>(null);
   const [adminCoverPreview, setAdminCoverPreview] = useState("");
@@ -676,13 +675,12 @@ export function OperationsAdminPage() {
 
   useEffect(() => {
     if (tab !== "chats") return;
-    const refreshChats = () => {
+    const refreshChats = () =>
       void apiRequest<{ sessions: ChatSession[] }>("/api/nexus/admin/chats")
         .then((data) => setChatSessions(data.sessions))
         .catch(() => undefined);
-    };
-    const timer = window.setInterval(refreshChats, 4000);
-    return () => window.clearInterval(timer);
+    const interval = window.setInterval(refreshChats, 5000);
+    return () => window.clearInterval(interval);
   }, [tab]);
 
   useEffect(() => {
@@ -847,10 +845,25 @@ export function OperationsAdminPage() {
     (overview?.pendingDeposits ?? 0) +
     (overview?.pendingWithdrawals ?? 0) +
     (overview?.openTickets ?? 0);
-  const visibleAdminProducts =
-    productStatusFilter === "ALL"
-      ? products
-      : products.filter((product) => product.status === productStatusFilter);
+  const productBelongsToCategory = useCallback(
+    (product: Product, categoryId: string) =>
+      !categoryId ||
+      [
+        product.category.id,
+        product.category.parent?.id,
+        product.category.parent?.parent?.id,
+      ].includes(categoryId),
+    [],
+  );
+  const visibleAdminProducts = products.filter(
+    (product) =>
+      (productStatusFilter === "ALL" ||
+        product.status === productStatusFilter) &&
+      productBelongsToCategory(product, productCategoryFilter),
+  );
+  const selectedCategoryProducts = products.filter((product) =>
+    productBelongsToCategory(product, adminSelectedCategoryId),
+  );
 
   async function createAdminProduct(event: FormEvent) {
     event.preventDefault();
@@ -1475,6 +1488,23 @@ export function OperationsAdminPage() {
                   </span>
                 </button>
               ))}
+              <label>
+                <span className="sr-only">Filter products by category</span>
+                <select
+                  value={productCategoryFilter}
+                  onChange={(event) =>
+                    setProductCategoryFilter(event.target.value)
+                  }
+                >
+                  <option value="">Every category</option>
+                  {categories.map((category) => (
+                    <option value={category.id} key={category.id}>
+                      {"—".repeat(categoryLevel(category, categories))}{" "}
+                      {category.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
             </div>
             <section className="admin-product-grid">
               {visibleAdminProducts.length ? (
@@ -1489,6 +1519,9 @@ export function OperationsAdminPage() {
                     <div className="admin-product-copy">
                       <div>
                         <Status value={product.status} />
+                        {product.isOfficial ? (
+                          <span className="status-pill approved">OFFICIAL</span>
+                        ) : null}
                         <small>{product.type ?? "DIGITAL"}</small>
                       </div>
                       <h3>{product.name}</h3>
@@ -1503,10 +1536,8 @@ export function OperationsAdminPage() {
                         · {money(product.priceUsdCents ?? product.priceCents)}
                       </p>
                       <small>
-                        {product.isOfficial
-                          ? "Ysello Official"
-                          : (product.seller.sellerProfile?.storeName ??
-                            product.seller.username)}{" "}
+                        {product.seller.sellerProfile?.storeName ??
+                          product.seller.username}{" "}
                         · {product.seller.email}
                       </small>
                       <small>
@@ -1690,14 +1721,6 @@ export function OperationsAdminPage() {
                   <small>
                     {deposit.method.replaceAll("_", " ")} ·{" "}
                     {deposit.reference ?? "No reference"}
-                  </small>
-                  <small>
-                    Buyer-paid fee estimate:{" "}
-                    {money(deposit.networkFeeCents ?? 0)} · estimated total:{" "}
-                    {money(
-                      deposit.totalPayableCents ??
-                        deposit.amountCents + (deposit.networkFeeCents ?? 0),
-                    )}
                   </small>
                   <small>TXID: {deposit.txHash ?? "Proof not submitted"}</small>
                   <small>{new Date(deposit.createdAt).toLocaleString()}</small>
@@ -2024,10 +2047,10 @@ export function OperationsAdminPage() {
                       onClick={() => setActiveChatId(session.id)}
                     >
                       <span className="chat-user-avatar">
-                        {chatParticipantInitials(session)}
+                        {chatInitials(session)}
                       </span>
                       <span>
-                        <strong>{chatParticipantName(session)}</strong>
+                        <strong>{chatDisplayName(session)}</strong>
                         <small>
                           {session.messages[session.messages.length - 1]
                             ?.body ?? "No messages"}
@@ -2043,15 +2066,14 @@ export function OperationsAdminPage() {
                     <article className="admin-chat-focus" key={session.id}>
                       <header>
                         <div className="chat-user-avatar">
-                          {chatParticipantInitials(session)}
+                          {chatInitials(session)}
                         </div>
                         <div>
-                          <strong>{chatParticipantName(session)}</strong>
+                          <strong>{chatDisplayName(session)}</strong>
                           <small>
-                            {chatParticipantEmail(session)} ·{" "}
                             {session.user
-                              ? session.user.role.toLowerCase()
-                              : "guest"}
+                              ? `${session.user.email} · ${session.user.role.toLowerCase()}`
+                              : `${session.guestEmail ?? "Anonymous visitor"} · guest`}
                           </small>
                         </div>
                         <Status value={session.status} />
@@ -2067,7 +2089,7 @@ export function OperationsAdminPage() {
                                 ? "Admin"
                                 : entry.role === "assistant"
                                   ? "AI assistant"
-                                  : chatParticipantName(session)}
+                                  : chatDisplayName(session)}
                             </small>
                             <p>{entry.body}</p>
                           </div>
@@ -2080,7 +2102,7 @@ export function OperationsAdminPage() {
                         <textarea
                           value={chatReply}
                           onChange={(event) => setChatReply(event.target.value)}
-                          placeholder={`Reply to ${chatParticipantName(session)}…`}
+                          placeholder={`Reply to ${chatDisplayName(session)}…`}
                           rows={3}
                         />
                         <button
@@ -2476,6 +2498,31 @@ export function OperationsAdminPage() {
                 </label>
               </div>
             </section>
+            {adminSelectedCategoryId ? (
+              <section className="admin-existing-category-products">
+                <header>
+                  <strong>Already added in this category</strong>
+                  <span>{selectedCategoryProducts.length} products</span>
+                </header>
+                {selectedCategoryProducts.length ? (
+                  <div>
+                    {selectedCategoryProducts.slice(0, 8).map((product) => (
+                      <article key={product.id}>
+                        <span>{product.name}</span>
+                        <small>
+                          {product.isOfficial ? "Official" : "Seller"} ·{" "}
+                          {product.status.toLowerCase()}
+                        </small>
+                      </article>
+                    ))}
+                  </div>
+                ) : (
+                  <p>
+                    No products have been added to this selected category yet.
+                  </p>
+                )}
+              </section>
+            ) : null}
             <div className="form-grid two">
               <label>
                 <span>Product title</span>

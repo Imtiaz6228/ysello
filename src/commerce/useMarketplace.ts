@@ -10,6 +10,7 @@ import { g2aDemoProducts } from "../data/g2aDemoCatalog";
 import { useLocale } from "../i18n/LocaleContext";
 import {
   marketplaceTaxonomy,
+  retiredSocialMediaCategorySlugs,
   type MarketplaceTaxonomyNode,
 } from "../data/marketplaceTaxonomy";
 
@@ -42,8 +43,8 @@ type ApiProduct = {
   averageRating: number | string;
   reviewCount: number;
   salesCount: number;
-  isOfficial?: boolean;
   deliveryNote?: string | null;
+  isOfficial?: boolean;
   coverImageUrl?: string | null;
   category: {
     name: string;
@@ -112,7 +113,11 @@ const localProducts = [
       product,
     ]),
   ).values(),
-];
+].filter(
+  (product) =>
+    !retiredSocialMediaCategorySlugs.has(product.categorySlug) &&
+    !product.category.toLowerCase().startsWith("social media /"),
+);
 
 function flattenTaxonomyBranch(
   nodes: MarketplaceTaxonomyNode[],
@@ -211,6 +216,7 @@ function mergeWithLocalCategories(remoteCategories: CatalogCategory[]) {
 }
 
 function badgeFor(product: ApiProduct) {
+  if (product.isOfficial) return "Official";
   if (product.salesCount > 500) return "Popular";
   if (product.salesCount > 100) return "Bundle";
   if (product.type === "SERVICE") return "Service";
@@ -245,6 +251,18 @@ function mapProduct(
         ]
           .filter(Boolean)
           .join(" / ");
+  const categoryPathSlugs = [
+    product.category.parent?.parent?.slug,
+    product.category.parent?.slug,
+    product.category.slug,
+  ].filter((slug): slug is string => Boolean(slug));
+  const compactCategoryPathSlugs = [
+    categoryPathSlugs[0],
+    categoryPathSlugs[categoryPathSlugs.length - 1],
+  ].filter(
+    (slug, index, slugs): slug is string =>
+      Boolean(slug) && slugs.indexOf(slug) === index,
+  );
   return {
     id: product.id,
     slug: product.slug,
@@ -253,11 +271,11 @@ function mapProduct(
     title: translation?.title ?? translation?.name ?? product.name,
     description: translation?.shortDescription ?? product.shortDescription,
     longDescription: translation?.description ?? product.description,
-    seller: product.isOfficial
-      ? "Ysello Official"
-      : (product.seller.sellerProfile?.storeName ?? "Marketplace seller"),
+    seller: product.seller.sellerProfile?.storeName ?? "Marketplace seller",
     sellerSlug: product.seller.sellerProfile?.slug ?? "",
-    isOfficial: Boolean(product.isOfficial),
+    isOfficial: product.isOfficial,
+    categoryPathSlugs: compactCategoryPathSlugs,
+    seoPath: `/product/${[...compactCategoryPathSlugs, product.slug].join("/")}`,
     priceCents:
       product.salePriceCents && product.salePriceCents > 0
         ? Math.min(product.priceCents, product.salePriceCents)
@@ -359,15 +377,12 @@ function mapCategories(categories: ApiCategory[]): CatalogCategory[] {
     );
 }
 
-export function useMarketplaceProducts(categorySlug?: string) {
+export function useMarketplaceProducts() {
   const { locale } = useLocale();
   const [products, setProducts] = useState<CatalogProduct[]>(localProducts);
   useEffect(() => {
-    const categoryQuery = categorySlug
-      ? `&category=${encodeURIComponent(categorySlug)}`
-      : "";
     void apiRequest<{ products: ApiProduct[] }>(
-      `/api/marketplace/products?take=500&sort=newest${categoryQuery}`,
+      "/api/marketplace/products?take=500&sort=newest",
     )
       .then((data) => {
         const remoteProducts = data.products.map((product, index) =>
@@ -379,7 +394,7 @@ export function useMarketplaceProducts(categorySlug?: string) {
         setProducts(remoteProducts);
       })
       .catch(() => undefined);
-  }, [categorySlug, locale]);
+  }, [locale]);
   return products;
 }
 
