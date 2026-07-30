@@ -66,8 +66,80 @@ const socialAccountPlatforms = (socialAccountDepartment?.subcategories ?? [])
   })
   .filter((platform) => platform.accounts);
 
-// The former g2-mobile-first-impression social-account block was intentionally
-// removed so mobile visitors move directly from search into category discovery.
+const commercePlatforms = [
+  {
+    slug: "steam",
+    name: "Steam",
+    categorySlug: "steam-games",
+    detail: "PC games & keys",
+  },
+  {
+    slug: "xbox",
+    name: "Xbox",
+    categorySlug: "xbox-live-games",
+    detail: "Games, passes & credit",
+  },
+  {
+    slug: "playstation",
+    name: "PlayStation",
+    categorySlug: "playstation-games",
+    detail: "Games, Plus & PSN",
+  },
+  {
+    slug: "epic-games",
+    name: "Epic Games",
+    categorySlug: "epic-games",
+    detail: "PC games & add-ons",
+  },
+  {
+    slug: "ea",
+    name: "EA App",
+    categorySlug: "ea-app-games",
+    detail: "EA games & FC points",
+  },
+  {
+    slug: "gog",
+    name: "GOG",
+    categorySlug: "gog-games",
+    detail: "DRM-free PC games",
+  },
+  {
+    slug: "ubisoft",
+    name: "Ubisoft",
+    categorySlug: "ubisoft-connect-games",
+    detail: "Ubisoft Connect",
+  },
+  {
+    slug: "battle-net",
+    name: "Battle.net",
+    categorySlug: "battle-net-games",
+    detail: "Blizzard games & credit",
+  },
+  {
+    slug: "windows",
+    name: "Windows",
+    categorySlug: "windows-11",
+    detail: "Operating systems",
+  },
+  {
+    slug: "apple",
+    name: "Apple",
+    categorySlug: "apple-gift-cards",
+    detail: "Gift cards & services",
+  },
+  {
+    slug: "android",
+    name: "Android",
+    categorySlug: "android-gaming",
+    detail: "Mobile games & apps",
+  },
+  {
+    slug: "discord",
+    name: "Discord",
+    categorySlug: "discord",
+    detail: "Nitro & communities",
+  },
+] as const;
 
 const serviceHighlights = [
   "Brand identity",
@@ -115,6 +187,18 @@ function salesNumber(product: CatalogProduct) {
   if (value.endsWith("k")) return parsed * 1_000;
   if (value.endsWith("m")) return parsed * 1_000_000;
   return parsed;
+}
+
+function discountPercent(product: CatalogProduct) {
+  if (
+    !product.originalPriceCents ||
+    product.originalPriceCents <= product.priceCents
+  ) {
+    return 0;
+  }
+  return Math.round(
+    (1 - product.priceCents / product.originalPriceCents) * 100,
+  );
 }
 
 function categoryCount(
@@ -333,6 +417,19 @@ export function MarketplaceHomePage() {
     [bestSellers, newArrivals],
   );
 
+  const topGainers = useMemo(
+    () =>
+      [...products]
+        .filter((product) => discountPercent(product) > 0)
+        .sort(
+          (a, b) =>
+            discountPercent(b) - discountPercent(a) ||
+            salesNumber(b) - salesNumber(a),
+        )
+        .slice(0, 6),
+    [products],
+  );
+
   const services = useMemo(
     () => products.filter((product) => product.type === "SERVICE").slice(0, 12),
     [products],
@@ -476,9 +573,16 @@ export function MarketplaceHomePage() {
       </section>
 
       <section
-        className="market-home-section g2-category-dock-section"
+        className="market-home-section g2-category-dock-section g2-mobile-first-impression"
         id="categories"
       >
+        <div className="g2-category-mobile-heading">
+          <span>
+            <strong>Browse categories</strong>
+            <small>Official departments, one tap away</small>
+          </span>
+          <Link to="/catalog">See all</Link>
+        </div>
         <div className="market-category-grid lux-quick-categories lux-main-category-row homepage-category-icons g2-category-dock">
           {marketplaceTaxonomy.map((category) => {
             const count = categoryCount(category, categories);
@@ -525,6 +629,31 @@ export function MarketplaceHomePage() {
         </div>
       </section>
 
+      <section className="market-home-section g2-home-section marketplace-platform-showcase">
+        <SectionHeading
+          title="Shop by platform"
+          text="Go straight to the storefront, device or network you already use."
+          href="/catalog"
+          action="Explore all"
+        />
+        <div className="marketplace-platform-grid">
+          {commercePlatforms.map((platform) => (
+            <Link
+              key={platform.slug}
+              to={categoryPath(platform.categorySlug, categories)}
+            >
+              <span
+                className={`marketplace-platform-logo brand-${platform.slug}`}
+              >
+                <MarketplacePlatformIcon slug={platform.slug} />
+              </span>
+              <strong>{platform.name}</strong>
+              <small>{platform.detail}</small>
+            </Link>
+          ))}
+        </div>
+      </section>
+
       <section className="market-home-section g2-home-section social-account-showcase">
         <SectionHeading
           title="Social Media Accounts"
@@ -550,23 +679,6 @@ export function MarketplaceHomePage() {
               </div>
               <ArrowRight aria-hidden="true" />
             </Link>
-          ))}
-        </div>
-      </section>
-
-      <section
-        className="market-home-section g2-home-section reference-top-stores"
-        id="top-stores"
-      >
-        <SectionHeading
-          title="Top Stores"
-          text="Shop verified storefronts with clear delivery and protected order support."
-          href="/catalog?sort=popular"
-          action="Browse marketplace"
-        />
-        <div className="reference-store-grid">
-          {featuredStores.slice(0, 12).map((store) => (
-            <TopStoreCard key={store.slug} store={store} />
           ))}
         </div>
       </section>
@@ -598,6 +710,37 @@ export function MarketplaceHomePage() {
             <Link to="/catalog">Browse marketplace</Link>
           </div>
         )}
+      </section>
+
+      <section className="market-home-section g2-home-section top-gainers-section">
+        <SectionHeading
+          title="Top Gainers"
+          text="Fast-rising offers with the strongest current savings."
+          href="/catalog?sort=popular"
+          action="See trending deals"
+        />
+        <ProductRail
+          products={topGainers}
+          emptyTitle="Top deals are being refreshed."
+          onBuy={buy}
+        />
+      </section>
+
+      <section
+        className="market-home-section g2-home-section reference-top-stores"
+        id="top-stores"
+      >
+        <SectionHeading
+          title="Top Stores"
+          text="Shop verified storefronts with clear delivery and protected order support."
+          href="/catalog?sort=popular"
+          action="Browse marketplace"
+        />
+        <div className="reference-store-grid">
+          {featuredStores.slice(0, 12).map((store) => (
+            <TopStoreCard key={store.slug} store={store} />
+          ))}
+        </div>
       </section>
 
       {bundleProducts.length === 3 ? (

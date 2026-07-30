@@ -22,6 +22,7 @@ import {
   useMarketplaceCategories,
   useMarketplaceProducts,
 } from "../commerce/useMarketplace";
+import { MarketplacePlatformIcon } from "../components/MarketplaceBrandIcon";
 import { YselloReferenceProductCard } from "../components/YselloReferenceLayout";
 import { MarketFooter, MarketHeader } from "../components/MarketHeader";
 import { Seo } from "../components/Seo";
@@ -32,6 +33,29 @@ type SortMode = "popular" | "rating" | "price_asc" | "price_desc" | "newest";
 type ViewMode = "grid" | "list";
 type ProductKind = "all" | "DOWNLOAD" | "SERVICE";
 type PriceBand = "all" | "under_25" | "25_50" | "over_50";
+
+function productFact(product: CatalogProduct, key: string) {
+  const value = product.facts?.[key];
+  return typeof value === "string" ? value.trim() : "";
+}
+
+function platformBrandSlug(value: string) {
+  const key = value.toLowerCase();
+  if (key.includes("steam")) return "steam";
+  if (key.includes("xbox")) return "xbox";
+  if (key.includes("playstation") || key.includes("psn"))
+    return "playstation";
+  if (key.includes("epic")) return "epic-games";
+  if (key.includes("ea app") || key === "ea") return "ea";
+  if (key.includes("gog")) return "gog";
+  if (key.includes("ubisoft")) return "ubisoft";
+  if (key.includes("battle")) return "battle-net";
+  if (key.includes("microsoft") || key.includes("windows")) return "windows";
+  if (key.includes("apple")) return "apple";
+  if (key.includes("android")) return "android";
+  if (key.includes("discord")) return "discord";
+  return key.replace(/[^a-z0-9]+/g, "-");
+}
 
 function CategoryGlyph({ slug }: { slug: string }) {
   const key = slug.toLowerCase();
@@ -115,6 +139,12 @@ export function CatalogPage() {
   );
   const [priceBand, setPriceBand] = useState<PriceBand>("all");
   const [minimumRating, setMinimumRating] = useState("all");
+  const [platformFilter, setPlatformFilterState] = useState(
+    searchParams.get("platform") ?? "all",
+  );
+  const [regionFilter, setRegionFilterState] = useState(
+    searchParams.get("region") ?? "all",
+  );
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
   const [visibleCount, setVisibleCount] = useState(24);
   const [socialPlatformSlug, setSocialPlatformSlug] = useState(
@@ -138,6 +168,20 @@ export function CatalogPage() {
         slug: findRoot(rootCategories, [item.slug, item.name], item.slug),
       })),
     [rootCategories],
+  );
+  const platformOptions = useMemo(
+    () =>
+      [...new Set(products.map((product) => productFact(product, "platform")))]
+        .filter(Boolean)
+        .sort((a, b) => a.localeCompare(b)),
+    [products],
+  );
+  const regionOptions = useMemo(
+    () =>
+      [...new Set(products.map((product) => productFact(product, "region")))]
+        .filter(Boolean)
+        .sort((a, b) => a.localeCompare(b)),
+    [products],
   );
   const activeSocialPlatform =
     socialAccountPlatforms.find(
@@ -173,6 +217,10 @@ export function CatalogPage() {
           (!maxPrice || product.priceCents <= maxPrice * 100) &&
           (minimumRating === "all" ||
             product.rating >= Number(minimumRating)) &&
+          (platformFilter === "all" ||
+            productFact(product, "platform") === platformFilter) &&
+          (regionFilter === "all" ||
+            productFact(product, "region") === regionFilter) &&
           (!normalizedQuery ||
             `${product.title} ${product.description} ${product.seller} ${product.category}`
               .toLowerCase()
@@ -187,9 +235,11 @@ export function CatalogPage() {
     kind,
     maxPrice,
     minimumRating,
+    platformFilter,
     priceBand,
     products,
     query,
+    regionFilter,
     sort,
     stockOnly,
   ]);
@@ -201,8 +251,10 @@ export function CatalogPage() {
       kind,
       maxPrice,
       minimumRating,
+      platformFilter,
       priceBand,
       query,
+      regionFilter,
       sort,
       stockOnly,
     ],
@@ -227,6 +279,16 @@ export function CatalogPage() {
     updateParam("category", value, "all");
   }
 
+  function setPlatformFilter(value: string) {
+    setPlatformFilterState(value);
+    updateParam("platform", value, "all");
+  }
+
+  function setRegionFilter(value: string) {
+    setRegionFilterState(value);
+    updateParam("region", value, "all");
+  }
+
   function clearFilters() {
     setQueryState("");
     setCategoryState("all");
@@ -234,6 +296,8 @@ export function CatalogPage() {
     setKind("all");
     setPriceBand("all");
     setMinimumRating("all");
+    setPlatformFilterState("all");
+    setRegionFilterState("all");
     setSearchParams(new URLSearchParams(), { replace: true });
   }
 
@@ -251,6 +315,8 @@ export function CatalogPage() {
     priceBand !== "all",
     maxPrice > 0,
     minimumRating !== "all",
+    platformFilter !== "all",
+    regionFilter !== "all",
   ].filter(Boolean).length;
 
   return (
@@ -339,7 +405,9 @@ export function CatalogPage() {
                   setCategory(platform.slug);
                 }}
               >
-                <b>{platform.name.slice(0, 2).toUpperCase()}</b>
+                <b className={`brand-${platform.slug}`}>
+                  <MarketplacePlatformIcon slug={platform.slug} />
+                </b>
                 {platform.name}
               </button>
             ))}
@@ -466,6 +534,45 @@ export function CatalogPage() {
               </label>
             </fieldset>
             <fieldset>
+              <legend>Platform</legend>
+              <label>
+                <input
+                  type="radio"
+                  name="platform"
+                  checked={platformFilter === "all"}
+                  onChange={() => setPlatformFilter("all")}
+                />
+                <span>All platforms</span>
+                <small>{products.length}</small>
+              </label>
+              {platformOptions.slice(0, 10).map((option) => (
+                <label key={option}>
+                  <input
+                    type="radio"
+                    name="platform"
+                    checked={platformFilter === option}
+                    onChange={() => setPlatformFilter(option)}
+                  />
+                  <span
+                    className={`ys-ref-filter-platform brand-${platformBrandSlug(option)}`}
+                  >
+                    <MarketplacePlatformIcon
+                      slug={platformBrandSlug(option)}
+                    />
+                    {option}
+                  </span>
+                  <small>
+                    {
+                      products.filter(
+                        (product) =>
+                          productFact(product, "platform") === option,
+                      ).length
+                    }
+                  </small>
+                </label>
+              ))}
+            </fieldset>
+            <fieldset>
               <legend>Product Type</legend>
               <label>
                 <input
@@ -494,6 +601,37 @@ export function CatalogPage() {
                 />
                 <span>Seller services</span>
               </label>
+            </fieldset>
+            <fieldset>
+              <legend>Region</legend>
+              <label>
+                <input
+                  type="radio"
+                  name="region"
+                  checked={regionFilter === "all"}
+                  onChange={() => setRegionFilter("all")}
+                />
+                <span>All regions</span>
+                <small>{products.length}</small>
+              </label>
+              {regionOptions.slice(0, 8).map((option) => (
+                <label key={option}>
+                  <input
+                    type="radio"
+                    name="region"
+                    checked={regionFilter === option}
+                    onChange={() => setRegionFilter(option)}
+                  />
+                  <span>{option}</span>
+                  <small>
+                    {
+                      products.filter(
+                        (product) => productFact(product, "region") === option,
+                      ).length
+                    }
+                  </small>
+                </label>
+              ))}
             </fieldset>
             <fieldset>
               <legend>Rating</legend>
@@ -557,6 +695,22 @@ export function CatalogPage() {
                 {stockOnly ? (
                   <button type="button" onClick={() => setStockOnly(false)}>
                     Available now ×
+                  </button>
+                ) : null}
+                {platformFilter !== "all" ? (
+                  <button
+                    type="button"
+                    onClick={() => setPlatformFilter("all")}
+                  >
+                    {platformFilter} ×
+                  </button>
+                ) : null}
+                {regionFilter !== "all" ? (
+                  <button
+                    type="button"
+                    onClick={() => setRegionFilter("all")}
+                  >
+                    {regionFilter} ×
                   </button>
                 ) : null}
               </div>

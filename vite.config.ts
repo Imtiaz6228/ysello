@@ -1,5 +1,5 @@
-import { defineConfig, loadEnv, type HtmlTagDescriptor } from "vite";
 import react from "@vitejs/plugin-react";
+import { defineConfig, loadEnv, type HtmlTagDescriptor } from "vite";
 
 const verificationVariables = [
   ["VITE_GOOGLE_SITE_VERIFICATION", "google-site-verification"],
@@ -7,6 +7,8 @@ const verificationVariables = [
   ["VITE_YANDEX_SITE_VERIFICATION", "yandex-verification"],
   ["VITE_BAIDU_SITE_VERIFICATION", "baidu-site-verification"],
 ] as const;
+
+const isCodexSeatbeltSandbox = process.env.CODEX_SANDBOX === "seatbelt";
 
 export default defineConfig(({ mode }) => {
   const environment = { ...loadEnv(mode, process.cwd(), ""), ...process.env };
@@ -18,6 +20,7 @@ export default defineConfig(({ mode }) => {
       injectTo: "head",
     }));
   const apiUrl = environment.VITE_API_BASE_URL?.trim();
+
   if (apiUrl) {
     try {
       const apiOrigin = new URL(apiUrl).origin;
@@ -52,6 +55,9 @@ export default defineConfig(({ mode }) => {
       host: "0.0.0.0",
       allowedHosts: ["terminal.local"],
       port: 5173,
+      ...(isCodexSeatbeltSandbox
+        ? { watch: { useFsEvents: false, usePolling: true } }
+        : {}),
       proxy: {
         "/api": "http://localhost:4000",
         "/uploads": "http://localhost:4000",
