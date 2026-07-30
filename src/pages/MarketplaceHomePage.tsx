@@ -150,13 +150,6 @@ const serviceHighlights = [
   "SEO & content",
 ];
 
-const budgetOptions = [
-  { max: 10, label: "UP TO", value: "$10" },
-  { max: 25, label: "UP TO", value: "$25" },
-  { max: 50, label: "UP TO", value: "$50" },
-  { max: 100, label: "UP TO", value: "$100" },
-];
-
 const faqs = [
   {
     question: "How are digital products delivered?",
@@ -614,18 +607,23 @@ export function MarketplaceHomePage() {
           className="market-subcategory-preview lux-subcategory-preview-grid g2-subcategory-preview"
           aria-label={`${focusedCategory.name} specialties`}
         >
-          <strong>{focusedCategory.name}</strong>
-          {focusedCategory.subcategories.slice(0, 8).map((subcategory) => (
-            <Link
-              key={subcategory.slug}
-              to={categoryPath(subcategory.slug, categories)}
-            >
-              {subcategory.name}
+          <div className="g2-subcategory-heading">
+            <strong>{focusedCategory.name}</strong>
+            <small>Popular subcategories</small>
+          </div>
+          <div className="g2-subcategory-links">
+            {focusedCategory.subcategories.slice(0, 8).map((subcategory) => (
+              <Link
+                key={subcategory.slug}
+                to={categoryPath(subcategory.slug, categories)}
+              >
+                {subcategory.name}
+              </Link>
+            ))}
+            <Link to={categoryPath(focusedCategory.slug, categories)}>
+              {t("viewAll")} <ArrowRight aria-hidden="true" />
             </Link>
-          ))}
-          <Link to={categoryPath(focusedCategory.slug, categories)}>
-            {t("viewAll")} <ArrowRight aria-hidden="true" />
-          </Link>
+          </div>
         </div>
       </section>
 
@@ -790,26 +788,6 @@ export function MarketplaceHomePage() {
           </div>
         </section>
       ) : null}
-
-      <section className="market-home-section g2-home-section">
-        <SectionHeading
-          title="What’s your budget?"
-          text="Start with a price point and see what fits."
-        />
-        <div className="g2-budget-grid">
-          {budgetOptions.map((option, index) => (
-            <Link
-              key={option.max}
-              className={`budget-${index + 1}`}
-              to={`/catalog?max=${option.max}&sort=price_asc`}
-            >
-              <span>{option.label}</span>
-              <strong>{option.value}</strong>
-              <ArrowRight aria-hidden="true" />
-            </Link>
-          ))}
-        </div>
-      </section>
 
       <section className="market-home-section g2-home-section">
         <SectionHeading
