@@ -63,6 +63,11 @@ import {
 import { useAuth } from "../auth/AuthContext";
 import { Seo } from "../components/Seo";
 import { LocaleSwitcher } from "../components/LocaleSwitcher";
+import {
+  mergeSellerTaxonomy,
+  sellerCategorySelection,
+} from "../commerce/sellerTaxonomy";
+import { catalogAttributePresets } from "../data/enterpriseCatalog";
 
 type Tab =
   | "overview"
@@ -272,6 +277,8 @@ type Category = {
   description: string;
   isActive: boolean;
   sortOrder: number;
+  backingId?: string | null;
+  isTaxonomyOption?: boolean;
 };
 type Coupon = {
   id: string;
@@ -506,19 +513,39 @@ export function OperationsAdminPage() {
   const [adminCoverImage, setAdminCoverImage] = useState<File | null>(null);
   const [adminCoverPreview, setAdminCoverPreview] = useState("");
   const [adminProductForm, setAdminProductForm] = useState({
-    rootCategoryId: "",
-    platformCategoryId: "",
-    listingTypeId: "",
+    categoryPathIds: [] as string[],
     name: "",
     shortDescription: "",
     description: "",
-    type: "SERVICE",
+    type: "DOWNLOAD",
     priceUsd: "",
     priceCny: "",
     priceRub: "",
     afterSalesServiceHours: 12,
     deliveryNote: "",
     inventoryLines: "",
+    brand: "",
+    platform: "",
+    region: "",
+    country: "",
+    server: "",
+    language: "English",
+    deliveryMethod: "Protected order delivery",
+    productKind: "",
+    condition: "New",
+    stockType: "Single",
+    duration: "",
+    warranty: "",
+    refundPolicy: "",
+    stockQuantity: 0,
+    minimumOrder: 1,
+    maximumOrder: 1,
+    sku: "",
+    tags: "",
+    instantDelivery: false,
+    manualDelivery: true,
+    digitalDownload: true,
+    productAttributes: {} as Record<string, string>,
     publish: true,
   });
 
@@ -823,17 +850,61 @@ export function OperationsAdminPage() {
   const pendingOrders = orders.filter(
     (order) => order.payment?.status === "REQUIRES_ACTION",
   );
-  const rootCategories = categories.filter((category) => !category.parentId);
-  const platformCategories = categories.filter(
-    (category) => category.parentId === adminProductForm.rootCategoryId,
+  const adminCatalogCategories = useMemo(
+    () => mergeSellerTaxonomy(categories),
+    [categories],
   );
-  const listingTypeCategories = categories.filter(
-    (category) => category.parentId === adminProductForm.platformCategoryId,
+  const adminCategoryLevels = useMemo(() => {
+    const levels: Category[][] = [];
+    let parentId: string | null = null;
+    for (let depth = 0; depth < 12; depth += 1) {
+      const choices = adminCatalogCategories.filter(
+        (category) => (category.parentId ?? null) === parentId,
+      );
+      if (!choices.length) break;
+      levels.push(choices);
+      const selected = adminProductForm.categoryPathIds[depth];
+      if (!selected || !choices.some((category) => category.id === selected))
+        break;
+      parentId = selected;
+    }
+    return levels;
+  }, [adminCatalogCategories, adminProductForm.categoryPathIds]);
+  const adminSelectedTaxonomyId =
+    adminProductForm.categoryPathIds[
+      adminProductForm.categoryPathIds.length - 1
+    ] ?? "";
+  const adminCategorySelection = sellerCategorySelection(
+    adminSelectedTaxonomyId,
+    adminCatalogCategories,
   );
-  const adminSelectedCategoryId =
-    adminProductForm.listingTypeId ||
-    adminProductForm.platformCategoryId ||
-    adminProductForm.rootCategoryId;
+  const adminSelectedCategoryId = adminCategorySelection?.backingId ?? "";
+  const adminSelectedPath = adminCategorySelection?.path ?? [];
+  const adminSelectedRoot = adminSelectedPath[0];
+  const adminIsSocialAccountListing =
+    adminSelectedRoot?.slug === "social-media";
+  const adminSocialPlatform = adminIsSocialAccountListing
+    ? (adminSelectedPath[1]?.name ?? "")
+    : "";
+  const adminSocialAccountType = adminIsSocialAccountListing
+    ? (adminSelectedPath[adminSelectedPath.length - 1]?.name ?? "")
+    : "";
+  const adminResolvedPlatform = adminIsSocialAccountListing
+    ? adminSocialPlatform
+    : adminProductForm.platform.trim();
+  const adminResolvedProductKind = adminIsSocialAccountListing
+    ? "Social media account"
+    : adminProductForm.productKind.trim();
+  const adminResolvedCondition = adminIsSocialAccountListing
+    ? adminSocialAccountType === "New accounts"
+      ? "New"
+      : adminSocialAccountType === "Old accounts"
+        ? "Old"
+        : adminSocialAccountType
+    : adminProductForm.condition.trim();
+  const adminDynamicAttributes = adminSelectedRoot?.slug
+    ? (catalogAttributePresets[adminSelectedRoot.slug] ?? [])
+    : [];
   const canManageCatalog =
     user?.role === "ADMIN" || user?.role === "SUPER_ADMIN";
   const availableCategoryParents = categories.filter(
@@ -871,8 +942,10 @@ export function OperationsAdminPage() {
       setMessage("Choose a category path for the catalog product.");
       return;
     }
-    if (listingTypeCategories.length && !adminProductForm.listingTypeId) {
-      setMessage("Choose the final listing type, such as New or Old.");
+    if (adminCategoryLevels[adminProductForm.categoryPathIds.length]?.length) {
+      setMessage(
+        "Complete every category, platform, product, and account type.",
+      );
       return;
     }
     if (!adminCoverImage) {
@@ -911,6 +984,36 @@ export function OperationsAdminPage() {
     );
     data.append("deliveryNote", adminProductForm.deliveryNote);
     data.append("inventoryLines", adminProductForm.inventoryLines);
+    data.append("brand", adminProductForm.brand);
+    data.append("platform", adminResolvedPlatform);
+    data.append("region", adminProductForm.region);
+    data.append("country", adminProductForm.country);
+    data.append("server", adminProductForm.server);
+    data.append("language", adminProductForm.language);
+    data.append("deliveryMethod", adminProductForm.deliveryMethod);
+    data.append("productKind", adminResolvedProductKind);
+    data.append("condition", adminResolvedCondition);
+    data.append("stockType", adminProductForm.stockType);
+    data.append("duration", adminProductForm.duration);
+    data.append("warranty", adminProductForm.warranty);
+    data.append("refundPolicy", adminProductForm.refundPolicy);
+    data.append("stockQuantity", String(adminProductForm.stockQuantity));
+    data.append("minimumOrder", String(adminProductForm.minimumOrder));
+    data.append("maximumOrder", String(adminProductForm.maximumOrder));
+    data.append("sku", adminProductForm.sku);
+    data.append("tags", adminProductForm.tags);
+    data.append("instantDelivery", String(adminProductForm.instantDelivery));
+    data.append("manualDelivery", String(adminProductForm.manualDelivery));
+    data.append("digitalDownload", String(adminProductForm.digitalDownload));
+    data.append(
+      "productAttributes",
+      JSON.stringify({
+        ...adminProductForm.productAttributes,
+        marketplaceCategoryPath: adminSelectedPath
+          .map((category) => category.name)
+          .join(" / "),
+      }),
+    );
     data.append("publish", String(adminProductForm.publish));
     data.append("coverImage", adminCoverImage);
     try {
@@ -931,6 +1034,19 @@ export function OperationsAdminPage() {
         priceRub: "",
         deliveryNote: "",
         inventoryLines: "",
+        brand: "",
+        platform: "",
+        region: "",
+        country: "",
+        server: "",
+        productKind: "",
+        duration: "",
+        warranty: "",
+        refundPolicy: "",
+        stockQuantity: 0,
+        sku: "",
+        tags: "",
+        productAttributes: {},
       }));
       await load();
     } catch (error) {
@@ -2399,11 +2515,30 @@ export function OperationsAdminPage() {
               ×
             </button>
             <span className="section-index">OFFICIAL CATALOG</span>
-            <h2 id="admin-product-dialog-title">Add a marketplace product</h2>
+            <h2 id="admin-product-dialog-title">
+              Add an Official marketplace product
+            </h2>
             <p className="modal-helper">
-              Choose the complete category path, upload a clear image, and
-              publish directly or save as draft.
+              Use the same complete listing flow as a seller. Official products
+              publish under the verified Official store and badge.
             </p>
+            <div className="seller-flow-steps admin-official-flow-steps">
+              <span
+                className={
+                  adminProductForm.categoryPathIds[0] ? "done" : "active"
+                }
+              >
+                <b>1</b>Category
+              </span>
+              <span
+                className={adminProductForm.categoryPathIds[0] ? "active" : ""}
+              >
+                <b>2</b>Platform & type
+              </span>
+              <span className={adminSelectedCategoryId ? "active" : ""}>
+                <b>3</b>Official listing
+              </span>
+            </div>
             <label className="admin-product-image-picker">
               {adminCoverPreview ? (
                 <img src={adminCoverPreview} alt="Selected product preview" />
@@ -2422,82 +2557,145 @@ export function OperationsAdminPage() {
               <small>JPEG, PNG or WebP · max 8 MB</small>
             </label>
             <section className="seller-category-flow">
+              <header>
+                <BadgeCheck aria-hidden="true" />
+                <div>
+                  <strong>Official catalog path</strong>
+                  <small>
+                    {adminSelectedPath.length
+                      ? adminSelectedPath
+                          .map((category) => category.name)
+                          .join(" → ")
+                      : "Choose where the Official product belongs"}
+                  </small>
+                </div>
+              </header>
               <div className="form-grid three">
-                <label>
-                  <span>Main category</span>
-                  <select
-                    required
-                    value={adminProductForm.rootCategoryId}
-                    onChange={(event) =>
-                      setAdminProductForm({
-                        ...adminProductForm,
-                        rootCategoryId: event.target.value,
-                        platformCategoryId: "",
-                        listingTypeId: "",
-                      })
-                    }
+                {adminCategoryLevels.map((choices, depth) => (
+                  <label
+                    key={`${depth}-${adminProductForm.categoryPathIds[depth - 1] ?? "root"}`}
                   >
-                    <option value="">Choose category</option>
-                    {rootCategories.map((category) => (
-                      <option value={category.id} key={category.id}>
-                        {category.name}
+                    <span>
+                      {depth + 1}.{" "}
+                      {adminIsSocialAccountListing
+                        ? depth === 0
+                          ? "Marketplace category"
+                          : depth === 1
+                            ? "Platform"
+                            : depth === 2
+                              ? "Product"
+                              : depth === 3
+                                ? "Account type"
+                                : `Level ${depth + 1}`
+                        : depth === 0
+                          ? "Main category"
+                          : depth === 1
+                            ? "Subcategory / platform"
+                            : depth === 2
+                              ? "Product / listing type"
+                              : `Level ${depth + 1}`}
+                    </span>
+                    <select
+                      required
+                      value={adminProductForm.categoryPathIds[depth] ?? ""}
+                      onChange={(event) =>
+                        setAdminProductForm({
+                          ...adminProductForm,
+                          categoryPathIds: [
+                            ...adminProductForm.categoryPathIds.slice(0, depth),
+                            event.target.value,
+                          ].filter(Boolean),
+                          productAttributes:
+                            depth === 0
+                              ? {}
+                              : adminProductForm.productAttributes,
+                        })
+                      }
+                    >
+                      <option value="">
+                        Choose {depth === 0 ? "category" : "option"}
                       </option>
-                    ))}
-                  </select>
-                </label>
-                <label>
-                  <span>Platform / subcategory</span>
-                  <select
-                    required={platformCategories.length > 0}
-                    disabled={!platformCategories.length}
-                    value={adminProductForm.platformCategoryId}
-                    onChange={(event) =>
-                      setAdminProductForm({
-                        ...adminProductForm,
-                        platformCategoryId: event.target.value,
-                        listingTypeId: "",
-                      })
-                    }
-                  >
-                    <option value="">
-                      {platformCategories.length
-                        ? "Choose platform"
-                        : "No second level"}
-                    </option>
-                    {platformCategories.map((category) => (
-                      <option value={category.id} key={category.id}>
-                        {category.name}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <label>
-                  <span>Listing type</span>
-                  <select
-                    required={listingTypeCategories.length > 0}
-                    disabled={!listingTypeCategories.length}
-                    value={adminProductForm.listingTypeId}
-                    onChange={(event) =>
-                      setAdminProductForm({
-                        ...adminProductForm,
-                        listingTypeId: event.target.value,
-                      })
-                    }
-                  >
-                    <option value="">
-                      {listingTypeCategories.length
-                        ? "Choose New / Old / other"
-                        : "No third level"}
-                    </option>
-                    {listingTypeCategories.map((category) => (
-                      <option value={category.id} key={category.id}>
-                        {category.name}
-                      </option>
-                    ))}
-                  </select>
-                </label>
+                      {choices.map((category) => (
+                        <option value={category.id} key={category.id}>
+                          {category.name}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                ))}
               </div>
             </section>
+            {adminIsSocialAccountListing &&
+            adminSocialPlatform &&
+            adminSocialAccountType &&
+            !adminCategoryLevels[adminProductForm.categoryPathIds.length]
+              ?.length ? (
+              <section className="seller-derived-account-summary">
+                <div>
+                  <BadgeCheck aria-hidden="true" />
+                  <span>
+                    <strong>Official account details confirmed</strong>
+                    <small>
+                      Platform and account type come from the selected path.
+                    </small>
+                  </span>
+                </div>
+                <p>
+                  <span>Platform</span>
+                  <b>{adminSocialPlatform}</b>
+                  <span>Product</span>
+                  <b>Account</b>
+                  <span>Account type</span>
+                  <b>{adminSocialAccountType}</b>
+                </p>
+              </section>
+            ) : null}
+            {adminDynamicAttributes.length ? (
+              <section className="seller-auto-attributes">
+                <header>
+                  <Zap aria-hidden="true" />
+                  <div>
+                    <strong>Category-specific product details</strong>
+                    <small>
+                      Complete the official platform fields for this department.
+                    </small>
+                  </div>
+                </header>
+                <div className="form-grid three">
+                  {adminDynamicAttributes.map((attribute) => (
+                    <label key={attribute.key}>
+                      <span>
+                        {attribute.label}
+                        {attribute.optional ? " (optional)" : ""}
+                      </span>
+                      <select
+                        required={!attribute.optional}
+                        value={
+                          adminProductForm.productAttributes[attribute.key] ??
+                          ""
+                        }
+                        onChange={(event) =>
+                          setAdminProductForm({
+                            ...adminProductForm,
+                            productAttributes: {
+                              ...adminProductForm.productAttributes,
+                              [attribute.key]: event.target.value,
+                            },
+                          })
+                        }
+                      >
+                        <option value="">
+                          Choose {attribute.label.toLowerCase()}
+                        </option>
+                        {attribute.options.map((option) => (
+                          <option key={option}>{option}</option>
+                        ))}
+                      </select>
+                    </label>
+                  ))}
+                </div>
+              </section>
+            ) : null}
             {adminSelectedCategoryId ? (
               <section className="admin-existing-category-products">
                 <header>
@@ -2646,6 +2844,240 @@ export function OperationsAdminPage() {
                 }
               />
             </label>
+            <section className="admin-official-details">
+              <header>
+                <BadgeCheck aria-hidden="true" />
+                <div>
+                  <strong>Official product specifications</strong>
+                  <small>
+                    These details appear in search, filters, and the product
+                    page.
+                  </small>
+                </div>
+              </header>
+              <div className="form-grid three">
+                <label>
+                  <span>Brand</span>
+                  <input
+                    value={adminProductForm.brand}
+                    onChange={(event) =>
+                      setAdminProductForm({
+                        ...adminProductForm,
+                        brand: event.target.value,
+                      })
+                    }
+                    placeholder="Official brand or publisher"
+                  />
+                </label>
+                {!adminIsSocialAccountListing ? (
+                  <label>
+                    <span>Platform</span>
+                    <input
+                      value={adminProductForm.platform}
+                      onChange={(event) =>
+                        setAdminProductForm({
+                          ...adminProductForm,
+                          platform: event.target.value,
+                        })
+                      }
+                      placeholder="Windows, Instagram, Web…"
+                    />
+                  </label>
+                ) : null}
+                <label>
+                  <span>Region</span>
+                  <input
+                    value={adminProductForm.region}
+                    onChange={(event) =>
+                      setAdminProductForm({
+                        ...adminProductForm,
+                        region: event.target.value,
+                      })
+                    }
+                    placeholder="Global"
+                  />
+                </label>
+                <label>
+                  <span>Country</span>
+                  <input
+                    value={adminProductForm.country}
+                    onChange={(event) =>
+                      setAdminProductForm({
+                        ...adminProductForm,
+                        country: event.target.value,
+                      })
+                    }
+                    placeholder="Optional"
+                  />
+                </label>
+                <label>
+                  <span>Server</span>
+                  <input
+                    value={adminProductForm.server}
+                    onChange={(event) =>
+                      setAdminProductForm({
+                        ...adminProductForm,
+                        server: event.target.value,
+                      })
+                    }
+                    placeholder="Optional"
+                  />
+                </label>
+                <label>
+                  <span>Language</span>
+                  <input
+                    value={adminProductForm.language}
+                    onChange={(event) =>
+                      setAdminProductForm({
+                        ...adminProductForm,
+                        language: event.target.value,
+                      })
+                    }
+                  />
+                </label>
+                {!adminIsSocialAccountListing ? (
+                  <label>
+                    <span>Product kind</span>
+                    <input
+                      value={adminProductForm.productKind}
+                      onChange={(event) =>
+                        setAdminProductForm({
+                          ...adminProductForm,
+                          productKind: event.target.value,
+                        })
+                      }
+                      placeholder="Account, key, download, service…"
+                    />
+                  </label>
+                ) : null}
+                <label>
+                  <span>Condition</span>
+                  <input
+                    value={adminResolvedCondition}
+                    disabled={adminIsSocialAccountListing}
+                    onChange={(event) =>
+                      setAdminProductForm({
+                        ...adminProductForm,
+                        condition: event.target.value,
+                      })
+                    }
+                  />
+                </label>
+                <label>
+                  <span>Delivery method</span>
+                  <select
+                    value={adminProductForm.deliveryMethod}
+                    onChange={(event) =>
+                      setAdminProductForm({
+                        ...adminProductForm,
+                        deliveryMethod: event.target.value,
+                      })
+                    }
+                  >
+                    <option>Protected order delivery</option>
+                    <option>Instant download</option>
+                    <option>Seller service</option>
+                  </select>
+                </label>
+                <label>
+                  <span>Stock type</span>
+                  <select
+                    value={adminProductForm.stockType}
+                    onChange={(event) =>
+                      setAdminProductForm({
+                        ...adminProductForm,
+                        stockType: event.target.value,
+                      })
+                    }
+                  >
+                    <option>Single</option>
+                    <option>Shared</option>
+                    <option>Unlimited service</option>
+                  </select>
+                </label>
+                <label>
+                  <span>Stock quantity</span>
+                  <input
+                    type="number"
+                    min={0}
+                    value={adminProductForm.stockQuantity}
+                    onChange={(event) =>
+                      setAdminProductForm({
+                        ...adminProductForm,
+                        stockQuantity: Number(event.target.value),
+                      })
+                    }
+                  />
+                </label>
+                <label>
+                  <span>Minimum order</span>
+                  <input
+                    type="number"
+                    min={1}
+                    value={adminProductForm.minimumOrder}
+                    onChange={(event) =>
+                      setAdminProductForm({
+                        ...adminProductForm,
+                        minimumOrder: Number(event.target.value),
+                      })
+                    }
+                  />
+                </label>
+                <label>
+                  <span>Maximum order</span>
+                  <input
+                    type="number"
+                    min={1}
+                    value={adminProductForm.maximumOrder}
+                    onChange={(event) =>
+                      setAdminProductForm({
+                        ...adminProductForm,
+                        maximumOrder: Number(event.target.value),
+                      })
+                    }
+                  />
+                </label>
+                <label>
+                  <span>SKU</span>
+                  <input
+                    value={adminProductForm.sku}
+                    onChange={(event) =>
+                      setAdminProductForm({
+                        ...adminProductForm,
+                        sku: event.target.value,
+                      })
+                    }
+                    placeholder="OFFICIAL-001"
+                  />
+                </label>
+                <label>
+                  <span>Tags</span>
+                  <input
+                    value={adminProductForm.tags}
+                    onChange={(event) =>
+                      setAdminProductForm({
+                        ...adminProductForm,
+                        tags: event.target.value,
+                      })
+                    }
+                    placeholder="premium, instant, verified"
+                  />
+                </label>
+                <label>
+                  <span>Duration</span>
+                  <input
+                    value={adminProductForm.duration}
+                    onChange={(event) =>
+                      setAdminProductForm({
+                        ...adminProductForm,
+                        duration: event.target.value,
+                      })
+                    }
+                    placeholder="12 months, lifetime…"
+                  />
+                </label>
+              </div>
+            </section>
             <label>
               <span>Delivery note</span>
               <textarea
@@ -2675,6 +3107,77 @@ export function OperationsAdminPage() {
                 />
               </label>
             ) : null}
+            <div className="form-grid two">
+              <label>
+                <span>Warranty</span>
+                <textarea
+                  rows={3}
+                  value={adminProductForm.warranty}
+                  onChange={(event) =>
+                    setAdminProductForm({
+                      ...adminProductForm,
+                      warranty: event.target.value,
+                    })
+                  }
+                  placeholder="Official replacement or support terms"
+                />
+              </label>
+              <label>
+                <span>Refund policy</span>
+                <textarea
+                  rows={3}
+                  value={adminProductForm.refundPolicy}
+                  onChange={(event) =>
+                    setAdminProductForm({
+                      ...adminProductForm,
+                      refundPolicy: event.target.value,
+                    })
+                  }
+                  placeholder="Eligibility and timing"
+                />
+              </label>
+            </div>
+            <div className="admin-official-delivery-toggles">
+              <label>
+                <input
+                  type="checkbox"
+                  checked={adminProductForm.instantDelivery}
+                  onChange={(event) =>
+                    setAdminProductForm({
+                      ...adminProductForm,
+                      instantDelivery: event.target.checked,
+                    })
+                  }
+                />
+                <span>Instant delivery</span>
+              </label>
+              <label>
+                <input
+                  type="checkbox"
+                  checked={adminProductForm.manualDelivery}
+                  onChange={(event) =>
+                    setAdminProductForm({
+                      ...adminProductForm,
+                      manualDelivery: event.target.checked,
+                    })
+                  }
+                />
+                <span>Protected manual delivery</span>
+              </label>
+              <label>
+                <input
+                  type="checkbox"
+                  checked={adminProductForm.digitalDownload}
+                  onChange={(event) =>
+                    setAdminProductForm({
+                      ...adminProductForm,
+                      digitalDownload: event.target.checked,
+                    })
+                  }
+                />
+                <span>Digital download</span>
+              </label>
+            </div>
             <label className="admin-publish-toggle">
               <input
                 type="checkbox"

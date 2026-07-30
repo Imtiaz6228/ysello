@@ -7,7 +7,6 @@ import {
   Download,
   Gift,
   Headphones,
-  Eye,
   Layers3,
   Mail,
   ShieldCheck,
@@ -237,7 +236,8 @@ function storeFallbacks(products: CatalogProduct[]): FeaturedStore[] {
 }
 
 function TopStoreCard({ store }: { store: FeaturedStore }) {
-  const isOfficial = store.isOfficial || store.name === "Ysello Official";
+  const isOfficial =
+    store.isOfficial || ["Official", "Ysello Official"].includes(store.name);
   return (
     <article className="reference-store-card">
       <Link
@@ -248,7 +248,9 @@ function TopStoreCard({ store }: { store: FeaturedStore }) {
           backgroundImage: `linear-gradient(135deg, rgba(7, 12, 28, .08), rgba(7, 12, 28, .48)), url(${store.bannerUrl || "/marketplace-assets/seller-growth.webp"})`,
         }}
       >
-        <span>{isOfficial ? "Official marketplace store" : "Verified store"}</span>
+        <span>
+          {isOfficial ? "Official marketplace store" : "Verified store"}
+        </span>
       </Link>
       <div className="reference-store-profile">
         <span className="reference-store-logo">
@@ -279,65 +281,6 @@ function TopStoreCard({ store }: { store: FeaturedStore }) {
       <Link className="reference-store-visit" to={`/stores/${store.slug}`}>
         Visit Store <ArrowRight aria-hidden="true" />
       </Link>
-    </article>
-  );
-}
-
-function FeaturedProductCard({
-  product,
-  onBuy,
-}: {
-  product: CatalogProduct;
-  onBuy: (product: CatalogProduct) => void;
-}) {
-  const { formatProductMoney } = useLocale();
-  const canPurchase =
-    product.type === "SERVICE" || (product.stockCount ?? 0) > 0;
-  const stockLabel =
-    product.type === "SERVICE"
-      ? "Available"
-      : `${Math.max(0, product.stockCount ?? 0)} left`;
-
-  return (
-    <article className="reference-featured-product-card">
-      <div className="reference-featured-product-media">
-        <span>{stockLabel}</span>
-        <Link to={productPath(product)} aria-label={product.title}>
-          {product.imageUrl ? (
-            <img
-              src={product.imageUrl}
-              alt={product.title}
-              loading="lazy"
-              decoding="async"
-              width="520"
-              height="390"
-            />
-          ) : (
-            <b className="reference-product-fallback">{product.icon}</b>
-          )}
-        </Link>
-      </div>
-      <div className="reference-featured-product-copy">
-        <Link to={productPath(product)}>{product.title}</Link>
-        <strong>{formatProductMoney(product)}</strong>
-        <footer>
-          <Link to={productPath(product)}>
-            <Eye aria-hidden="true" /> View
-          </Link>
-          <button
-            type="button"
-            disabled={!canPurchase}
-            onClick={() => onBuy(product)}
-            aria-label={
-              canPurchase
-                ? `Add ${product.title} to cart`
-                : `${product.title} is unavailable`
-            }
-          >
-            <ShoppingCart aria-hidden="true" />
-          </button>
-        </footer>
-      </div>
     </article>
   );
 }
@@ -547,7 +490,9 @@ export function MarketplaceHomePage() {
                 onFocus={() => setFocusedCategorySlug(category.slug)}
                 onMouseEnter={() => setFocusedCategorySlug(category.slug)}
               >
-                <span className={`market-category-official-icon brand-${category.slug}`}>
+                <span
+                  className={`market-category-official-icon brand-${category.slug}`}
+                >
                   <MarketplaceCategoryIcon slug={category.slug} />
                 </span>
                 <strong>{category.name}</strong>
@@ -636,9 +581,9 @@ export function MarketplaceHomePage() {
           href="/catalog?sort=popular"
         />
         {homepageFeatured.length ? (
-          <div className="reference-featured-product-grid">
+          <div className="reference-featured-product-grid premium-product-grid">
             {homepageFeatured.map((product) => (
-              <FeaturedProductCard
+              <YselloReferenceProductCard
                 key={product.id}
                 product={product}
                 onBuy={buy}

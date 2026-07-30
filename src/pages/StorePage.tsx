@@ -61,7 +61,7 @@ export function StorePage() {
         </div>
         <div>
           <span className="verified-store">
-            <BadgeCheck /> {store.isOfficial ? "YSELLO OFFICIAL" : "VERIFIED SELLER"}
+            <BadgeCheck /> {store.isOfficial ? "OFFICIAL" : "VERIFIED SELLER"}
           </span>
           <h1>{store.name}</h1>
           <p>{store.about}</p>

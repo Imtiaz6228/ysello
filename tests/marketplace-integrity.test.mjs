@@ -84,6 +84,47 @@ test("admin product moderation approves listings without a stuck pending state",
   assert.match(admin, /productStatusFilter/);
 });
 
+test("official admin publishing matches the seller taxonomy and catalog metadata", async () => {
+  const routes = await read("src/routes/admin.routes.ts");
+  const admin = await read("src/pages/OperationsAdminPage.tsx");
+
+  assert.match(admin, /mergeSellerTaxonomy\(categories\)/);
+  assert.match(admin, /categoryPathIds/);
+  assert.match(admin, />Account type</);
+  assert.match(admin, /adminSocialPlatform/);
+  assert.match(admin, /productAttributes/);
+  assert.match(admin, /stockQuantity/);
+  assert.match(admin, /instantDelivery/);
+  assert.match(admin, /manualDelivery/);
+  assert.match(admin, /digitalDownload/);
+
+  assert.match(routes, /storeName: "Official"/);
+  assert.match(routes, /isOfficial: true/);
+  assert.match(routes, /productAttributes: input\.productAttributes/);
+  assert.match(routes, /stockQuantity: input\.stockQuantity/);
+});
+
+test("premium grids keep store card regions fluid on phones", async () => {
+  const premium = await read("src/marketplace-premium-v3.css");
+
+  assert.match(
+    premium,
+    /\.store-products\.store-products-premium[\s\S]*grid-template-columns: repeat\(4,/,
+  );
+  assert.match(
+    premium,
+    /@media \(max-width: 720px\)[\s\S]*grid-template-columns: repeat\(2,/,
+  );
+  assert.match(
+    premium,
+    /> \.ys-ref-product-media\.g2-product-media[\s\S]*width: calc\(100% - 20px\) !important;[\s\S]*height: auto !important;/,
+  );
+  assert.match(
+    premium,
+    /> \.ys-ref-product-copy\.g2-product-copy[\s\S]*width: 100% !important;[\s\S]*height: auto !important;/,
+  );
+});
+
 test("product surfaces use responsive icon grids instead of unrelated artwork", async () => {
   const card = await read("src/components/MarketplaceProductCard.tsx");
   const home = await read("src/pages/MarketplaceHomePage.tsx");

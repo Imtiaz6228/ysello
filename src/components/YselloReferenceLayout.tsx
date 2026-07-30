@@ -309,11 +309,12 @@ export function YselloReferenceProductCard({
     >
       <span className="g2-card-offer">
         <BadgeCheck aria-hidden="true" />{" "}
-        {product.isOfficial ? "Official Ysello product" : "Verified seller"} ·{" "}
-        {product.seller}
+        {product.isOfficial ? "Official" : "Verified seller"} · {product.seller}
       </span>
       <div className="ys-ref-product-media g2-product-media">
-        {!canPurchase ? <span className="product-sold-out-ribbon">SOLD OUT</span> : null}
+        {!canPurchase ? (
+          <span className="product-sold-out-ribbon">SOLD OUT</span>
+        ) : null}
         <Link
           className="g2-product-image-link"
           to={productPath(product)}
@@ -389,9 +390,7 @@ export function YselloReferenceProductCard({
           {discount ? <b>-{discount}%</b> : null}
         </div>
         <div className="g2-product-stock">
-          <span>
-            {product.delivery || "Delivery shown at checkout"}
-          </span>
+          <span>{product.delivery || "Delivery shown at checkout"}</span>
         </div>
         <div className="ys-ref-product-card-actions g2-product-actions">
           <Link to={productPath(product)}>View details</Link>

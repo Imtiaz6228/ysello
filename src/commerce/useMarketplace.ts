@@ -544,7 +544,9 @@ export function useMarketplaceStores() {
               name: store.storeName,
               slug: store.slug,
               about: store.about,
-              isOfficial: store.storeName === "Ysello Official",
+              isOfficial: ["Official", "Ysello Official"].includes(
+                store.storeName,
+              ),
               rating: Number(store.averageRating) || 0,
               sales: store.totalSales,
               joined: new Date(store.createdAt).getFullYear().toString(),
@@ -656,7 +658,9 @@ export function useMarketplaceStore(slug?: string) {
           policy:
             data.store.policy ||
             "Ysello buyer protection applies to every order.",
-          isOfficial: data.store.storeName === "Ysello Official",
+          isOfficial: ["Official", "Ysello Official"].includes(
+            data.store.storeName,
+          ),
           rating: Number(data.store.averageRating),
           sales: data.store.totalSales.toLocaleString(),
           joined: new Date(data.store.createdAt).getFullYear().toString(),

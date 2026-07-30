@@ -11,6 +11,7 @@ import {
   Role,
   SellerApplicationStatus,
   TicketStatus,
+  Prisma,
 } from "@prisma/client";
 import { z } from "zod";
 import {
@@ -58,6 +59,31 @@ const requireAdmin = requireRole(Role.ADMIN, Role.SUPER_ADMIN);
 
 const emptyToUndefined = (value: unknown) =>
   value === "" || value === undefined ? undefined : value;
+const optionalAdminText = (max: number) =>
+  z.preprocess(emptyToUndefined, z.string().trim().max(max).optional());
+const adminCheckbox = z.preprocess(
+  (value) => value === true || value === "true" || value === "on",
+  z.boolean(),
+);
+const adminStringList = z.preprocess(
+  (value) => {
+    if (Array.isArray(value)) return value;
+    if (typeof value !== "string") return [];
+    return value
+      .split(",")
+      .map((item) => item.trim())
+      .filter(Boolean);
+  },
+  z.array(z.string().max(100)).max(100),
+);
+const adminJsonObject = z.preprocess((value) => {
+  if (typeof value !== "string") return value ?? {};
+  try {
+    return JSON.parse(value);
+  } catch {
+    return {};
+  }
+}, z.record(z.unknown()));
 
 function parseAdminInventoryLines(raw?: string) {
   if (!raw) return [];
@@ -109,14 +135,14 @@ async function ensureAdminSellerProfile(userId: string) {
   const existing = await prisma.sellerProfile.findUnique({ where: { userId } });
   if (existing) {
     if (
-      existing.storeName !== "Ysello Official" ||
+      existing.storeName !== "Official" ||
       !existing.isVerified ||
       existing.isSuspended
     ) {
       return prisma.sellerProfile.update({
         where: { userId },
         data: {
-          storeName: "Ysello Official",
+          storeName: "Official",
           about:
             "Official marketplace catalog managed by the Ysello administration team.",
           policy:
@@ -149,7 +175,7 @@ async function ensureAdminSellerProfile(userId: string) {
   return prisma.sellerProfile.create({
     data: {
       userId,
-      storeName: "Ysello Official",
+      storeName: "Official",
       slug,
       about:
         "Official marketplace catalog managed by the Ysello administration team.",
@@ -742,6 +768,33 @@ adminRouter.post(
             emptyToUndefined,
             z.string().trim().max(500_000).optional(),
           ),
+          brand: optionalAdminText(120),
+          platform: optionalAdminText(100),
+          region: optionalAdminText(100),
+          country: optionalAdminText(100),
+          server: optionalAdminText(100),
+          language: optionalAdminText(80),
+          deliveryMethod: optionalAdminText(100),
+          productKind: optionalAdminText(100),
+          condition: optionalAdminText(100),
+          stockType: optionalAdminText(100),
+          duration: optionalAdminText(100),
+          warranty: optionalAdminText(500),
+          refundPolicy: optionalAdminText(2000),
+          stockQuantity: z.coerce
+            .number()
+            .int()
+            .min(0)
+            .max(10_000_000)
+            .default(0),
+          minimumOrder: z.coerce.number().int().min(1).max(100_000).default(1),
+          maximumOrder: z.coerce.number().int().min(1).max(100_000).default(1),
+          sku: optionalAdminText(100),
+          tags: adminStringList.default([]),
+          instantDelivery: adminCheckbox.default(false),
+          manualDelivery: adminCheckbox.default(true),
+          digitalDownload: adminCheckbox.default(true),
+          productAttributes: adminJsonObject.default({}),
           publish: z
             .preprocess(
               (value) => value === "true" || value === true,
@@ -792,6 +845,28 @@ adminRouter.post(
           coverImageUrl: publicUploadUrl(req.file.filename),
           afterSalesServiceHours: input.afterSalesServiceHours,
           deliveryNote: input.deliveryNote,
+          brand: input.brand,
+          platform: input.platform,
+          region: input.region,
+          country: input.country,
+          server: input.server,
+          language: input.language,
+          deliveryMethod: input.deliveryMethod,
+          productKind: input.productKind,
+          condition: input.condition,
+          stockType: input.stockType,
+          duration: input.duration,
+          warranty: input.warranty,
+          refundPolicy: input.refundPolicy,
+          stockQuantity: input.stockQuantity,
+          minimumOrder: input.minimumOrder,
+          maximumOrder: input.maximumOrder,
+          sku: input.sku,
+          tags: input.tags,
+          instantDelivery: input.instantDelivery,
+          manualDelivery: input.manualDelivery,
+          digitalDownload: input.digitalDownload,
+          productAttributes: input.productAttributes as Prisma.InputJsonValue,
           publishedAt: canPublish ? new Date() : null,
           seoTitle: input.name.slice(0, 70),
           seoDescription: input.shortDescription.slice(0, 170),
