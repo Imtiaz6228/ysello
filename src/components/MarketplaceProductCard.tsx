@@ -1,5 +1,6 @@
 import {
   BadgeCheck,
+  BarChart3,
   BriefcaseBusiness,
   Clock3,
   Eye,
@@ -32,7 +33,9 @@ export function MarketplaceProductCard({
   const stockLabel =
     product.type === "SERVICE"
       ? "Service slot"
-      : `${product.stockCount ?? 0} in stock`;
+      : (product.stockCount ?? 0) > 0
+        ? `${product.stockCount ?? 0} available`
+        : "Sold out";
   const canPurchase =
     product.type === "SERVICE" || (product.stockCount ?? 0) > 0;
   const ProductIcon =
@@ -46,12 +49,22 @@ export function MarketplaceProductCard({
       className={`market-product-card ys-product-card ${layout === "list" ? "list" : ""}`}
     >
       <div className="ys-product-card-top">
+        {!canPurchase ? <span className="product-sold-out-ribbon">SOLD OUT</span> : null}
         <Link
           className="ys-product-glyph"
           to={productPath(product)}
           aria-label={`View ${product.title}`}
         >
-          <ProductIcon aria-hidden="true" />
+          {product.imageUrl ? (
+            <span
+              className="ys-product-image"
+              role="img"
+              aria-label={product.title}
+              style={{ backgroundImage: `url(${product.imageUrl})` }}
+            />
+          ) : (
+            <ProductIcon aria-hidden="true" />
+          )}
         </Link>
         <div className="ys-product-badges">
           <span className="ys-product-kind">
@@ -93,6 +106,9 @@ export function MarketplaceProductCard({
             <small>({product.reviews})</small>
           </span>
           <span>
+            <BarChart3 /> {product.sales || "0"} sales
+          </span>
+          <span>
             <Zap /> Auto
           </span>
         </div>
@@ -110,7 +126,7 @@ export function MarketplaceProductCard({
               disabled={!canPurchase}
               onClick={() => onBuy(product)}
             >
-              <ShoppingCart /> {canPurchase ? t("purchase") : t("unavailable")}
+              <ShoppingCart /> {canPurchase ? t("purchase") : "Sold out"}
             </button>
           </div>
         </footer>

@@ -3529,6 +3529,21 @@ function WalletTabContent({
       setMessage(text);
       return;
     }
+    const normalizedTx = proofTx.trim().toLowerCase();
+    const evmTopup = ["CRYPTO_BEP20", "CRYPTO_ERC20", "ETH"].includes(
+      activeTopup.method,
+    );
+    const validTx = evmTopup
+      ? /^0x[a-f0-9]{64}$/.test(normalizedTx)
+      : /^[a-f0-9]{64}$/.test(normalizedTx);
+    if (!validTx) {
+      const text = evmTopup
+        ? "Enter the complete 0x transaction hash (66 characters) for this network."
+        : "Enter the complete 64-character transaction ID for this network.";
+      setTopupFeedback({ kind: "error", text });
+      setMessage(text);
+      return;
+    }
     setBusy(true);
     try {
       const payload = new FormData();
@@ -3808,7 +3823,7 @@ function WalletTabContent({
               <button
                 type="submit"
                 className="primary-button"
-                disabled={busy || !selectedMethod}
+                disabled={busy}
               >
                 <PlusCircle size={16} />{" "}
                 {busy ? t("creatingPayment") : t("createPayment")}
@@ -3943,11 +3958,15 @@ function WalletTabContent({
               <span>{t("transactionId")} *</span>
               <input
                 value={proofTx}
-                minLength={64}
                 maxLength={66}
                 onChange={(event) => setProofTx(event.target.value)}
                 placeholder="Paste the complete on-chain transaction hash"
               />
+              <small>
+                Use the full TXID shown by your wallet or exchange. You can
+                submit the form to see exact validation for the selected
+                network.
+              </small>
             </label>
             <label className="topup-upload">
               <UploadCloud size={24} />
@@ -4000,7 +4019,7 @@ function WalletTabContent({
             <button
               type="button"
               className="primary-button"
-              disabled={busy || proofTx.trim().length < 64 || !proofFile}
+              disabled={busy}
               onClick={() => void submitProof()}
             >
               <CheckCircle2 size={18} />{" "}

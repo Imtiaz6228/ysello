@@ -5,22 +5,16 @@ import {
   ChevronDown,
   CreditCard,
   Download,
-  Gamepad2,
   Gift,
   Headphones,
   Eye,
   Layers3,
   Mail,
-  MonitorDown,
-  RefreshCw,
   ShieldCheck,
   ShoppingCart,
   Store,
-  Tags,
-  UsersRound,
   Zap,
 } from "lucide-react";
-import type { LucideIcon } from "lucide-react";
 import { FormEvent, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useCart } from "../commerce/CartContext";
@@ -33,6 +27,10 @@ import {
   type FeaturedStore,
 } from "../commerce/useMarketplace";
 import { MarketFooter, MarketHeader } from "../components/MarketHeader";
+import {
+  MarketplaceCategoryIcon,
+  MarketplacePlatformIcon,
+} from "../components/MarketplaceBrandIcon";
 import { Seo } from "../components/Seo";
 import { YselloReferenceProductCard } from "../components/YselloReferenceLayout";
 import {
@@ -42,15 +40,6 @@ import {
 } from "../data/marketplaceTaxonomy";
 import type { CatalogProduct } from "../data/catalog";
 import { useLocale } from "../i18n/LocaleContext";
-
-const categoryIcons: Record<string, LucideIcon> = {
-  gaming: Gamepad2,
-  software: MonitorDown,
-  subscriptions: RefreshCw,
-  "gift-cards": Gift,
-  "social-media": UsersRound,
-  outlet: Tags,
-};
 
 const categoryArt: Record<string, string> = {
   gaming: "/marketplace-assets/hero-marketplace.webp",
@@ -77,6 +66,9 @@ const socialAccountPlatforms = (socialAccountDepartment?.subcategories ?? [])
     };
   })
   .filter((platform) => platform.accounts);
+
+// The former g2-mobile-first-impression social-account block was intentionally
+// removed so mobile visitors move directly from search into category discovery.
 
 const serviceHighlights = [
   "Brand identity",
@@ -229,6 +221,7 @@ function storeFallbacks(products: CatalogProduct[]): FeaturedStore[] {
       slug,
       about:
         "Verified digital products with clear delivery terms and order-linked buyer support.",
+      isOfficial: product.isOfficial === true,
       rating: product.rating,
       sales: salesNumber(product),
       joined: "2026",
@@ -244,8 +237,19 @@ function storeFallbacks(products: CatalogProduct[]): FeaturedStore[] {
 }
 
 function TopStoreCard({ store }: { store: FeaturedStore }) {
+  const isOfficial = store.isOfficial || store.name === "Ysello Official";
   return (
     <article className="reference-store-card">
+      <Link
+        className="reference-store-cover"
+        to={`/stores/${store.slug}`}
+        aria-label={`Visit ${store.name}`}
+        style={{
+          backgroundImage: `linear-gradient(135deg, rgba(7, 12, 28, .08), rgba(7, 12, 28, .48)), url(${store.bannerUrl || "/marketplace-assets/seller-growth.webp"})`,
+        }}
+      >
+        <span>{isOfficial ? "Official marketplace store" : "Verified store"}</span>
+      </Link>
       <div className="reference-store-profile">
         <span className="reference-store-logo">
           {store.logoUrl ? (
@@ -265,7 +269,8 @@ function TopStoreCard({ store }: { store: FeaturedStore }) {
           <h3>
             <Link to={`/stores/${store.slug}`}>{store.name}</Link>
             <span>
-              <BadgeCheck aria-hidden="true" /> VERIFIED
+              <BadgeCheck aria-hidden="true" />{" "}
+              {isOfficial ? "OFFICIAL" : "VERIFIED"}
             </span>
           </h3>
           <p>{store.about}</p>
@@ -498,44 +503,6 @@ export function MarketplaceHomePage() {
       <MarketHeader />
 
       <section
-        className="g2-mobile-first-impression"
-        aria-label="Social media account marketplace"
-      >
-        <header>
-          <span>
-            <ShieldCheck aria-hidden="true" />
-          </span>
-          <div>
-            <strong>Browse account inventory with confidence</strong>
-            <small>
-              Choose a platform, then compare new or old accounts with clear
-              follower and posting history.
-            </small>
-          </div>
-          <Link
-            to={categoryPath("social-media", categories)}
-            aria-label="Browse all social media accounts"
-          >
-            <ArrowRight aria-hidden="true" />
-          </Link>
-        </header>
-        <div>
-          {socialAccountPlatforms.slice(0, 4).map((platform) => (
-            <Link
-              key={platform.slug}
-              to={categoryPath(platform.slug, categories)}
-            >
-              <b>{platform.name.slice(0, 2).toUpperCase()}</b>
-              <span>
-                <strong>{platform.name}</strong>
-                <small>New · Old · Followers · Posts</small>
-              </span>
-            </Link>
-          ))}
-        </div>
-      </section>
-
-      <section
         className="market-home-hero pro-market-hero g2-home-hero"
         aria-labelledby="marketplace-hero-title"
       >
@@ -571,7 +538,6 @@ export function MarketplaceHomePage() {
       >
         <div className="market-category-grid lux-quick-categories lux-main-category-row homepage-category-icons g2-category-dock">
           {marketplaceTaxonomy.map((category) => {
-            const Icon = categoryIcons[category.slug] ?? Layers3;
             const count = categoryCount(category, categories);
             return (
               <Link
@@ -581,8 +547,8 @@ export function MarketplaceHomePage() {
                 onFocus={() => setFocusedCategorySlug(category.slug)}
                 onMouseEnter={() => setFocusedCategorySlug(category.slug)}
               >
-                <span>
-                  <Icon aria-hidden="true" />
+                <span className={`market-category-official-icon brand-${category.slug}`}>
+                  <MarketplaceCategoryIcon slug={category.slug} />
                 </span>
                 <strong>{category.name}</strong>
                 <small>
@@ -627,7 +593,9 @@ export function MarketplaceHomePage() {
               key={platform.slug}
               to={categoryPath(platform.slug, categories)}
             >
-              <span>{platform.name.slice(0, 2).toUpperCase()}</span>
+              <span className={`platform-brand-icon brand-${platform.slug}`}>
+                <MarketplacePlatformIcon slug={platform.slug} />
+              </span>
               <div>
                 <strong>{platform.name}</strong>
                 <small>Accounts</small>

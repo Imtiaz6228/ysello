@@ -387,6 +387,10 @@ export function OrderDeliveryPage() {
         !item.deliveredAt,
     ),
   );
+  const conversationPartner =
+    user?.role === "CUSTOMER"
+      ? (order?.items[0]?.seller.firstName ?? "Seller")
+      : (order?.buyer.firstName ?? "Buyer");
 
   return (
     <main className="commerce-page order-workspace">
@@ -726,105 +730,125 @@ export function OrderDeliveryPage() {
 
       <div className="order-chat order-chat-pro">
         <header className="order-chat-heading">
-          <div>
-            <span className="section-index">PRIVATE ORDER CHAT</span>
-            <h2>Buyer & seller workspace</h2>
-            <small>
-              Messages update automatically. Attach screenshots when evidence is
-              needed.
-            </small>
+          <div className="order-chat-identity">
+            <span>{conversationPartner.slice(0, 1).toUpperCase()}</span>
+            <div>
+              <small>PRIVATE ORDER CHAT</small>
+              <h2>{conversationPartner}</h2>
+              <p>
+                {order ? `Order #${order.orderNumber}` : "Protected order workspace"}
+                {" · "}Messages update automatically
+              </p>
+            </div>
           </div>
-          <span className="chat-live-dot">Live</span>
+          <span className="chat-live-dot">
+            <i /> Protected & live
+          </span>
         </header>
         {error ? <div className="notice error">{error}</div> : null}
         {success ? <div className="notice success">{success}</div> : null}
-        {messages.length ? (
-          messages.map((message) => (
-            <article
-              className={`order-chat-bubble ${message.author.role === "SELLER" ? "seller-message" : "buyer-message"} ${message.author.id === user?.id ? "own-message" : ""}`}
-              key={message.id}
-            >
-              <span>{message.author.firstName[0]}</span>
-              <div>
-                <header>
-                  <strong>{message.author.firstName}</strong>
-                  <small>
-                    {message.author.role.replace("_", " ")} ·{" "}
-                    {new Date(message.createdAt).toLocaleString()}
-                  </small>
-                </header>
-                <p>{message.body}</p>
-                {message.attachmentUrl ? (
-                  <a
-                    className="chat-attachment"
-                    href={message.attachmentUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                  >
-                    <img
-                      src={message.attachmentUrl}
-                      alt={message.attachmentName ?? "attachment"}
-                    />
-                    <small>{message.attachmentName ?? "View screenshot"}</small>
-                  </a>
-                ) : null}
-              </div>
-            </article>
-          ))
-        ) : (
-          <div className="no-tickets">
-            <MessageCircle />
-            <strong>No messages yet</strong>
-            <p>Start the order conversation below.</p>
-          </div>
-        )}
-        <div ref={threadEndRef} />
-        <div className="chat-quick-replies">
-          {[
-            "Thanks",
-            "Verifying",
-            "Need more information",
-            "Resolved",
-            "Refund requested",
-          ].map((reply) => (
-            <button key={reply} type="button" onClick={() => setBody(reply)}>
-              {reply}
-            </button>
-          ))}
+        <div
+          className="order-chat-thread"
+          role="log"
+          aria-live="polite"
+          aria-label="Order conversation"
+        >
+          {messages.length ? (
+            messages.map((message) => (
+              <article
+                className={`order-chat-bubble ${message.author.role === "SELLER" ? "seller-message" : "buyer-message"} ${message.author.id === user?.id ? "own-message" : ""}`}
+                key={message.id}
+              >
+                <span>{message.author.firstName[0]}</span>
+                <div>
+                  <header>
+                    <strong>
+                      {message.author.id === user?.id
+                        ? "You"
+                        : message.author.firstName}
+                    </strong>
+                    <small>
+                      {new Date(message.createdAt).toLocaleTimeString([], {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
+                    </small>
+                  </header>
+                  <p>{message.body}</p>
+                  {message.attachmentUrl ? (
+                    <a
+                      className="chat-attachment"
+                      href={message.attachmentUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      <img
+                        src={message.attachmentUrl}
+                        alt={message.attachmentName ?? "attachment"}
+                      />
+                      <small>{message.attachmentName ?? "View screenshot"}</small>
+                    </a>
+                  ) : null}
+                </div>
+              </article>
+            ))
+          ) : (
+            <div className="no-tickets">
+              <MessageCircle />
+              <strong>Your protected conversation starts here</strong>
+              <p>Send a clear delivery question or attach a screenshot.</p>
+            </div>
+          )}
+          <div ref={threadEndRef} />
         </div>
-        <form onSubmit={send}>
-          <textarea
-            value={body}
-            onChange={(event) => setBody(event.target.value)}
-            onKeyDown={(event) => {
-              if (event.key === "Enter" && !event.shiftKey) {
-                event.preventDefault();
-                event.currentTarget.form?.requestSubmit();
-              }
-            }}
-            placeholder="Write a message about delivery…"
-            rows={4}
-          />
-          <div className="chat-compose-actions">
-            <label className="upload-action">
-              <Paperclip size={16} /> Attach screenshot
-              <input
-                type="file"
-                accept="image/jpeg,image/png,image/webp"
-                onChange={(event) =>
-                  setAttachment(event.target.files?.[0] ?? null)
-                }
-              />
-            </label>
-            {attachment ? <small>{attachment.name}</small> : null}
-            <button
-              className="chat-send-button"
-              disabled={sending || !body.trim()}
-            >
-              <Send size={15} /> {sending ? "Sending…" : "Send"}
-            </button>
+        <div className="order-chat-composer">
+          <div className="chat-quick-replies">
+            {[
+              "Thanks",
+              "Verifying",
+              "Need more information",
+              "Resolved",
+              "Refund requested",
+            ].map((reply) => (
+              <button key={reply} type="button" onClick={() => setBody(reply)}>
+                {reply}
+              </button>
+            ))}
           </div>
-        </form>
+          <form onSubmit={send}>
+            <textarea
+              value={body}
+              onChange={(event) => setBody(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" && !event.shiftKey) {
+                  event.preventDefault();
+                  event.currentTarget.form?.requestSubmit();
+                }
+              }}
+              placeholder={`Message ${conversationPartner} about this order…`}
+              rows={3}
+            />
+            <div className="chat-compose-actions">
+              <label className="upload-action">
+                <Paperclip size={16} /> Attach screenshot
+                <input
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  onChange={(event) =>
+                    setAttachment(event.target.files?.[0] ?? null)
+                  }
+                />
+              </label>
+              {attachment ? <small>{attachment.name}</small> : null}
+              <button
+                className="chat-send-button"
+                disabled={sending || !body.trim()}
+              >
+                <Send size={15} /> {sending ? "Sending…" : "Send"}
+              </button>
+            </div>
+          </form>
+        </div>
       </div>
       <MarketFooter />
     </main>

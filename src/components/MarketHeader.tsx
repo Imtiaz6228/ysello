@@ -3,25 +3,18 @@ import {
   BadgeCheck,
   ChevronDown,
   Clock3,
-  Gamepad2,
-  Gift,
   Grid2X2,
   Heart,
   LifeBuoy,
   LogOut,
   Menu,
-  MonitorDown,
-  RefreshCw,
   Search,
   ShieldCheck,
   ShoppingCart,
   Store,
-  Tags,
   UserRound,
-  UsersRound,
   X,
 } from "lucide-react";
-import type { LucideIcon } from "lucide-react";
 import { FormEvent, useEffect, useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { STAFF_ROLES } from "../api/client";
@@ -33,15 +26,7 @@ import {
 } from "../data/marketplaceTaxonomy";
 import { useLocale } from "../i18n/LocaleContext";
 import { LocaleSwitcher } from "./LocaleSwitcher";
-
-const categoryIcons: Record<string, LucideIcon> = {
-  gaming: Gamepad2,
-  software: MonitorDown,
-  subscriptions: RefreshCw,
-  "gift-cards": Gift,
-  "social-media": UsersRound,
-  outlet: Tags,
-};
+import { MarketplaceCategoryIcon } from "./MarketplaceBrandIcon";
 
 const departmentLabels: Record<string, string> = {
   gaming: "Gaming",
@@ -59,8 +44,7 @@ function taxonomyCategoryPath(rootSlug: string, leafSlug = rootSlug) {
 }
 
 function DepartmentIcon({ category }: { category: MarketplaceTaxonomyItem }) {
-  const Icon = categoryIcons[category.slug] ?? Grid2X2;
-  return <Icon aria-hidden="true" />;
+  return <MarketplaceCategoryIcon slug={category.slug} />;
 }
 
 function MegaMenu({
@@ -324,6 +308,9 @@ export function MarketHeader() {
           className="market-department-bar g2-department-bar"
           aria-label="Marketplace departments"
         >
+          <Link className="g2-marketplace-tab" to="/catalog">
+            <Store aria-hidden="true" /> Marketplace
+          </Link>
           {marketplaceTaxonomy.slice(0, 6).map((category) => (
             <button
               key={category.slug}
@@ -405,6 +392,17 @@ export function MarketHeader() {
                 </Link>
               </div>
             </header>
+
+            <Link className="g2-mobile-marketplace-tab" to="/catalog">
+              <span>
+                <Store aria-hidden="true" />
+              </span>
+              <div>
+                <small>EXPLORE EVERYTHING</small>
+                <strong>Marketplace</strong>
+              </div>
+              <ArrowRight aria-hidden="true" />
+            </Link>
 
             <section className="g2-mobile-categories">
               <div className="g2-mobile-category-heading">

@@ -1,5 +1,7 @@
 import {
   BadgeCheck,
+  BarChart3,
+  Boxes,
   BriefcaseBusiness,
   ChevronRight,
   Heart,
@@ -298,6 +300,8 @@ export function YselloReferenceProductCard({
   const discount = originalPrice
     ? Math.round((1 - product.priceCents / originalPrice) * 100)
     : 0;
+  const availableQuantity =
+    product.type === "SERVICE" ? null : Math.max(0, product.stockCount ?? 0);
 
   return (
     <article
@@ -309,6 +313,7 @@ export function YselloReferenceProductCard({
         {product.seller}
       </span>
       <div className="ys-ref-product-media g2-product-media">
+        {!canPurchase ? <span className="product-sold-out-ribbon">SOLD OUT</span> : null}
         <Link
           className="g2-product-image-link"
           to={productPath(product)}
@@ -351,12 +356,30 @@ export function YselloReferenceProductCard({
           </span>
           <span>{product.type === "SERVICE" ? "SERVICE" : region}</span>
         </div>
-        <div className="ys-ref-product-meta g2-product-meta">
+        <div className="ys-ref-product-meta g2-product-meta product-commerce-metrics">
           <span>
             <Star fill="currentColor" aria-hidden="true" />{" "}
-            {product.rating || "New"} <small>({product.reviews})</small>
+            <b>{product.rating || "New"}</b>
+            <small>{product.reviews} ratings</small>
           </span>
-          <span>{product.delivery || "Delivery shown at checkout"}</span>
+          <span>
+            <BarChart3 aria-hidden="true" />
+            <b>{product.sales || "0"}</b>
+            <small>total sales</small>
+          </span>
+          <span className={canPurchase ? "" : "sold-out"}>
+            <Boxes aria-hidden="true" />
+            <b>
+              {product.type === "SERVICE"
+                ? "Open"
+                : availableQuantity === 0
+                  ? "Sold out"
+                  : availableQuantity}
+            </b>
+            <small>
+              {product.type === "SERVICE" ? "service slots" : "available"}
+            </small>
+          </span>
         </div>
         <div className="ys-ref-product-price-row g2-product-price-row">
           <div>
@@ -367,9 +390,7 @@ export function YselloReferenceProductCard({
         </div>
         <div className="g2-product-stock">
           <span>
-            {product.type === "SERVICE"
-              ? "Service availability shown before checkout"
-              : `${product.stockCount ?? 0} available`}
+            {product.delivery || "Delivery shown at checkout"}
           </span>
         </div>
         <div className="ys-ref-product-card-actions g2-product-actions">
@@ -381,7 +402,7 @@ export function YselloReferenceProductCard({
               onClick={() => onBuy(product)}
             >
               <ShoppingBag aria-hidden="true" />
-              {canPurchase ? "Add to cart" : "Unavailable"}
+              {canPurchase ? "Add to cart" : "Sold out"}
             </button>
           ) : null}
         </div>

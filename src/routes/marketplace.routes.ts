@@ -216,6 +216,7 @@ marketplaceRouter.get(
         slug: true,
         about: true,
         logoUrl: true,
+        bannerUrl: true,
         averageRating: true,
         totalSales: true,
         createdAt: true,

@@ -1,9 +1,7 @@
 import {
-  ClipboardList,
-  Grid2X2,
   Home,
-  Search,
   ShoppingBag,
+  Store,
   UserRound,
 } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
@@ -32,11 +30,6 @@ export function MobileBottomNavigation() {
   }
 
   const accountPath = user ? "/dashboard" : "/sign-in";
-  const isHomepage = location.pathname === "/";
-  const browseIcon = isHomepage ? Grid2X2 : Search;
-  const BrowseIcon = browseIcon;
-  const thirdPath = isHomepage ? accountPath : "/cart";
-  const ThirdIcon = isHomepage ? ClipboardList : ShoppingBag;
 
   return (
     <nav className="mobile-bottom-nav" aria-label="Mobile navigation">
@@ -51,17 +44,17 @@ export function MobileBottomNavigation() {
         to="/catalog"
         aria-current={location.pathname === "/catalog" ? "page" : undefined}
       >
-        <BrowseIcon aria-hidden="true" />
-        <span>{isHomepage ? "Browse" : "Search"}</span>
+        <Store aria-hidden="true" />
+        <span>Marketplace</span>
       </Link>
       <Link
         className="mobile-cart-link"
-        to={thirdPath}
-        aria-current={location.pathname === thirdPath ? "page" : undefined}
+        to="/cart"
+        aria-current={location.pathname === "/cart" ? "page" : undefined}
       >
-        <ThirdIcon aria-hidden="true" />
-        {!isHomepage && count > 0 ? <b>{count > 99 ? "99+" : count}</b> : null}
-        <span>{isHomepage ? "Orders" : "Cart"}</span>
+        <ShoppingBag aria-hidden="true" />
+        {count > 0 ? <b>{count > 99 ? "99+" : count}</b> : null}
+        <span>Cart</span>
       </Link>
       <Link
         to={accountPath}

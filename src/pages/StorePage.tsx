@@ -2,22 +2,18 @@ import {
   BadgeCheck,
   CalendarDays,
   MessageCircle,
-  PackageCheck,
   ShieldCheck,
-  ShoppingBag,
   Star,
 } from "lucide-react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { useCart } from "../commerce/CartContext";
-import { productPath } from "../commerce/marketplaceUrls";
 import { MarketFooter, MarketHeader } from "../components/MarketHeader";
 import { Seo } from "../components/Seo";
+import { YselloReferenceProductCard } from "../components/YselloReferenceLayout";
 import { useMarketplaceStore } from "../commerce/useMarketplace";
-import { useLocale } from "../i18n/LocaleContext";
 import { NotFoundPage } from "./NotFoundPage";
 
 export function StorePage() {
-  const { formatProductMoney } = useLocale();
   const { slug } = useParams();
   const { add } = useCart();
   const navigate = useNavigate();
@@ -38,7 +34,7 @@ export function StorePage() {
         title={`${store.name} digital store`}
         description={store.about}
         canonicalPath={`/stores/${slug}`}
-        image="/marketplace-assets/seller-growth.webp"
+        image={store.bannerUrl || "/marketplace-assets/seller-growth.webp"}
         imageAlt={`${store.name} digital storefront`}
         schema={{
           "@context": "https://schema.org",
@@ -53,20 +49,25 @@ export function StorePage() {
       <section
         className="store-banner has-store-banner"
         style={{
-          backgroundImage:
-            "linear-gradient(100deg, rgba(8,12,26,.96), rgba(31,38,102,.72)), url(/marketplace-assets/seller-growth.webp)",
+          backgroundImage: `linear-gradient(100deg, rgba(8,12,26,.96), rgba(31,38,102,.72)), url(${store.bannerUrl || "/marketplace-assets/seller-growth.webp"})`,
         }}
       >
-        <div className="store-monogram">{store.mark}</div>
+        <div className="store-monogram store-logo">
+          {store.logoUrl ? (
+            <img src={store.logoUrl} alt={`${store.name} logo`} />
+          ) : (
+            store.mark
+          )}
+        </div>
         <div>
           <span className="verified-store">
-            <BadgeCheck /> VERIFIED SELLER
+            <BadgeCheck /> {store.isOfficial ? "YSELLO OFFICIAL" : "VERIFIED SELLER"}
           </span>
           <h1>{store.name}</h1>
           <p>{store.about}</p>
           <div className="store-facts">
             <span>
-              <Star fill="currentColor" /> {store.rating} rating
+              <Star fill="currentColor" /> {store.rating.toFixed(1)} rating
             </span>
             <span>{store.sales} sales</span>
             <span>{products.length} products</span>
@@ -81,31 +82,31 @@ export function StorePage() {
       </section>
       <section className="store-body">
         <div>
-          <span className="section-index">PRODUCTS</span>
-          <div className="store-products">
-            {products.map((product) => (
-              <article key={product.id}>
-                <div className="store-product-icon" aria-hidden="true">
-                  <PackageCheck />
-                </div>
-                <Link to={productPath(product)}>
-                  <h2>{product.title}</h2>
-                </Link>
-                <p>{product.description}</p>
-                <footer>
-                  <strong>{formatProductMoney(product)}</strong>
-                  <button
-                    onClick={() => {
-                      add(product);
-                      navigate("/cart");
-                    }}
-                  >
-                    <ShoppingBag /> Add to cart
-                  </button>
-                </footer>
-              </article>
-            ))}
+          <div className="store-products-heading">
+            <div>
+              <span className="section-index">ALL PRODUCTS</span>
+              <h2>{store.name} catalog</h2>
+            </div>
+            <span>{products.length} live listings</span>
           </div>
+          {products.length ? (
+            <div className="store-products store-products-premium store-product-icon-grid">
+              {products.map((product) => (
+                <YselloReferenceProductCard
+                  key={product.id}
+                  product={product}
+                  onBuy={(selected) => {
+                    add(selected);
+                    navigate("/cart");
+                  }}
+                />
+              ))}
+            </div>
+          ) : (
+            <div className="empty-state">
+              This store has no live products right now.
+            </div>
+          )}
         </div>
         <aside>
           <ShieldCheck />

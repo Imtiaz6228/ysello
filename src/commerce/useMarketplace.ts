@@ -449,6 +449,7 @@ export type PublicStore = {
   name: string;
   about: string;
   policy: string;
+  isOfficial: boolean;
   rating: number;
   sales: string;
   joined: string;
@@ -461,11 +462,13 @@ export type FeaturedStore = {
   name: string;
   slug: string;
   about: string;
+  isOfficial: boolean;
   rating: number;
   sales: number;
   joined: string;
   mark: string;
   logoUrl?: string | null;
+  bannerUrl?: string | null;
 };
 
 export type PublicMarketplaceReview = {
@@ -531,25 +534,35 @@ export function useMarketplaceStores() {
         totalSales: number;
         createdAt: string;
         logoUrl?: string | null;
+        bannerUrl?: string | null;
       }>;
     }>("/api/marketplace/stores")
       .then((data) =>
         setStores(
-          data.stores.map((store) => ({
-            name: store.storeName,
-            slug: store.slug,
-            about: store.about,
-            rating: Number(store.averageRating) || 0,
-            sales: store.totalSales,
-            joined: new Date(store.createdAt).getFullYear().toString(),
-            mark: store.storeName
-              .split(/\s+/)
-              .map((word) => word[0])
-              .join("")
-              .slice(0, 2)
-              .toUpperCase(),
-            logoUrl: normalizePublicMediaUrl(store.logoUrl),
-          })),
+          data.stores
+            .map((store) => ({
+              name: store.storeName,
+              slug: store.slug,
+              about: store.about,
+              isOfficial: store.storeName === "Ysello Official",
+              rating: Number(store.averageRating) || 0,
+              sales: store.totalSales,
+              joined: new Date(store.createdAt).getFullYear().toString(),
+              mark: store.storeName
+                .split(/\s+/)
+                .map((word) => word[0])
+                .join("")
+                .slice(0, 2)
+                .toUpperCase(),
+              logoUrl: normalizePublicMediaUrl(store.logoUrl),
+              bannerUrl: normalizePublicMediaUrl(store.bannerUrl),
+            }))
+            .sort(
+              (a, b) =>
+                Number(b.isOfficial) - Number(a.isOfficial) ||
+                b.sales - a.sales ||
+                b.rating - a.rating,
+            ),
         ),
       )
       .catch(() => setStores([]));
@@ -569,6 +582,7 @@ export function useMarketplaceStore(slug?: string) {
           "A verified marketplace seller offering clear product details, protected delivery and order-linked support.",
         policy:
           "Ysello buyer protection and the listing-specific delivery terms apply to every order.",
+        isOfficial: fallbackProducts[0].isOfficial === true,
         rating:
           fallbackProducts.reduce((sum, product) => sum + product.rating, 0) /
           fallbackProducts.length,
@@ -600,6 +614,7 @@ export function useMarketplaceStore(slug?: string) {
           "A verified marketplace seller offering clear product details, protected delivery and order-linked support.",
         policy:
           "Ysello buyer protection and the listing-specific delivery terms apply to every order.",
+        isOfficial: localStoreProducts[0].isOfficial === true,
         rating:
           localStoreProducts.reduce((sum, product) => sum + product.rating, 0) /
           localStoreProducts.length,
@@ -641,6 +656,7 @@ export function useMarketplaceStore(slug?: string) {
           policy:
             data.store.policy ||
             "Ysello buyer protection applies to every order.",
+          isOfficial: data.store.storeName === "Ysello Official",
           rating: Number(data.store.averageRating),
           sales: data.store.totalSales.toLocaleString(),
           joined: new Date(data.store.createdAt).getFullYear().toString(),

@@ -108,10 +108,23 @@ async function uniqueProductSlug(name: string) {
 async function ensureAdminSellerProfile(userId: string) {
   const existing = await prisma.sellerProfile.findUnique({ where: { userId } });
   if (existing) {
-    if (!existing.isVerified || existing.isSuspended) {
+    if (
+      existing.storeName !== "Ysello Official" ||
+      !existing.isVerified ||
+      existing.isSuspended
+    ) {
       return prisma.sellerProfile.update({
         where: { userId },
-        data: { isVerified: true, isSuspended: false, suspensionReason: null },
+        data: {
+          storeName: "Ysello Official",
+          about:
+            "Official marketplace catalog managed by the Ysello administration team.",
+          policy:
+            "Products are reviewed and supported through the marketplace order system.",
+          isVerified: true,
+          isSuspended: false,
+          suspensionReason: null,
+        },
       });
     }
     return existing;
