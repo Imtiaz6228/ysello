@@ -248,8 +248,14 @@ const sellerMenuGroups: Array<{
     label: "Catalog",
     items: [
       { label: "My products", tab: "products", icon: Boxes },
+      {
+        label: "Product groups",
+        tab: "product-groups",
+        icon: FolderKanban,
+      },
       { label: "Categories", tab: "categories", icon: Grid3X3 },
       { label: "Inventory & variants", tab: "inventory", icon: Layers3 },
+      { label: "Uploaded files", tab: "downloads", icon: Download },
       { label: "Drafts & review", tab: "drafts", icon: FileText },
     ],
   },
@@ -257,36 +263,69 @@ const sellerMenuGroups: Array<{
     label: "Orders",
     items: [
       { label: "All orders", tab: "orders", icon: ShoppingBag },
+      { label: "Processing", tab: "processing", icon: Clock3 },
+      { label: "Delivered", tab: "delivered", icon: PackageCheck },
       { label: "Refunds", tab: "refunds", icon: ArrowDownRight },
       { label: "Disputes", tab: "disputes", icon: ShieldCheck },
     ],
   },
   {
     label: "Finance",
-    items: [{ label: "Financial center", tab: "finance", icon: WalletCards }],
+    items: [
+      { label: "Financial center", tab: "finance", icon: WalletCards },
+      { label: "Transactions", tab: "transactions", icon: FileText },
+      { label: "Frozen funds", tab: "frozen", icon: LockKeyhole },
+      { label: "Earnings", tab: "earnings", icon: TrendingUp },
+      { label: "Withdrawals", tab: "withdrawals", icon: CircleDollarSign },
+      { label: "Payment methods", tab: "payments", icon: CreditCard },
+    ],
   },
   {
-    label: "Inbox",
+    label: "Customers & support",
     items: [
       { label: "Buyer messages", tab: "messages", icon: MessageSquare },
       { label: "Reviews", tab: "reviews", icon: BadgeCheck },
       { label: "Support tickets", tab: "tickets", icon: TicketCheck },
       { label: "Notifications", tab: "notifications", icon: Bell },
-    ],
-  },
-  {
-    label: "Performance",
-    items: [{ label: "Analytics", tab: "analytics", icon: BarChart3 }],
-  },
-  {
-    label: "Store",
-    items: [
-      { label: "Store profile", tab: "storefront", icon: Store },
-      { label: "Security", tab: "security", icon: ShieldCheck },
       { label: "Seller support", tab: "support", icon: LifeBuoy },
     ],
   },
+  {
+    label: "Growth",
+    items: [
+      { label: "Coupons", tab: "coupons", icon: Tag },
+      { label: "Promotions", tab: "promotions", icon: Gift },
+      { label: "Sponsored listings", tab: "sponsored", icon: Megaphone },
+      { label: "Featured products", tab: "featured", icon: Sparkles },
+    ],
+  },
+  {
+    label: "Analytics",
+    items: [
+      { label: "Overview", tab: "analytics", icon: BarChart3 },
+      { label: "Revenue", tab: "revenue", icon: TrendingUp },
+      { label: "Visitors", tab: "visitors", icon: Users },
+      { label: "Conversion", tab: "conversion", icon: ArrowUpRight },
+    ],
+  },
+  {
+    label: "Store settings",
+    items: [
+      { label: "Store profile", tab: "storefront", icon: Store },
+      { label: "Security", tab: "security", icon: ShieldCheck },
+      { label: "API access", tab: "api", icon: KeyRound },
+      { label: "Preferences", tab: "preferences", icon: Settings },
+    ],
+  },
 ];
+
+function sellerGroupLabel(tab: Tab) {
+  return (
+    sellerMenuGroups.find((group) =>
+      group.items.some((item) => item.tab === tab),
+    )?.label ?? "Workspace"
+  );
+}
 
 type FinanceSummary = {
   availableBalanceCents: number;
@@ -529,15 +568,7 @@ export function SellerStudioPage() {
     walletAddress: "",
   });
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>(
-    {
-      Workspace: true,
-      Catalog: true,
-      Orders: true,
-      Finance: true,
-      Inbox: true,
-      Performance: true,
-      Store: true,
-    },
+    () => ({ [sellerGroupLabel(tab)]: true }),
   );
   const [mediaUploading, setMediaUploading] = useState("");
   const [deliveryOrder, setDeliveryOrder] = useState<SellerOrder | null>(null);
@@ -770,6 +801,7 @@ export function SellerStudioPage() {
 
   function selectTab(next: Tab) {
     setTabState(next);
+    setExpandedGroups({ [sellerGroupLabel(next)]: true });
     setDrawerOpen(false);
     setSearchQuery("");
     setStatusFilter("ALL");
@@ -783,7 +815,10 @@ export function SellerStudioPage() {
   useEffect(() => {
     const syncTab = () => {
       const hash = window.location.hash.replace("#", "");
-      if (validTab(hash)) setTabState(hash);
+      if (validTab(hash)) {
+        setTabState(hash);
+        setExpandedGroups({ [sellerGroupLabel(hash)]: true });
+      }
     };
     window.addEventListener("hashchange", syncTab);
     return () => window.removeEventListener("hashchange", syncTab);
@@ -1636,11 +1671,11 @@ export function SellerStudioPage() {
               <button
                 className="seller-nav-group"
                 type="button"
+                aria-expanded={Boolean(expandedGroups[group.label])}
                 onClick={() =>
-                  setExpandedGroups({
-                    ...expandedGroups,
-                    [group.label]: !expandedGroups[group.label],
-                  })
+                  setExpandedGroups(
+                    expandedGroups[group.label] ? {} : { [group.label]: true },
+                  )
                 }
               >
                 <span>{group.label}</span>
@@ -1669,14 +1704,18 @@ export function SellerStudioPage() {
             </section>
           ))}
         </nav>
-        <div className="seller-sidebar-support">
+        <button
+          type="button"
+          className="seller-sidebar-support"
+          onClick={() => selectTab("support")}
+        >
           <LifeBuoy />
           <span>
             <strong>Seller support</strong>
             <small>Help whenever you need it</small>
           </span>
           <ArrowRight />
-        </div>
+        </button>
         <div className="seller-pro-sidebar-footer">
           <Link to="/">
             <Home size={16} /> Home

@@ -46,7 +46,6 @@ import {
   Moon,
   Server,
   ShieldCheck,
-  Star,
   Sun,
   TrendingUp,
   X,
@@ -470,15 +469,10 @@ export function OperationsAdminPage() {
   const [notificationOpen, setNotificationOpen] = useState(false);
   const [darkMode, setDarkMode] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [openGroups, setOpenGroups] = useState<string[]>(
-    navGroups.map((group) => group.label),
-  );
-  const [favoriteTabs, setFavoriteTabs] = useState<Tab[]>([
-    "overview",
-    "deposits",
-    "products",
-  ]);
-  const [recentTabs, setRecentTabs] = useState<Tab[]>([tab]);
+  const [openGroups, setOpenGroups] = useState<string[]>(() => {
+    const activeGroup = navGroups.find((group) => group.items.includes(tab));
+    return [activeGroup?.label ?? "Command center"];
+  });
   const [overview, setOverview] = useState<Overview | null>(null);
   const [applications, setApplications] = useState<SellerApplication[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
@@ -551,9 +545,8 @@ export function OperationsAdminPage() {
 
   function selectTab(next: Tab) {
     setTabState(next);
-    setRecentTabs((current) =>
-      [next, ...current.filter((item) => item !== next)].slice(0, 4),
-    );
+    const activeGroup = navGroups.find((group) => group.items.includes(next));
+    setOpenGroups([activeGroup?.label ?? "Command center"]);
     setGlobalSearch("");
     setMobileNavOpen(false);
     window.history.replaceState(
@@ -564,19 +557,7 @@ export function OperationsAdminPage() {
   }
 
   function toggleGroup(label: string) {
-    setOpenGroups((current) =>
-      current.includes(label)
-        ? current.filter((item) => item !== label)
-        : [...current, label],
-    );
-  }
-
-  function toggleFavorite(next: Tab) {
-    setFavoriteTabs((current) =>
-      current.includes(next)
-        ? current.filter((item) => item !== next)
-        : [...current, next],
-    );
+    setOpenGroups((current) => (current.includes(label) ? [] : [label]));
   }
 
   useEffect(() => {
@@ -1127,33 +1108,6 @@ export function OperationsAdminPage() {
             placeholder="Search menu"
           />
         </label>
-        {!sidebarCollapsed ? (
-          <section className="admin-pinned-navigation">
-            <header>
-              <span>
-                <Star /> Favorites
-              </span>
-              <small>{favoriteTabs.length}</small>
-            </header>
-            <div>
-              {favoriteTabs.slice(0, 4).map((favorite) => {
-                const item = nav.find((entry) => entry.id === favorite)!;
-                const Icon = item.icon;
-                return (
-                  <button
-                    type="button"
-                    className={tab === item.id ? "active" : ""}
-                    onClick={() => selectTab(item.id)}
-                    key={item.id}
-                  >
-                    <Icon />
-                    <span>{item.label}</span>
-                  </button>
-                );
-              })}
-            </div>
-          </section>
-        ) : null}
         <nav className="admin-grouped-nav" aria-label="Admin navigation">
           {navGroups.map((group) => {
             const GroupIcon = group.icon;
@@ -1210,16 +1164,6 @@ export function OperationsAdminPage() {
                             </b>
                           )}
                         </button>
-                        {!sidebarCollapsed ? (
-                          <button
-                            type="button"
-                            className={`admin-favorite-toggle ${favoriteTabs.includes(id) ? "active" : ""}`}
-                            onClick={() => toggleFavorite(id)}
-                            aria-label={`${favoriteTabs.includes(id) ? "Remove" : "Add"} ${label} favorite`}
-                          >
-                            <Star />
-                          </button>
-                        ) : null}
                       </span>
                     ))}
                   </div>
@@ -1228,22 +1172,6 @@ export function OperationsAdminPage() {
             );
           })}
         </nav>
-        {!sidebarCollapsed ? (
-          <section className="admin-recent-navigation">
-            <span>Recently visited</span>
-            <div>
-              {recentTabs.map((recent) => (
-                <button
-                  type="button"
-                  onClick={() => selectTab(recent)}
-                  key={recent}
-                >
-                  {nav.find((item) => item.id === recent)?.label}
-                </button>
-              ))}
-            </div>
-          </section>
-        ) : null}
         <div className="admin-sidebar-footer">
           <div>
             <span>

@@ -34,6 +34,7 @@ import "./marketplace-premium-v2.css";
 import "./marketplace-premium-v3.css";
 import "./marketplace-premium-v4.css";
 import "./marketplace-professional-v5.css";
+import "./dashboard-professional-v6.css";
 import { LocaleProvider } from "./i18n/LocaleContext";
 import { AppErrorBoundary } from "./components/AppErrorBoundary";
 

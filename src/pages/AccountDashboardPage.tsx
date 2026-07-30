@@ -294,32 +294,64 @@ const tabs: Array<{
 
 const buyerMenuGroups: Array<{
   label: string;
-  items: Array<{ tab: Tab; label: string; icon: typeof Home }>;
+  items: Array<{
+    tab: Tab;
+    label: string;
+    icon: typeof Home;
+    roles?: string[];
+  }>;
 }> = [
   {
-    label: "Dashboard",
+    label: "Overview",
     items: [{ tab: "overview", label: "Overview", icon: Home }],
   },
   {
-    label: "Purchases",
+    label: "Orders & support",
     items: [
-      { tab: "orders", label: "Orders", icon: ShoppingBag },
+      { tab: "orders", label: "All orders", icon: ShoppingBag },
+      { tab: "active-orders", label: "Active orders", icon: Activity },
+      {
+        tab: "completed-orders",
+        label: "Completed orders",
+        icon: CheckCircle2,
+      },
+      { tab: "pending-orders", label: "Pending orders", icon: Clock3 },
+      { tab: "cancelled-orders", label: "Cancelled orders", icon: X },
       { tab: "refunds", label: "Refunds", icon: RefreshCw },
       { tab: "disputes", label: "Disputes", icon: Gavel },
     ],
   },
   {
-    label: "Digital Library",
+    label: "Library & delivery",
     items: [
       { tab: "purchased-products", label: "My library", icon: PackageOpen },
-      { tab: "wishlist", label: "Saved products", icon: Heart },
-      { tab: "cart", label: "Shopping cart", icon: ShoppingBag },
+      { tab: "downloads", label: "Downloads", icon: Download },
+      { tab: "license-keys", label: "License keys", icon: KeyRound },
+      {
+        tab: "activation-codes",
+        label: "Activation codes",
+        icon: ListChecks,
+      },
+      { tab: "delivery-history", label: "Delivery history", icon: History },
     ],
   },
   {
-    label: "Inbox",
+    label: "Shopping & rewards",
+    items: [
+      { tab: "wishlist", label: "Wishlist", icon: Heart },
+      { tab: "favorites", label: "Favorites", icon: Bookmark },
+      { tab: "cart", label: "Shopping cart", icon: ShoppingBag },
+      { tab: "coupons", label: "Coupons", icon: Tag },
+      { tab: "gift-cards", label: "Gift cards", icon: Gift },
+      { tab: "rewards", label: "Rewards", icon: Award },
+      { tab: "cashback", label: "Cashback", icon: Percent },
+    ],
+  },
+  {
+    label: "Messages & help",
     items: [
       { tab: "messages", label: "Order messages", icon: MessageSquare },
+      { tab: "chats", label: "Seller chat", icon: MessageCircle },
       { tab: "tickets", label: "Support", icon: TicketCheck },
       { tab: "notifications", label: "Notifications", icon: Bell },
     ],
@@ -336,10 +368,31 @@ const buyerMenuGroups: Array<{
     items: [
       { tab: "profile", label: "Profile", icon: UserRound },
       { tab: "security", label: "Security", icon: ShieldCheck },
+      { tab: "addresses", label: "Addresses", icon: MapPin },
+      {
+        tab: "payment-methods",
+        label: "Payment methods",
+        icon: CreditCard,
+      },
+      { tab: "preferences", label: "Preferences", icon: SlidersHorizontal },
       { tab: "reviews", label: "My reviews", icon: Star },
+      {
+        tab: "seller",
+        label: "Seller hub",
+        icon: Store,
+        roles: ["SELLER"],
+      },
     ],
   },
 ];
+
+function buyerGroupLabel(tab: Tab) {
+  return (
+    buyerMenuGroups.find((group) =>
+      group.items.some((item) => item.tab === tab),
+    )?.label ?? "Overview"
+  );
+}
 
 function roleDashboardRedirect(role: string) {
   if (STAFF_ROLES.some((staffRole) => staffRole === role)) return "/admin";
@@ -355,17 +408,11 @@ export function AccountDashboardPage() {
   });
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>(
-    {
-      Dashboard: true,
-      Purchases: true,
-      "Digital Library": true,
-      Inbox: true,
-      Wallet: true,
-      Account: true,
-    },
+    () => ({ [buyerGroupLabel(tab)]: true }),
   );
   function selectTab(next: Tab) {
     setTabState(next);
+    setExpandedGroups({ [buyerGroupLabel(next)]: true });
     setDrawerOpen(false);
     window.history.replaceState(
       null,
@@ -377,7 +424,10 @@ export function AccountDashboardPage() {
   useEffect(() => {
     const syncTab = () => {
       const hash = window.location.hash.replace("#", "") as Tab;
-      if (tabs.some((item) => item.id === hash)) setTabState(hash);
+      if (tabs.some((item) => item.id === hash)) {
+        setTabState(hash);
+        setExpandedGroups({ [buyerGroupLabel(hash)]: true });
+      }
     };
     window.addEventListener("hashchange", syncTab);
     return () => window.removeEventListener("hashchange", syncTab);
@@ -892,11 +942,11 @@ export function AccountDashboardPage() {
               <button
                 type="button"
                 className="buyer-nav-group"
+                aria-expanded={Boolean(expandedGroups[group.label])}
                 onClick={() =>
-                  setExpandedGroups({
-                    ...expandedGroups,
-                    [group.label]: !expandedGroups[group.label],
-                  })
+                  setExpandedGroups(
+                    expandedGroups[group.label] ? {} : { [group.label]: true },
+                  )
                 }
               >
                 <span>{group.label}</span>
@@ -906,36 +956,43 @@ export function AccountDashboardPage() {
               </button>
               {expandedGroups[group.label] ? (
                 <div>
-                  {group.items.map(({ tab: itemTab, label, icon: Icon }) => (
-                    <button
-                      key={`${group.label}-${itemTab}`}
-                      className={tab === itemTab ? "active" : ""}
-                      onClick={() => selectTab(itemTab)}
-                    >
-                      <Icon size={17} />
-                      <span>{label}</span>
-                      {itemTab === "active-orders" && activeOrders ? (
-                        <b>{activeOrders}</b>
-                      ) : null}
-                      {itemTab === "chats" && chats.length ? (
-                        <b>{chats.length}</b>
-                      ) : null}
-                      {itemTab === "notifications" &&
-                      tickets.filter(
-                        (ticket) =>
-                          !["CLOSED", "RESOLVED"].includes(ticket.status),
-                      ).length ? (
-                        <b>
-                          {
-                            tickets.filter(
-                              (ticket) =>
-                                !["CLOSED", "RESOLVED"].includes(ticket.status),
-                            ).length
-                          }
-                        </b>
-                      ) : null}
-                    </button>
-                  ))}
+                  {group.items
+                    .filter(
+                      (item) =>
+                        !item.roles || item.roles.includes(user.role),
+                    )
+                    .map(({ tab: itemTab, label, icon: Icon }) => (
+                      <button
+                        key={`${group.label}-${itemTab}`}
+                        className={tab === itemTab ? "active" : ""}
+                        onClick={() => selectTab(itemTab)}
+                      >
+                        <Icon size={17} />
+                        <span>{label}</span>
+                        {itemTab === "active-orders" && activeOrders ? (
+                          <b>{activeOrders}</b>
+                        ) : null}
+                        {itemTab === "chats" && chats.length ? (
+                          <b>{chats.length}</b>
+                        ) : null}
+                        {itemTab === "notifications" &&
+                        tickets.filter(
+                          (ticket) =>
+                            !["CLOSED", "RESOLVED"].includes(ticket.status),
+                        ).length ? (
+                          <b>
+                            {
+                              tickets.filter(
+                                (ticket) =>
+                                  !["CLOSED", "RESOLVED"].includes(
+                                    ticket.status,
+                                  ),
+                              ).length
+                            }
+                          </b>
+                        ) : null}
+                      </button>
+                    ))}
                 </div>
               ) : null}
             </section>
