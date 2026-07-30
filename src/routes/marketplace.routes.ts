@@ -220,9 +220,23 @@ marketplaceRouter.get(
         averageRating: true,
         totalSales: true,
         createdAt: true,
+        user: {
+          select: {
+            _count: {
+              select: {
+                products: { where: { isOfficial: true } },
+              },
+            },
+          },
+        },
       },
     });
-    res.json({ stores });
+    res.json({
+      stores: stores.map(({ user, ...store }) => ({
+        ...store,
+        isOfficial: user._count.products > 0,
+      })),
+    });
   }),
 );
 
@@ -299,7 +313,13 @@ marketplaceRouter.get(
       },
       orderBy: { publishedAt: "desc" },
     });
-    res.json({ store, products });
+    res.json({
+      store: {
+        ...store,
+        isOfficial: products.some((product) => product.isOfficial),
+      },
+      products,
+    });
   }),
 );
 

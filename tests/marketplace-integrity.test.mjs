@@ -98,8 +98,9 @@ test("official admin publishing matches the seller taxonomy and catalog metadata
   assert.match(admin, /manualDelivery/);
   assert.match(admin, /digitalDownload/);
 
-  assert.match(routes, /storeName: "Official"/);
+  assert.match(routes, /storeName: officialStoreName/);
   assert.match(routes, /isOfficial: true/);
+  assert.match(routes, /officialStoreName: input\.officialStoreName/);
   assert.match(routes, /productAttributes: input\.productAttributes/);
   assert.match(routes, /stockQuantity: input\.stockQuantity/);
 });

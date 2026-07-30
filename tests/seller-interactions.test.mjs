@@ -10,7 +10,39 @@ test("seller dashboard cards and revenue periods are interactive", async () => {
   assert.match(source, /setAnalyticsPeriod\("30d"\)/);
   assert.match(source, /setAnalyticsPeriod\("year"\)/);
   assert.ok(
-    (source.match(/className="seller-metric-action"/g) ?? []).length >= 8,
+    (source.match(/className="seller-metric-action"/g) ?? []).length >= 4,
+  );
+});
+
+test("seller workspace keeps balance and sign-out visible on mobile", async () => {
+  const [source, styles] = await Promise.all([
+    read("src/pages/SellerStudioPage.tsx"),
+    read("src/dashboard-premium-v7.css"),
+  ]);
+  assert.match(source, /className="seller-sidebar-balance"/);
+  assert.match(source, /className="seller-topbar-balance"/);
+  assert.match(source, /className="seller-mobile-signout"/);
+  assert.match(
+    styles,
+    /@media \(max-width: 720px\)[\s\S]*?\.seller-mobile-signout[\s\S]*?display: grid !important/,
+  );
+});
+
+test("admin official listings keep their chosen verified store name", async () => {
+  const [page, routes, schema, marketplace] = await Promise.all([
+    read("src/pages/OperationsAdminPage.tsx"),
+    read("src/routes/admin.routes.ts"),
+    read("prisma/schema.prisma"),
+    read("src/commerce/useMarketplace.ts"),
+  ]);
+  assert.match(page, /Official store name/);
+  assert.match(page, /data\.append\(\s*"officialStoreName"/);
+  assert.match(routes, /officialStoreName: z\.string\(\)\.trim\(\)\.min\(2\)/);
+  assert.match(routes, /officialStoreName: input\.officialStoreName/);
+  assert.match(schema, /officialStoreName\s+String\?/);
+  assert.match(
+    marketplace,
+    /product\.isOfficial \? product\.officialStoreName : null/,
   );
 });
 

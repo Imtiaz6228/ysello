@@ -740,6 +740,10 @@ if (isProduction && fs.existsSync(frontendIndex)) {
       const url = canonicalUrl(canonicalPath);
       const imageUrl = absolutePublicUrl(siteUrl, product.coverImageUrl);
       const seller = product.seller.sellerProfile;
+      const sellerName =
+        product.isOfficial && product.officialStoreName
+          ? product.officialStoreName
+          : seller.storeName;
       const customTitle = product.seoTitle?.trim();
       const title = customTitle
         ? customTitle.toLowerCase().includes("ysello")
@@ -767,7 +771,7 @@ if (isProduction && fs.existsSync(frontendIndex)) {
             : "https://schema.org/OutOfStock",
           seller: {
             "@type": "Organization",
-            name: seller.storeName,
+            name: sellerName,
             url: canonicalUrl(`/stores/${seller.slug}`),
           },
         },
@@ -793,7 +797,7 @@ if (isProduction && fs.existsSync(frontendIndex)) {
       ]
         .filter(Boolean)
         .join("");
-      const content = `<section><h2>Product details</h2><p>${escapeHtml(product.description)}</p><ul>${facts}</ul></section><section><h2>Seller and category</h2><p>Sold by <a href="/stores/${escapeHtml(seller.slug)}">${escapeHtml(seller.storeName)}</a> in <a href="${escapeHtml(categorySeoPath(product.category))}">${escapeHtml(product.category.name)}</a>.</p><p><strong>Price:</strong> $${(priceCents / 100).toFixed(2)} USD</p></section>`;
+      const content = `<section><h2>Product details</h2><p>${escapeHtml(product.description)}</p><ul>${facts}</ul></section><section><h2>Seller and category</h2><p>Sold by <a href="/stores/${escapeHtml(seller.slug)}">${escapeHtml(sellerName)}</a> in <a href="${escapeHtml(categorySeoPath(product.category))}">${escapeHtml(product.category.name)}</a>.</p><p><strong>Price:</strong> $${(priceCents / 100).toFixed(2)} USD</p></section>`;
       sendHtml(
         res,
         renderSeoDocument(frontendTemplate, {

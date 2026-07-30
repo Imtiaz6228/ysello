@@ -131,18 +131,21 @@ async function uniqueProductSlug(name: string) {
   return slug;
 }
 
-async function ensureAdminSellerProfile(userId: string) {
+async function ensureAdminSellerProfile(
+  userId: string,
+  officialStoreName = "Ysello Official",
+) {
   const existing = await prisma.sellerProfile.findUnique({ where: { userId } });
   if (existing) {
     if (
-      existing.storeName !== "Official" ||
+      existing.storeName !== officialStoreName ||
       !existing.isVerified ||
       existing.isSuspended
     ) {
       return prisma.sellerProfile.update({
         where: { userId },
         data: {
-          storeName: "Official",
+          storeName: officialStoreName,
           about:
             "Official marketplace catalog managed by the Ysello administration team.",
           policy:
@@ -175,7 +178,7 @@ async function ensureAdminSellerProfile(userId: string) {
   return prisma.sellerProfile.create({
     data: {
       userId,
-      storeName: "Official",
+      storeName: officialStoreName,
       slug,
       about:
         "Official marketplace catalog managed by the Ysello administration team.",
@@ -741,6 +744,7 @@ adminRouter.post(
       const input = z
         .object({
           categoryId: z.string().uuid(),
+          officialStoreName: z.string().trim().min(2).max(120),
           name: z.string().trim().min(3).max(160),
           shortDescription: z.string().trim().min(10).max(240),
           description: z.string().trim().min(30).max(20000),
@@ -821,7 +825,10 @@ adminRouter.post(
           "CATEGORY_NOT_FOUND",
         );
 
-      await ensureAdminSellerProfile(req.auth!.id);
+      await ensureAdminSellerProfile(
+        req.auth!.id,
+        input.officialStoreName,
+      );
       const inventoryLines = parseAdminInventoryLines(input.inventoryLines);
       const canPublish =
         input.publish &&
@@ -842,6 +849,7 @@ adminRouter.post(
           priceRubCents: input.priceRubCents ?? 0,
           currency: "USD",
           isOfficial: true,
+          officialStoreName: input.officialStoreName,
           coverImageUrl: publicUploadUrl(req.file.filename),
           afterSalesServiceHours: input.afterSalesServiceHours,
           deliveryNote: input.deliveryNote,

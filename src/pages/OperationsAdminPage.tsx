@@ -139,6 +139,7 @@ type Product = {
   name: string;
   status: string;
   isOfficial?: boolean;
+  officialStoreName?: string | null;
   priceCents: number;
   priceUsdCents?: number;
   priceCnyCents?: number;
@@ -508,6 +509,7 @@ export function OperationsAdminPage() {
   const [adminCoverPreview, setAdminCoverPreview] = useState("");
   const [adminProductForm, setAdminProductForm] = useState({
     categoryPathIds: [] as string[],
+    officialStoreName: "Ysello Official",
     name: "",
     shortDescription: "",
     description: "",
@@ -941,6 +943,10 @@ export function OperationsAdminPage() {
     setMessage("");
     const data = new FormData();
     data.append("categoryId", adminSelectedCategoryId);
+    data.append(
+      "officialStoreName",
+      adminProductForm.officialStoreName.trim(),
+    );
     data.append("name", adminProductForm.name);
     data.append("shortDescription", adminProductForm.shortDescription);
     data.append("description", adminProductForm.description);
@@ -1007,6 +1013,7 @@ export function OperationsAdminPage() {
       setAdminCoverImage(null);
       setAdminProductForm((current) => ({
         ...current,
+        officialStoreName: "Ysello Official",
         name: "",
         shortDescription: "",
         description: "",
@@ -1205,9 +1212,13 @@ export function OperationsAdminPage() {
             >
               <Menu />
             </button>
-            <Link className="panel-home-link" to="/">
-              <Home size={17} /> Home
-            </Link>
+            <span className="admin-mobile-title">
+              <ShieldCheck />
+              <span>
+                <small>YSELLO</small>
+                <strong>Admin workspace</strong>
+              </span>
+            </span>
             <div className="admin-global-search">
               <Search />
               <input
@@ -1580,7 +1591,8 @@ export function OperationsAdminPage() {
                         · {money(product.priceUsdCents ?? product.priceCents)}
                       </p>
                       <small>
-                        {product.seller.sellerProfile?.storeName ??
+                        {product.officialStoreName ??
+                          product.seller.sellerProfile?.storeName ??
                           product.seller.username}{" "}
                         · {product.seller.email}
                       </small>
@@ -2448,7 +2460,8 @@ export function OperationsAdminPage() {
             </h2>
             <p className="modal-helper">
               Use the same complete listing flow as a seller. Official products
-              publish under the verified Official store and badge.
+              publish under the verified store name you choose and carry the
+              Official badge.
             </p>
             <div className="seller-flow-steps admin-official-flow-steps">
               <span
@@ -2649,6 +2662,29 @@ export function OperationsAdminPage() {
                 )}
               </section>
             ) : null}
+            <label className="admin-official-store-field">
+              <span>
+                <Store aria-hidden="true" />
+                Official store name
+              </span>
+              <input
+                required
+                minLength={2}
+                maxLength={120}
+                value={adminProductForm.officialStoreName}
+                onChange={(event) =>
+                  setAdminProductForm({
+                    ...adminProductForm,
+                    officialStoreName: event.target.value,
+                  })
+                }
+                placeholder="Ysello Official"
+              />
+              <small>
+                Buyers will see this verified store name on product cards and
+                product details.
+              </small>
+            </label>
             <div className="form-grid two">
               <label>
                 <span>Product title</span>

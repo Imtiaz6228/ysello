@@ -1659,6 +1659,22 @@ export function SellerStudioPage() {
           </div>
           {profile?.isVerified ? <BadgeCheck size={17} /> : null}
         </div>
+        <button
+          type="button"
+          className="seller-sidebar-balance"
+          onClick={() => selectTab("finance")}
+        >
+          <span>
+            <WalletCards />
+          </span>
+          <div>
+            <small>AVAILABLE BALANCE</small>
+            <strong>
+              {formatMoney(finance?.availableBalanceCents ?? 0)}
+            </strong>
+          </div>
+          <ArrowRight />
+        </button>
         <div className="panel-mobile-sidebar-tools">
           <LocaleSwitcher compact />
           <Link to="/sign-out">
@@ -1751,6 +1767,22 @@ export function SellerStudioPage() {
             />
           </label>
           <div>
+            <button
+              type="button"
+              className="seller-topbar-balance"
+              onClick={() => selectTab("finance")}
+              aria-label={`Available balance ${formatMoney(
+                finance?.availableBalanceCents ?? 0,
+              )}`}
+            >
+              <WalletCards />
+              <span>
+                <small>Available</small>
+                <strong>
+                  {formatMoney(finance?.availableBalanceCents ?? 0)}
+                </strong>
+              </span>
+            </button>
             <Link className="panel-home-link" to="/">
               <Home size={17} /> Home
             </Link>
@@ -1771,6 +1803,13 @@ export function SellerStudioPage() {
               aria-label="Sign out"
             >
               <LogOut size={16} /> Sign out
+            </Link>
+            <Link
+              className="seller-mobile-signout"
+              to="/sign-out"
+              aria-label="Sign out"
+            >
+              <LogOut />
             </Link>
             <button
               className="seller-create-button"
@@ -1830,8 +1869,12 @@ export function SellerStudioPage() {
         {tab === "overview" ? (
           <>
             <section className="seller-balance-hero">
-              <div>
-                <span>Available balance</span>
+              <div className="seller-balance-primary">
+                <span className="seller-balance-label">
+                  <WalletCards />
+                  AVAILABLE BALANCE
+                  <b>READY TO WITHDRAW</b>
+                </span>
                 <strong>
                   {formatMoney(finance?.availableBalanceCents ?? 0)}
                 </strong>
@@ -1842,15 +1885,60 @@ export function SellerStudioPage() {
                     : "$0.00"}{" "}
                   earned today
                 </p>
+                <div className="seller-balance-breakdown">
+                  <button
+                    type="button"
+                    onClick={() => selectTab("frozen")}
+                  >
+                    <small>Frozen funds</small>
+                    <b>
+                      {formatMoney(finance?.frozenBalanceCents ?? 0)}
+                    </b>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => selectTab("earnings")}
+                  >
+                    <small>Lifetime earnings</small>
+                    <b>
+                      {formatMoney(
+                        finance?.totalSellerEarningsCents ?? grossSales,
+                      )}
+                    </b>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => selectTab("orders")}
+                  >
+                    <small>Orders today</small>
+                    <b>{finance?.todayOrderCount ?? 0}</b>
+                  </button>
+                </div>
               </div>
-              <div className="seller-balance-actions">
-                <button onClick={() => selectTab("withdrawals")}>
-                  <CircleDollarSign /> Withdraw funds
-                </button>
-                <button onClick={() => selectTab("finance")}>
-                  <FileText /> View transactions
-                </button>
-              </div>
+              <aside className="seller-balance-command">
+                <div className="seller-balance-store-status">
+                  <span>
+                    <Store />
+                  </span>
+                  <div>
+                    <small>STORE STATUS</small>
+                    <strong>
+                      {profile?.isVerified
+                        ? "Verified and selling"
+                        : "Seller account active"}
+                    </strong>
+                  </div>
+                  <BadgeCheck />
+                </div>
+                <div className="seller-balance-actions">
+                  <button onClick={() => selectTab("withdrawals")}>
+                    <CircleDollarSign /> Withdraw funds
+                  </button>
+                  <button onClick={() => selectTab("transactions")}>
+                    <FileText /> View transactions
+                  </button>
+                </div>
+              </aside>
               <span className="seller-balance-orb">
                 <Sparkles />
               </span>
@@ -1875,26 +1963,6 @@ export function SellerStudioPage() {
               <button
                 type="button"
                 className="seller-metric-action"
-                onClick={() => selectTab("earnings")}
-              >
-                <span>
-                  <WalletCards />
-                </span>
-                <div>
-                  <small>Lifetime earnings</small>
-                  <strong>
-                    {formatMoney(
-                      finance?.totalSellerEarningsCents ?? grossSales,
-                    )}
-                  </strong>
-                  <p className="positive">
-                    <ArrowUpRight /> All-time total
-                  </p>
-                </div>
-              </button>
-              <button
-                type="button"
-                className="seller-metric-action"
                 onClick={() => selectTab("processing")}
               >
                 <span>
@@ -1905,22 +1973,6 @@ export function SellerStudioPage() {
                   <strong>{pendingOrders}</strong>
                   <p>
                     <Clock3 /> Requires attention
-                  </p>
-                </div>
-              </button>
-              <button
-                type="button"
-                className="seller-metric-action"
-                onClick={() => selectTab("delivered")}
-              >
-                <span>
-                  <PackageCheck />
-                </span>
-                <div>
-                  <small>Completed orders</small>
-                  <strong>{deliveredOrders}</strong>
-                  <p className="positive">
-                    <ArrowUpRight /> Successful delivery
                   </p>
                 </div>
               </button>
@@ -1941,20 +1993,6 @@ export function SellerStudioPage() {
               <button
                 type="button"
                 className="seller-metric-action"
-                onClick={() => selectTab("orders")}
-              >
-                <span>
-                  <Users />
-                </span>
-                <div>
-                  <small>Unique buyers</small>
-                  <strong>{uniqueBuyers}</strong>
-                  <p>Across {orderRecords.length} orders</p>
-                </div>
-              </button>
-              <button
-                type="button"
-                className="seller-metric-action"
                 onClick={() => selectTab("analytics")}
               >
                 <span>
@@ -1965,23 +2003,9 @@ export function SellerStudioPage() {
                   <strong>
                     {Number(profile?.averageRating ?? 0).toFixed(1)}
                   </strong>
-                  <p className="positive">Buyer feedback</p>
-                </div>
-              </button>
-              <button
-                type="button"
-                className="seller-metric-action"
-                onClick={() => selectTab("frozen")}
-              >
-                <span>
-                  <LockKeyhole />
-                </span>
-                <div>
-                  <small>Frozen balance</small>
-                  <strong>
-                    {formatMoney(finance?.frozenBalanceCents ?? 0)}
-                  </strong>
-                  <p>Releases automatically</p>
+                  <p className="positive">
+                    {deliveredOrders} completed · {uniqueBuyers} buyers
+                  </p>
                 </div>
               </button>
             </section>

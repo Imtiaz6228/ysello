@@ -45,6 +45,7 @@ type ApiProduct = {
   salesCount: number;
   deliveryNote?: string | null;
   isOfficial?: boolean;
+  officialStoreName?: string | null;
   coverImageUrl?: string | null;
   category: {
     name: string;
@@ -271,7 +272,10 @@ function mapProduct(
     title: translation?.title ?? translation?.name ?? product.name,
     description: translation?.shortDescription ?? product.shortDescription,
     longDescription: translation?.description ?? product.description,
-    seller: product.seller.sellerProfile?.storeName ?? "Marketplace seller",
+    seller:
+      (product.isOfficial ? product.officialStoreName : null) ??
+      product.seller.sellerProfile?.storeName ??
+      "Marketplace seller",
     sellerSlug: product.seller.sellerProfile?.slug ?? "",
     isOfficial: product.isOfficial,
     categoryPathSlugs: compactCategoryPathSlugs,
@@ -533,6 +537,7 @@ export function useMarketplaceStores() {
         averageRating: number | string;
         totalSales: number;
         createdAt: string;
+        isOfficial?: boolean;
         logoUrl?: string | null;
         bannerUrl?: string | null;
       }>;
@@ -544,9 +549,9 @@ export function useMarketplaceStores() {
               name: store.storeName,
               slug: store.slug,
               about: store.about,
-              isOfficial: ["Official", "Ysello Official"].includes(
-                store.storeName,
-              ),
+              isOfficial:
+                store.isOfficial === true ||
+                ["Official", "Ysello Official"].includes(store.storeName),
               rating: Number(store.averageRating) || 0,
               sales: store.totalSales,
               joined: new Date(store.createdAt).getFullYear().toString(),
@@ -646,6 +651,7 @@ export function useMarketplaceStore(slug?: string) {
         averageRating: number | string;
         totalSales: number;
         createdAt: string;
+        isOfficial?: boolean;
         logoUrl?: string | null;
         bannerUrl?: string | null;
       };
@@ -658,9 +664,9 @@ export function useMarketplaceStore(slug?: string) {
           policy:
             data.store.policy ||
             "Ysello buyer protection applies to every order.",
-          isOfficial: ["Official", "Ysello Official"].includes(
-            data.store.storeName,
-          ),
+          isOfficial:
+            data.store.isOfficial === true ||
+            ["Official", "Ysello Official"].includes(data.store.storeName),
           rating: Number(data.store.averageRating),
           sales: data.store.totalSales.toLocaleString(),
           joined: new Date(data.store.createdAt).getFullYear().toString(),

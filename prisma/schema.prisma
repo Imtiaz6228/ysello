@@ -415,6 +415,7 @@ model Product {
   discountPercent        Int           @default(0)
   couponSupport          Boolean       @default(false)
   isOfficial             Boolean       @default(false)
+  officialStoreName      String?
   isFeatured             Boolean       @default(false)
   isRecommended          Boolean       @default(false)
   instantDelivery        Boolean       @default(false)
