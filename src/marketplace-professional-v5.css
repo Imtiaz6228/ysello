@@ -133,9 +133,7 @@
   padding: 15px 16px 16px !important;
 }
 
-.ys-ref-product-card.g2-product-card
-  .g2-product-copy
-  .ys-ref-product-title {
+.ys-ref-product-card.g2-product-card .g2-product-copy .ys-ref-product-title {
   min-height: 2.7em !important;
   font-size: 16px !important;
   line-height: 1.35 !important;
@@ -348,9 +346,7 @@
     transform: none !important;
   }
 
-  .market-shell-header.g2-market-header
-    .g2-header-search
-    > svg {
+  .market-shell-header.g2-market-header .g2-header-search > svg {
     display: block !important;
     width: 21px !important;
     height: 21px !important;
@@ -363,9 +359,7 @@
     transform: none !important;
   }
 
-  .market-shell-header.g2-market-header
-    .g2-header-search
-    > input {
+  .market-shell-header.g2-market-header .g2-header-search > input {
     display: block !important;
     width: 100% !important;
     min-width: 0 !important;
@@ -383,22 +377,16 @@
     transform: none !important;
   }
 
-  .market-shell-header.g2-market-header
-    .g2-header-search
-    > input::placeholder {
+  .market-shell-header.g2-market-header .g2-header-search > input::placeholder {
     color: #858b98 !important;
     opacity: 1;
   }
 
-  .market-shell-header.g2-market-header
-    .g2-header-search
-    > label {
+  .market-shell-header.g2-market-header .g2-header-search > label {
     display: none !important;
   }
 
-  .market-shell-header.g2-market-header
-    .g2-header-search
-    > button {
+  .market-shell-header.g2-market-header .g2-header-search > button {
     display: grid !important;
     width: 58px !important;
     height: 56px !important;
@@ -418,10 +406,7 @@
     transform: none !important;
   }
 
-  .market-shell-header.g2-market-header
-    .g2-header-search
-    > button
-    svg {
+  .market-shell-header.g2-market-header .g2-header-search > button svg {
     width: 23px !important;
     height: 23px !important;
   }
@@ -442,9 +427,7 @@
     padding: 18px 16px 6px !important;
   }
 
-  .g2-home-page
-    .g2-category-dock-section
-    .g2-category-mobile-heading {
+  .g2-home-page .g2-category-dock-section .g2-category-mobile-heading {
     display: flex !important;
     width: 100% !important;
     min-height: 58px !important;
@@ -456,29 +439,20 @@
     gap: 14px !important;
   }
 
-  .g2-home-page
-    .g2-category-dock-section
-    .g2-category-mobile-heading
-    > span {
+  .g2-home-page .g2-category-dock-section .g2-category-mobile-heading > span {
     display: block !important;
     min-width: 0 !important;
     flex: 1 1 auto !important;
   }
 
-  .g2-home-page
-    .g2-category-dock-section
-    .g2-category-mobile-heading
-    strong {
+  .g2-home-page .g2-category-dock-section .g2-category-mobile-heading strong {
     display: block !important;
     color: #171923 !important;
     font-size: 20px !important;
     line-height: 1.15 !important;
   }
 
-  .g2-home-page
-    .g2-category-dock-section
-    .g2-category-mobile-heading
-    small {
+  .g2-home-page .g2-category-dock-section .g2-category-mobile-heading small {
     display: block !important;
     margin-top: 5px !important;
     color: #6f7582 !important;
@@ -486,10 +460,7 @@
     line-height: 1.35 !important;
   }
 
-  .g2-home-page
-    .g2-category-dock-section
-    .g2-category-mobile-heading
-    > a {
+  .g2-home-page .g2-category-dock-section .g2-category-mobile-heading > a {
     display: inline-flex !important;
     width: auto !important;
     min-width: max-content !important;
@@ -521,9 +492,7 @@
     border-radius: 16px !important;
   }
 
-  .g2-home-page
-    .g2-category-dock
-    .market-category-card {
+  .g2-home-page .g2-category-dock .market-category-card {
     display: flex !important;
     min-width: 0 !important;
     min-height: 132px !important;
@@ -569,8 +538,7 @@
     font-size: 11px !important;
   }
 
-  .g2-home-page
-    .market-subcategory-preview.g2-subcategory-preview {
+  .g2-home-page .market-subcategory-preview.g2-subcategory-preview {
     display: grid !important;
     width: 100% !important;
     min-height: 0 !important;
@@ -582,24 +550,16 @@
     border-radius: 14px !important;
   }
 
-  .g2-home-page
-    .g2-subcategory-preview
-    .g2-subcategory-heading {
+  .g2-home-page .g2-subcategory-preview .g2-subcategory-heading {
     min-height: 58px !important;
     padding: 10px 12px !important;
   }
 
-  .g2-home-page
-    .g2-subcategory-preview
-    .g2-subcategory-heading
-    strong {
+  .g2-home-page .g2-subcategory-preview .g2-subcategory-heading strong {
     font-size: 15px !important;
   }
 
-  .g2-home-page
-    .g2-subcategory-preview
-    .g2-subcategory-heading
-    small {
+  .g2-home-page .g2-subcategory-preview .g2-subcategory-heading small {
     font-size: 11px !important;
   }
 
@@ -612,10 +572,7 @@
     overflow: visible !important;
   }
 
-  .g2-home-page
-    .g2-subcategory-preview
-    .g2-subcategory-links
-    > a {
+  .g2-home-page .g2-subcategory-preview .g2-subcategory-links > a {
     width: 100% !important;
     min-width: 0 !important;
     min-height: 46px !important;
@@ -891,9 +848,7 @@
     padding-inline: 12px !important;
   }
 
-  .g2-home-page
-    .g2-category-dock
-    .market-category-card {
+  .g2-home-page .g2-category-dock .market-category-card {
     min-height: 126px !important;
   }
 
@@ -910,3 +865,315 @@
   }
 }
 
+/*
+ * Final storefront sizing pass.
+ * Keeps the desktop hero stable across laptop and wide-screen widths, reduces
+ * product-card density on every storefront, and standardizes primary commerce
+ * actions on the familiar G2A-style blue.
+ */
+:root {
+  --ys-commerce-blue: #006bf9;
+  --ys-commerce-blue-hover: #0057d6;
+  --ys-commerce-blue-ring: rgba(0, 107, 249, 0.22);
+}
+
+.market-shell-header.g2-market-header
+  .g2-header-dark
+  .market-main-nav.g2-main-nav
+  .market-header-search.g2-header-search
+  > button,
+.g2-home-page .g2-home-hero .g2-hero-intro > div a:first-child,
+.ys-ref-product-card.g2-product-card
+  .ys-ref-product-card-actions.g2-product-actions
+  > button,
+.g2-home-page .g2-bundle > aside > button,
+.g2-home-page .g2-newsletter button,
+.g2-home-page .g2-seller-promo a {
+  border-color: var(--ys-commerce-blue) !important;
+  background: var(--ys-commerce-blue) !important;
+  color: #fff !important;
+  box-shadow: 0 8px 20px rgba(0, 107, 249, 0.2) !important;
+}
+
+.market-shell-header.g2-market-header
+  .g2-header-dark
+  .market-main-nav.g2-main-nav
+  .market-header-search.g2-header-search
+  > button:hover,
+.g2-home-page .g2-home-hero .g2-hero-intro > div a:first-child:hover,
+.ys-ref-product-card.g2-product-card
+  .ys-ref-product-card-actions.g2-product-actions
+  > button:hover:not(:disabled),
+.g2-home-page .g2-bundle > aside > button:hover,
+.g2-home-page .g2-newsletter button:hover,
+.g2-home-page .g2-seller-promo a:hover {
+  border-color: var(--ys-commerce-blue-hover) !important;
+  background: var(--ys-commerce-blue-hover) !important;
+}
+
+.market-shell-header.g2-market-header
+  .market-header-search.g2-header-search:focus-within {
+  border-color: var(--ys-commerce-blue) !important;
+  box-shadow:
+    0 0 0 3px var(--ys-commerce-blue-ring),
+    0 9px 30px rgba(0, 0, 0, 0.2) !important;
+}
+
+/* Compact shared product card used by home, catalog, category and store pages. */
+.ys-ref-product-card.g2-product-card {
+  border-radius: 14px !important;
+}
+
+.ys-ref-product-card.g2-product-card .g2-card-offer {
+  height: 30px !important;
+  padding-inline: 10px !important;
+  font-size: 9px !important;
+}
+
+.ys-ref-product-card.g2-product-card > .ys-ref-product-media.g2-product-media {
+  width: calc(100% - 16px) !important;
+  margin: 8px 8px 0 !important;
+  aspect-ratio: 16 / 9 !important;
+  border-radius: 10px !important;
+}
+
+.ys-ref-product-card.g2-product-card .g2-product-media > button {
+  top: 7px !important;
+  right: 7px !important;
+  width: 30px !important;
+  height: 30px !important;
+}
+
+.ys-ref-product-card.g2-product-card .ys-ref-product-copy.g2-product-copy {
+  padding: 11px 12px 12px !important;
+}
+
+.ys-ref-product-card.g2-product-card .g2-product-copy .ys-ref-product-title {
+  min-height: 2.6em !important;
+  font-size: 14px !important;
+  line-height: 1.3 !important;
+}
+
+.ys-ref-product-card.g2-product-card .g2-product-description {
+  display: none !important;
+}
+
+.ys-ref-product-card.g2-product-card .g2-product-facts {
+  min-height: 24px !important;
+  margin-top: 7px !important;
+  gap: 5px !important;
+}
+
+.ys-ref-product-card.g2-product-card .g2-product-facts span {
+  min-height: 22px !important;
+  padding: 4px 6px !important;
+  font-size: 9px !important;
+}
+
+.ys-ref-product-card.g2-product-card
+  .ys-ref-product-meta.g2-product-meta.product-commerce-metrics {
+  min-height: 42px !important;
+  margin-top: 8px !important;
+  padding-block: 6px !important;
+}
+
+.ys-ref-product-card.g2-product-card
+  .ys-ref-product-meta.g2-product-meta.product-commerce-metrics
+  > span {
+  min-height: 28px !important;
+  padding-inline: 5px !important;
+  grid-template-columns: 12px minmax(0, 1fr) !important;
+  gap: 0 4px !important;
+}
+
+.ys-ref-product-card.g2-product-card
+  .ys-ref-product-meta.g2-product-meta.product-commerce-metrics
+  svg {
+  width: 11px !important;
+  height: 11px !important;
+}
+
+.ys-ref-product-card.g2-product-card
+  .ys-ref-product-meta.g2-product-meta.product-commerce-metrics
+  b {
+  font-size: 10px !important;
+}
+
+.ys-ref-product-card.g2-product-card
+  .ys-ref-product-meta.g2-product-meta.product-commerce-metrics
+  small {
+  font-size: 7px !important;
+}
+
+.ys-ref-product-card.g2-product-card .g2-product-price-row {
+  min-height: 36px !important;
+  margin-top: 7px !important;
+}
+
+.ys-ref-product-card.g2-product-card .g2-product-price-row strong {
+  font-size: 19px !important;
+}
+
+.ys-ref-product-card.g2-product-card .g2-product-stock {
+  min-height: 18px !important;
+  margin-top: 2px !important;
+  font-size: 9px !important;
+}
+
+.ys-ref-product-card.g2-product-card
+  .ys-ref-product-card-actions.g2-product-actions {
+  min-height: 38px !important;
+  margin-top: 7px !important;
+}
+
+.ys-ref-product-card.g2-product-card .g2-product-actions > button {
+  height: 38px !important;
+  min-height: 38px !important;
+  font-size: 12px !important;
+}
+
+.ys-ref-product-card.g2-product-card
+  .ys-ref-product-card-actions.g2-product-actions
+  > button:disabled {
+  border-color: #d9dee7 !important;
+  background: #e9ecf1 !important;
+  color: #7b8391 !important;
+  box-shadow: none !important;
+}
+
+@media (min-width: 901px) {
+  /* Do not let the legacy 1180px breakpoint stack the desktop hero. */
+  .g2-home-page .market-home-hero.g2-home-hero {
+    display: grid !important;
+    min-height: 310px !important;
+    grid-template-columns: minmax(0, 1.45fr) minmax(340px, 0.8fr) !important;
+    align-items: stretch !important;
+  }
+
+  .g2-home-page .g2-home-hero .g2-hero-intro {
+    position: relative !important;
+    inset: auto !important;
+    width: auto !important;
+    min-width: 0 !important;
+    min-height: 310px !important;
+    padding: 40px 48px !important;
+  }
+
+  .g2-home-page .g2-home-hero .g2-hero-intro h1 {
+    max-width: 600px !important;
+    margin: 16px 0 12px !important;
+    font-size: clamp(38px, 3.5vw, 54px) !important;
+    line-height: 1 !important;
+  }
+
+  .g2-home-page .g2-home-hero .g2-hero-intro p {
+    max-width: 540px !important;
+    font-size: 14px !important;
+    line-height: 1.55 !important;
+  }
+
+  .g2-home-page .g2-home-hero .g2-hero-intro > div {
+    margin-top: 20px !important;
+  }
+
+  .g2-home-page .g2-home-hero .g2-hero-proof {
+    position: relative !important;
+    inset: auto !important;
+    display: grid !important;
+    min-width: 0 !important;
+    padding: 22px !important;
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    align-items: center !important;
+  }
+
+  .g2-home-page .g2-home-hero .g2-hero-proof > span {
+    min-width: 0 !important;
+    min-height: 108px !important;
+    padding: 12px 8px !important;
+    gap: 9px !important;
+    font-size: 10px !important;
+    line-height: 1.35 !important;
+  }
+
+  .g2-home-page .g2-home-hero .g2-hero-proof svg {
+    width: 27px !important;
+    height: 27px !important;
+    color: #72a9ff !important;
+  }
+}
+
+@media (min-width: 1280px) {
+  .g2-home-page .market-product-grid.g2-product-rail,
+  .g2-home-page .reference-featured-product-grid.premium-product-grid,
+  .ys-ref-page .ys-ref-catalog-grid.grid,
+  .ys-ref-page .store-products.store-products-premium {
+    grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
+    gap: 16px !important;
+  }
+}
+
+@media (min-width: 1121px) and (max-width: 1279px) {
+  .g2-home-page .market-product-grid.g2-product-rail,
+  .g2-home-page .reference-featured-product-grid.premium-product-grid,
+  .ys-ref-page .ys-ref-catalog-grid.grid,
+  .ys-ref-page .store-products.store-products-premium {
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+    gap: 16px !important;
+  }
+}
+
+@media (max-width: 900px) {
+  .g2-home-page .market-product-grid.g2-product-rail,
+  .g2-home-page .reference-featured-product-grid.premium-product-grid {
+    grid-auto-columns: min(270px, 74vw) !important;
+    gap: 11px !important;
+  }
+}
+
+@media (max-width: 600px) {
+  .g2-home-page .market-product-grid.g2-product-rail,
+  .g2-home-page .reference-featured-product-grid.premium-product-grid {
+    grid-auto-columns: min(245px, 72vw) !important;
+  }
+
+  .ys-ref-page .ys-ref-catalog-grid.grid,
+  .ys-ref-page .store-products.store-products-premium {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 10px !important;
+  }
+
+  .ys-ref-page
+    .ys-ref-catalog-grid.grid
+    .ys-ref-product-meta.g2-product-meta.product-commerce-metrics,
+  .ys-ref-page
+    .store-products.store-products-premium
+    .ys-ref-product-meta.g2-product-meta.product-commerce-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  .ys-ref-page
+    .ys-ref-catalog-grid.grid
+    .ys-ref-product-meta.g2-product-meta.product-commerce-metrics
+    > span:nth-child(3),
+  .ys-ref-page
+    .store-products.store-products-premium
+    .ys-ref-product-meta.g2-product-meta.product-commerce-metrics
+    > span:nth-child(3),
+  .ys-ref-page .ys-ref-catalog-grid.grid .g2-product-stock,
+  .ys-ref-page .store-products.store-products-premium .g2-product-stock {
+    display: none !important;
+  }
+
+  .ys-ref-page .ys-ref-catalog-grid.grid .g2-card-offer,
+  .ys-ref-page .store-products.store-products-premium .g2-card-offer {
+    font-size: 7.5px !important;
+  }
+
+  .ys-ref-page .ys-ref-catalog-grid.grid .g2-product-copy .ys-ref-product-title,
+  .ys-ref-page
+    .store-products.store-products-premium
+    .g2-product-copy
+    .ys-ref-product-title {
+    font-size: 12px !important;
+  }
+}

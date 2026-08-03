@@ -291,7 +291,15 @@ export function YselloReferenceProductCard({
         ? "Seller service"
         : "Digital download";
   const region =
-    typeof product.facts?.region === "string" ? product.facts.region : "GLOBAL";
+    typeof product.facts?.region === "string"
+      ? product.facts.region.trim()
+      : "";
+  const secondaryFact =
+    product.type === "SERVICE"
+      ? "SERVICE"
+      : region && region.toUpperCase() !== "GLOBAL"
+        ? region
+        : null;
   const originalPrice =
     product.originalPriceCents &&
     product.originalPriceCents > product.priceCents
@@ -355,7 +363,7 @@ export function YselloReferenceProductCard({
           <span>
             <Zap aria-hidden="true" /> {platform}
           </span>
-          <span>{product.type === "SERVICE" ? "SERVICE" : region}</span>
+          {secondaryFact ? <span>{secondaryFact}</span> : null}
         </div>
         <div className="ys-ref-product-meta g2-product-meta product-commerce-metrics">
           <span>
