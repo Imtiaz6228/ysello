@@ -37,7 +37,10 @@ const googleProfileSchema = z.object({
 });
 
 function googleRedirectUri() {
-  return env.GOOGLE_REDIRECT_URI ?? `${env.APP_URL}/google-callback.php`;
+  return (
+    env.GOOGLE_REDIRECT_URI ??
+    new URL("/auth/google/callback", env.API_URL).toString()
+  );
 }
 
 function requireGoogleConfiguration() {
@@ -71,9 +74,13 @@ export function safeOAuthReturnTo(value: unknown) {
 
     const pathname = url.pathname.replace(/\/{2,}/g, "/");
     if (
-      ["/sign-in", "/register", "/sign-out", "/google-callback.php"].includes(
-        pathname,
-      )
+      [
+        "/sign-in",
+        "/register",
+        "/sign-out",
+        "/auth/google/callback",
+        "/google-callback.php",
+      ].includes(pathname)
     ) {
       return undefined;
     }

@@ -62,7 +62,7 @@ JWT_SECRET=GENERATE_A_RANDOM_SECRET_OF_AT_LEAST_32_CHARACTERS
 CSRF_SECRET=GENERATE_A_DIFFERENT_RANDOM_SECRET_OF_AT_LEAST_32_CHARACTERS
 GOOGLE_CLIENT_ID=YOUR_GOOGLE_WEB_CLIENT_ID
 GOOGLE_CLIENT_SECRET=YOUR_ROTATED_GOOGLE_WEB_CLIENT_SECRET
-GOOGLE_REDIRECT_URI=https://ysello.com/google-callback.php
+GOOGLE_REDIRECT_URI=https://api.ysello.com/auth/google/callback
 ACCESS_TOKEN_MINUTES=15
 REFRESH_TOKEN_DAYS=30
 SHORT_REFRESH_TOKEN_HOURS=24
@@ -104,21 +104,24 @@ FROZEN_HOLD_HOURS=72
 Create a **Web application** OAuth client in Google Cloud Console and configure
 these exact production values:
 
-- Authorized JavaScript origin: `https://ysello.com`
-- Authorized redirect URI: `https://ysello.com/google-callback.php`
+- Authorized JavaScript origins: `https://ysello.com` and `https://www.ysello.com`
+- Authorized redirect URI: `https://api.ysello.com/auth/google/callback`
 
 Set `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, and `GOOGLE_REDIRECT_URI` on
 Railway, then redeploy Railway and Vercel. The secret is backend-only: do not put
 it in Vercel, source control, frontend code, or any `VITE_*` variable. Rotate the
 secret immediately if it has ever been pasted into chat, logs, tickets, or a
 public location. For local OAuth testing, separately authorize
-`http://localhost:5173/google-callback.php` and use that value in the local
+`http://localhost:4000/auth/google/callback` and use that value in the local
 environment.
 
 The callback uses authorization-code exchange with PKCE, a signed short-lived
 HttpOnly state cookie, Google's verified account identifier, and Ysello's
 existing rotating refresh-session cookies. A verified Google email can safely
-link to an existing Ysello account with the same email.
+link to an existing Ysello account with the same email. The API callback relays
+the browser to the canonical Ysello callback before code exchange; this keeps
+the host-only OAuth state and login cookies scoped to `ysello.com` while still
+using Google's registered `api.ysello.com` redirect URI.
 
 `API_URL` is the browser-reachable HTTPS origin of this API. Do not set it to a
 PostgreSQL/TCP proxy URL, a `*.railway.internal` hostname, or a URL copied from

@@ -21,6 +21,25 @@ function GoogleMark() {
   );
 }
 
+function googleAuthStartUrl(params: URLSearchParams) {
+  const path = `/api/auth/google/start?${params.toString()}`;
+  const configuredSiteUrl =
+    (import.meta.env.VITE_SITE_URL as string | undefined)?.trim() ||
+    (import.meta.env.PROD ? "https://ysello.com" : "");
+  if (!configuredSiteUrl) return path;
+
+  try {
+    const siteUrl = new URL(configuredSiteUrl);
+    if (!["http:", "https:"].includes(siteUrl.protocol)) return path;
+
+    // Always start on the canonical site. The signed state cookie is host-only,
+    // so beginning on www.ysello.com and finishing on ysello.com would lose it.
+    return new URL(path, siteUrl.origin).toString();
+  } catch {
+    return path;
+  }
+}
+
 export function GoogleAuthButton({
   intent,
   returnTo,
@@ -32,10 +51,7 @@ export function GoogleAuthButton({
   if (returnTo) params.set("returnTo", returnTo);
 
   return (
-    <a
-      className="google-auth-button"
-      href={`/api/auth/google/start?${params.toString()}`}
-    >
+    <a className="google-auth-button" href={googleAuthStartUrl(params)}>
       <GoogleMark />
       Continue with Google
     </a>

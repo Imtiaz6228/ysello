@@ -98,7 +98,22 @@ authRouter.get(
   authLimiter,
   asyncHandler(async (req, res) => {
     const input = googleOAuthStartSchema.parse(req.query);
-    const flow = createGoogleOAuthFlow(input);
+    let flow;
+
+    try {
+      flow = createGoogleOAuthFlow(input);
+    } catch (error) {
+      if (
+        error instanceof ApiError &&
+        error.code === "GOOGLE_OAUTH_NOT_CONFIGURED"
+      ) {
+        res.setHeader("Cache-Control", "private, no-store");
+        res.redirect(303, googleAuthPage(input.intent, "unavailable"));
+        return;
+      }
+
+      throw error;
+    }
 
     setGoogleOAuthCookie(res, flow.cookieValue);
     res.setHeader("Cache-Control", "private, no-store");

@@ -217,6 +217,21 @@ function sendRequestToken(_req: express.Request, res: express.Response) {
 
 app.get("/api/csrf", sendRequestToken);
 app.get("/api/session/bootstrap", sendRequestToken);
+// Google is configured to return to the public API domain. Relay the browser
+// to the canonical app callback so the host-only OAuth state cookie set through
+// the frontend /api proxy is available before the server exchanges the code.
+app.get("/auth/google/callback", (req, res) => {
+  const callbackUrl = new URL("/google-callback.php", env.APP_URL);
+
+  for (const key of ["code", "state", "error"] as const) {
+    const value = req.query[key];
+    if (typeof value === "string") callbackUrl.searchParams.set(key, value);
+  }
+
+  res.setHeader("Cache-Control", "private, no-store");
+  res.setHeader("Referrer-Policy", "no-referrer");
+  res.redirect(303, callbackUrl.toString());
+});
 app.get("/google-callback.php", (req, res) => {
   const queryIndex = req.originalUrl.indexOf("?");
   const query = queryIndex >= 0 ? req.originalUrl.slice(queryIndex) : "";
