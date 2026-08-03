@@ -26,10 +26,7 @@ jobs:
           ref: ${{ github.event.workflow_run.head_sha || github.sha }}
       - name: Deploy to Railway
         if: ${{ env.RAILWAY_TOKEN != '' && env.RAILWAY_SERVICE_ID != '' }}
-        uses: bervProject/railway-deploy@v3
-        with:
-          service: ${{ env.RAILWAY_SERVICE_ID }}
-          token: ${{ env.RAILWAY_TOKEN }}
+        run: npx --yes @railway/cli@latest up --service "$RAILWAY_SERVICE_ID" --detach
       - name: Railway deployment is managed externally
         if: ${{ env.RAILWAY_TOKEN == '' || env.RAILWAY_SERVICE_ID == '' }}
         run: echo "Railway secrets are not configured in GitHub; skipping CLI deployment."
