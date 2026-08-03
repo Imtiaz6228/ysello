@@ -47,6 +47,9 @@ jobs:
       - name: Lint source
         run: npm run lint
 
+      - name: Build frontend and API
+        run: npm run build:railway
+
       - name: Run tests
         run: npm test
 
@@ -58,9 +61,6 @@ jobs:
 
       - name: Apply PostgreSQL migrations
         run: npm run prisma:migrate
-
-      - name: Build frontend and API
-        run: npm run build:railway
 
       - name: Validate Sites artifact
         run: bash scripts/validate-artifact.sh
