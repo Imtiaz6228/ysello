@@ -13,6 +13,10 @@ export function sha256(value: string) {
   return createHash("sha256").update(value).digest("hex");
 }
 
+export function sha256Base64Url(value: string) {
+  return createHash("sha256").update(value).digest("base64url");
+}
+
 export function hmacSha256(value: string, secret: string) {
   return createHmac("sha256", secret).update(value).digest("hex");
 }

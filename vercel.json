@@ -40,6 +40,13 @@
       ]
     },
     {
+      "source": "/google-callback.php",
+      "headers": [
+        { "key": "X-Robots-Tag", "value": "noindex, nofollow, noarchive" },
+        { "key": "Cache-Control", "value": "private, no-store" }
+      ]
+    },
+    {
       "source": "/:path*",
       "headers": [
         {
@@ -91,6 +98,10 @@
     {
       "source": "/uploads/:path*",
       "destination": "https://api.ysello.com/uploads/:path*"
+    },
+    {
+      "source": "/google-callback.php",
+      "destination": "https://api.ysello.com/api/auth/google/callback"
     },
     {
       "source": "/stores/:slug",

@@ -5,12 +5,19 @@ import { ApiError, homePathForRole } from "../api/client";
 import { useAuth } from "../auth/AuthContext";
 import { Alert } from "../components/Alert";
 import { AuthShell } from "../components/AuthShell";
+import { GoogleAuthButton } from "../components/GoogleAuthButton";
 import { PasswordField } from "../components/PasswordField";
+import { googleAuthStatusMessage } from "../lib/google-auth-ui";
 
 export function SignInPage() {
   const { signIn } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  const googleStatus = googleAuthStatusMessage(
+    new URLSearchParams(location.search).get("google"),
+  );
+  const returnTo = (location.state as { from?: { pathname?: string } } | null)
+    ?.from?.pathname;
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [rememberMe, setRememberMe] = useState(true);
@@ -68,6 +75,15 @@ export function SignInPage() {
         </div>
 
         {status ? <Alert type={status.type} message={status.message} /> : null}
+        {!status && googleStatus ? (
+          <Alert type="error" message={googleStatus} />
+        ) : null}
+
+        <GoogleAuthButton intent="signin" returnTo={returnTo} />
+
+        <div className="auth-divider" role="separator">
+          <span>or continue with email</span>
+        </div>
 
         <label className="field" htmlFor="email">
           <span>Email address</span>

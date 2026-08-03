@@ -61,6 +61,7 @@ export default defineConfig(({ mode }) => {
       proxy: {
         "/api": "http://localhost:4000",
         "/uploads": "http://localhost:4000",
+        "/google-callback.php": "http://localhost:4000",
       },
     },
     build: {

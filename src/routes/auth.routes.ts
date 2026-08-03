@@ -1,13 +1,22 @@
 import { Router } from "express";
-import { setAuthCookies, issueCsrfToken } from "../lib/cookies.js";
+import { env } from "../config/env.js";
+import {
+  clearGoogleOAuthCookie,
+  getGoogleOAuthCookie,
+  issueCsrfToken,
+  setAuthCookies,
+  setGoogleOAuthCookie,
+} from "../lib/cookies.js";
 import { requireAuth, requireVerifiedUser } from "../middleware/auth.js";
-import { asyncHandler } from "../middleware/error-handler.js";
+import { ApiError, asyncHandler } from "../middleware/error-handler.js";
 import { authLimiter, sensitiveLimiter } from "../middleware/rate-limit.js";
 import { imageUpload } from "../middleware/upload.js";
 import {
   availabilitySchema,
   changePasswordSchema,
   forgotPasswordSchema,
+  googleOAuthCallbackSchema,
+  googleOAuthStartSchema,
   loginSchema,
   registerSchema,
   resendVerificationSchema,
@@ -31,8 +40,47 @@ import {
 } from "../services/auth.service.js";
 import { verifyCaptcha } from "../services/captcha.service.js";
 import { clearAuthCookies } from "../lib/cookies.js";
+import {
+  authenticateWithGoogle,
+  createGoogleOAuthFlow,
+  readGoogleOAuthFlow,
+} from "../services/google-auth.service.js";
 
 export const authRouter = Router();
+
+function googleAuthPage(intent: "signin" | "register", status: string) {
+  const url = new URL(
+    intent === "register" ? "/register" : "/sign-in",
+    env.APP_URL,
+  );
+  url.searchParams.set("google", status);
+  return url.toString();
+}
+
+function googleErrorStatus(error: unknown) {
+  if (!(error instanceof ApiError)) return "failed";
+
+  switch (error.code) {
+    case "ACCOUNT_SUSPENDED":
+      return "suspended";
+    case "GOOGLE_ACCOUNT_CONFLICT":
+      return "account_conflict";
+    case "GOOGLE_EMAIL_NOT_VERIFIED":
+      return "email_unverified";
+    case "GOOGLE_OAUTH_NOT_CONFIGURED":
+      return "unavailable";
+    case "GOOGLE_OAUTH_STATE_INVALID":
+      return "invalid_session";
+    default:
+      return "failed";
+  }
+}
+
+function homePathForRole(role: string) {
+  if (["MODERATOR", "ADMIN", "SUPER_ADMIN"].includes(role)) return "/admin";
+  if (role === "SELLER") return "/seller";
+  return "/dashboard";
+}
 
 authRouter.get(
   "/availability",
@@ -42,6 +90,80 @@ authRouter.get(
     const availability = await getAvailability(input.email, input.username);
 
     res.json(availability);
+  }),
+);
+
+authRouter.get(
+  "/google/start",
+  authLimiter,
+  asyncHandler(async (req, res) => {
+    const input = googleOAuthStartSchema.parse(req.query);
+    const flow = createGoogleOAuthFlow(input);
+
+    setGoogleOAuthCookie(res, flow.cookieValue);
+    res.setHeader("Cache-Control", "private, no-store");
+    res.redirect(302, flow.authorizationUrl);
+  }),
+);
+
+authRouter.get(
+  "/google/callback",
+  authLimiter,
+  asyncHandler(async (req, res) => {
+    const input = googleOAuthCallbackSchema.parse(req.query);
+    let flow;
+
+    try {
+      flow = readGoogleOAuthFlow(getGoogleOAuthCookie(req), input.state);
+    } catch (error) {
+      clearGoogleOAuthCookie(res);
+      res.redirect(303, googleAuthPage("signin", googleErrorStatus(error)));
+      return;
+    }
+
+    clearGoogleOAuthCookie(res);
+    if (input.error) {
+      res.redirect(
+        303,
+        googleAuthPage(
+          flow.intent,
+          input.error === "access_denied" ? "cancelled" : "failed",
+        ),
+      );
+      return;
+    }
+    if (!input.code) {
+      res.redirect(303, googleAuthPage(flow.intent, "failed"));
+      return;
+    }
+
+    try {
+      const user = await authenticateWithGoogle(input.code, flow.codeVerifier);
+      const session = await createSession(user, req, true);
+      setAuthCookies(
+        res,
+        session.accessToken,
+        session.refreshToken,
+        session.rememberMe,
+      );
+      issueCsrfToken(res);
+      res.setHeader("Cache-Control", "private, no-store");
+      res.redirect(
+        303,
+        new URL(
+          flow.returnTo ?? homePathForRole(user.role),
+          env.APP_URL,
+        ).toString(),
+      );
+    } catch (error) {
+      if (!(error instanceof ApiError)) {
+        console.error(
+          "Google OAuth callback failed:",
+          error instanceof Error ? error.message : error,
+        );
+      }
+      res.redirect(303, googleAuthPage(flow.intent, googleErrorStatus(error)));
+    }
   }),
 );
 

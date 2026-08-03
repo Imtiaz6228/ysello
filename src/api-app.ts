@@ -90,10 +90,7 @@ function categorySeoPathFromFlat(
   ]).join("/")}`;
 }
 
-function productSeoPath(product: {
-  slug: string;
-  category: SeoCategoryNode;
-}) {
+function productSeoPath(product: { slug: string; category: SeoCategoryNode }) {
   return `${categorySeoPath(product.category).replace("/category/", "/product/")}/${product.slug}`;
 }
 
@@ -220,6 +217,11 @@ function sendRequestToken(_req: express.Request, res: express.Response) {
 
 app.get("/api/csrf", sendRequestToken);
 app.get("/api/session/bootstrap", sendRequestToken);
+app.get("/google-callback.php", (req, res) => {
+  const queryIndex = req.originalUrl.indexOf("?");
+  const query = queryIndex >= 0 ? req.originalUrl.slice(queryIndex) : "";
+  res.redirect(307, `/api/auth/google/callback${query}`);
+});
 
 app.use((req, res, next) => {
   if (

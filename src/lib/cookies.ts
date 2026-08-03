@@ -11,6 +11,9 @@ export const REFRESH_TOKEN_COOKIE = isProduction
   ? "__Host-auth_refresh"
   : "auth_refresh";
 export const CSRF_COOKIE = isProduction ? "__Host-auth_csrf" : "auth_csrf";
+export const GOOGLE_OAUTH_COOKIE = isProduction
+  ? "__Host-google_oauth"
+  : "google_oauth";
 
 function baseCookieOptions() {
   return {
@@ -46,6 +49,30 @@ export function setAuthCookies(
 export function clearAuthCookies(res: Response) {
   res.clearCookie(ACCESS_TOKEN_COOKIE, baseCookieOptions());
   res.clearCookie(REFRESH_TOKEN_COOKIE, baseCookieOptions());
+}
+
+function googleOAuthCookieOptions() {
+  return {
+    secure: isProduction,
+    sameSite: "lax" as const,
+    path: "/",
+    httpOnly: true,
+  };
+}
+
+export function setGoogleOAuthCookie(res: Response, value: string) {
+  res.cookie(GOOGLE_OAUTH_COOKIE, value, {
+    ...googleOAuthCookieOptions(),
+    maxAge: 10 * 60 * 1000,
+  });
+}
+
+export function clearGoogleOAuthCookie(res: Response) {
+  res.clearCookie(GOOGLE_OAUTH_COOKIE, googleOAuthCookieOptions());
+}
+
+export function getGoogleOAuthCookie(req: Request) {
+  return req.cookies?.[GOOGLE_OAUTH_COOKIE] as string | undefined;
 }
 
 export function issueCsrfToken(res: Response) {

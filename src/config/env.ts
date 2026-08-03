@@ -112,6 +112,18 @@ const envSchema = z.object({
   COOKIE_DOMAIN: z.preprocess(emptyToUndefined, z.string().optional()),
   JWT_SECRET: z.string().min(32),
   CSRF_SECRET: z.string().min(32),
+  GOOGLE_CLIENT_ID: z.preprocess(
+    emptyToUndefined,
+    z.string().min(20).optional(),
+  ),
+  GOOGLE_CLIENT_SECRET: z.preprocess(
+    emptyToUndefined,
+    z.string().min(20).optional(),
+  ),
+  GOOGLE_REDIRECT_URI: z.preprocess(
+    emptyToUndefined,
+    z.string().url().optional(),
+  ),
   ACCESS_TOKEN_MINUTES: z.coerce.number().int().positive().default(15),
   REFRESH_TOKEN_DAYS: z.coerce.number().int().positive().default(30),
   SHORT_REFRESH_TOKEN_HOURS: z.coerce.number().int().positive().default(24),
@@ -221,6 +233,15 @@ if (parsed.data.TURNSTILE_REQUIRED && !parsed.data.TURNSTILE_SECRET_KEY) {
   );
 }
 
+if (
+  Boolean(parsed.data.GOOGLE_CLIENT_ID) !==
+  Boolean(parsed.data.GOOGLE_CLIENT_SECRET)
+) {
+  throw new Error(
+    "GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET must be configured together",
+  );
+}
+
 if (parsed.data.NODE_ENV === "production") {
   for (const key of ["APP_URL", "API_URL"] as const) {
     const url = new URL(parsed.data[key]);
@@ -233,6 +254,21 @@ if (parsed.data.NODE_ENV === "production") {
     if (key === "APP_URL" && (url.pathname !== "/" || url.search || url.hash)) {
       throw new Error(
         "APP_URL must be the preferred public origin without a path, query, or fragment",
+      );
+    }
+  }
+
+  if (parsed.data.GOOGLE_REDIRECT_URI) {
+    const redirectUrl = new URL(parsed.data.GOOGLE_REDIRECT_URI);
+    if (
+      redirectUrl.protocol !== "https:" ||
+      redirectUrl.username ||
+      redirectUrl.password ||
+      redirectUrl.search ||
+      redirectUrl.hash
+    ) {
+      throw new Error(
+        "GOOGLE_REDIRECT_URI must be a public HTTPS URL without credentials, query, or fragment",
       );
     }
   }

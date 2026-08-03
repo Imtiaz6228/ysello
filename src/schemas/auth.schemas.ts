@@ -59,6 +59,17 @@ export const availabilitySchema = z.object({
   username: usernameSchema.optional(),
 });
 
+export const googleOAuthStartSchema = z.object({
+  intent: z.enum(["signin", "register"]).default("signin"),
+  returnTo: z.string().max(1024).optional(),
+});
+
+export const googleOAuthCallbackSchema = z.object({
+  code: z.string().min(1).max(4096).optional(),
+  state: z.string().min(1).max(1024).optional(),
+  error: z.string().max(200).optional(),
+});
+
 export const resendVerificationSchema = z.object({
   email: emailSchema,
 });

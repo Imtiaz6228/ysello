@@ -181,7 +181,7 @@ model User {
   country            String
   city               String?
   profileImageUrl    String?
-  passwordHash       String
+  passwordHash       String?
   role               Role      @default(CUSTOMER)
   isSuspended        Boolean   @default(false)
   suspensionReason   String?
@@ -193,6 +193,7 @@ model User {
   updatedAt          DateTime  @updatedAt
 
   refreshSessions         RefreshSession[]
+  externalAuthAccounts    ExternalAuthAccount[]
   emailVerificationTokens EmailVerificationToken[]
   passwordResetTokens     PasswordResetToken[]
   sellerApplication       SellerApplication?
@@ -220,6 +221,21 @@ model User {
 
   @@index([email])
   @@index([username])
+}
+
+model ExternalAuthAccount {
+  id                String   @id @default(uuid())
+  userId            String
+  provider          String
+  providerAccountId String
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@unique([userId, provider])
+  @@index([userId])
 }
 
 model RefreshSession {

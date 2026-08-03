@@ -193,7 +193,7 @@ export async function loginUser(input: LoginInput, req: Request) {
   );
   const user = await prisma.user.findUnique({ where: { email: input.email } });
 
-  if (!user) {
+  if (!user || !user.passwordHash) {
     throw invalidError;
   }
 
@@ -386,6 +386,13 @@ export async function changePassword(
   password: string,
 ) {
   const user = await prisma.user.findUniqueOrThrow({ where: { id: userId } });
+  if (!user.passwordHash) {
+    throw new ApiError(
+      400,
+      "This account does not have a password yet. Use Forgot password to create one.",
+      "PASSWORD_NOT_SET",
+    );
+  }
   const passwordMatches = await verifyPassword(
     user.passwordHash,
     currentPassword,

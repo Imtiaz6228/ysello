@@ -6,8 +6,10 @@ import { useAuth } from "../auth/AuthContext";
 import { Alert } from "../components/Alert";
 import { AuthShell } from "../components/AuthShell";
 import { Captcha } from "../components/Captcha";
+import { GoogleAuthButton } from "../components/GoogleAuthButton";
 import { PasswordField } from "../components/PasswordField";
 import { PasswordStrength } from "../components/PasswordStrength";
+import { googleAuthStatusMessage } from "../lib/google-auth-ui";
 
 type RegisterForm = {
   firstName: string;
@@ -41,6 +43,11 @@ export function RegisterPage() {
   const { register } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  const googleStatus = googleAuthStatusMessage(
+    new URLSearchParams(location.search).get("google"),
+  );
+  const returnTo = (location.state as { from?: { pathname?: string } } | null)
+    ?.from?.pathname;
   const [form, setForm] = useState(initialForm);
   const [profilePicture, setProfilePicture] = useState<File | null>(null);
   const [captchaToken, setCaptchaToken] = useState("");
@@ -150,6 +157,20 @@ export function RegisterPage() {
         </div>
 
         {status ? <Alert type={status.type} message={status.message} /> : null}
+        {!status && googleStatus ? (
+          <Alert type="error" message={googleStatus} />
+        ) : null}
+
+        <GoogleAuthButton intent="register" returnTo={returnTo} />
+        <p className="google-consent-copy">
+          By continuing with Google, you agree to Ysello&apos;s{" "}
+          <Link to="/terms">Terms</Link> and{" "}
+          <Link to="/privacy">Privacy Policy</Link>.
+        </p>
+
+        <div className="auth-divider" role="separator">
+          <span>or register with email</span>
+        </div>
 
         <div className="form-grid two">
           <label className="field" htmlFor="firstName">
