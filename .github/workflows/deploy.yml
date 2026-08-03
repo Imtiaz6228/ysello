@@ -12,26 +12,14 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  deploy-vercel:
-    name: Deploy to Vercel
-    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
-    runs-on: ubuntu-latest
-    environment: production
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
-      - name: Deploy to Vercel
-        uses: amondnet/vercel-action@v25
-        with:
-          vercel-token: ${{ secrets.VERCEL_TOKEN }}
-          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
-          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
-          vercel-args: '--prod'
-
   deploy-railway:
     name: Deploy to Railway
-    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
+    if: >-
+      ${{
+        (github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success') &&
+        secrets.RAILWAY_TOKEN != '' &&
+        secrets.RAILWAY_SERVICE_ID != ''
+      }}
     runs-on: ubuntu-latest
     environment: production
     steps:
