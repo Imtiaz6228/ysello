@@ -6,12 +6,8 @@ import { MobileBottomNavigation } from "./components/MobileBottomNavigation";
 import { RouteLoading } from "./components/RouteLoading";
 import { SupportWidgetPro } from "./components/SupportWidgetPro";
 import { publicPages } from "./content/publicPages";
+import { MarketplaceHomePage } from "./pages/MarketplaceHomePage";
 
-const MarketplaceHomePage = lazy(() =>
-  import("./pages/MarketplaceHomePage").then((module) => ({
-    default: module.MarketplaceHomePage,
-  })),
-);
 const CatalogPage = lazy(() =>
   import("./pages/CatalogPage").then((module) => ({
     default: module.CatalogPage,
