@@ -12,6 +12,13 @@ export const TRUSTED_APP_ORIGINS = [
 
 const emptyToUndefined = (value: unknown) => (value === "" ? undefined : value);
 
+const trimmedStringToUndefined = (value: unknown) => {
+  if (typeof value !== "string") return value;
+
+  const trimmed = value.trim();
+  return trimmed === "" ? undefined : trimmed;
+};
+
 function railwayPublicOrigin() {
   const raw = process.env.RAILWAY_PUBLIC_DOMAIN?.trim();
   if (!raw) return undefined;
@@ -113,15 +120,22 @@ const envSchema = z.object({
   JWT_SECRET: z.string().min(32),
   CSRF_SECRET: z.string().min(32),
   GOOGLE_CLIENT_ID: z.preprocess(
-    emptyToUndefined,
-    z.string().min(20).optional(),
+    trimmedStringToUndefined,
+    z
+      .string()
+      .min(20)
+      .regex(
+        /^[A-Za-z0-9-]+\.apps\.googleusercontent\.com$/,
+        "must be a Google OAuth web client ID",
+      )
+      .optional(),
   ),
   GOOGLE_CLIENT_SECRET: z.preprocess(
-    emptyToUndefined,
+    trimmedStringToUndefined,
     z.string().min(20).optional(),
   ),
   GOOGLE_REDIRECT_URI: z.preprocess(
-    emptyToUndefined,
+    trimmedStringToUndefined,
     z.string().url().optional(),
   ),
   ACCESS_TOKEN_MINUTES: z.coerce.number().int().positive().default(15),

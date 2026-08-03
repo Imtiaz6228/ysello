@@ -115,6 +115,11 @@ public location. For local OAuth testing, separately authorize
 `http://localhost:4000/auth/google/callback` and use that value in the local
 environment.
 
+Enter each Railway value as a single line without quotes or trailing whitespace.
+An encoded `%0A` in Google's authorization URL means a copied variable contains
+a newline; remove it and redeploy. The API trims these values defensively, but
+the Railway variables should still be normalized at the source.
+
 The callback uses authorization-code exchange with PKCE, a signed short-lived
 HttpOnly state cookie, Google's verified account identifier, and Ysello's
 existing rotating refresh-session cookies. A verified Google email can safely

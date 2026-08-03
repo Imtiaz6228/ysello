@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { spawnSync } from "node:child_process";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 
@@ -48,6 +49,49 @@ test("Google identities are unique and passwordless users remain supported", asy
   assert.match(schema, /passwordHash\s+String\?/);
   assert.match(migration, /ALTER COLUMN "passwordHash" DROP NOT NULL/);
   assert.match(authService, /!user\.passwordHash/);
+});
+
+test("Google OAuth trims copied Railway values before building the request", () => {
+  const result = spawnSync(
+    process.execPath,
+    [
+      "--import",
+      "tsx",
+      "--input-type=module",
+      "--eval",
+      `const { createGoogleOAuthFlow } = await import("./src/services/google-auth.service.ts");
+       const authorizationUrl = new URL(createGoogleOAuthFlow({ intent: "signin" }).authorizationUrl);
+       console.log(JSON.stringify({
+         clientId: authorizationUrl.searchParams.get("client_id"),
+         redirectUri: authorizationUrl.searchParams.get("redirect_uri"),
+         containsEncodedNewline: authorizationUrl.toString().includes("%0A"),
+       }));`,
+    ],
+    {
+      cwd: new URL("..", import.meta.url),
+      encoding: "utf8",
+      env: {
+        ...process.env,
+        NODE_ENV: "production",
+        DATABASE_URL: "postgresql://user:pass@localhost:5432/ysello",
+        APP_URL: "https://ysello.com",
+        API_URL: "https://api.ysello.com",
+        JWT_SECRET: "j".repeat(40),
+        CSRF_SECRET: "c".repeat(40),
+        GOOGLE_CLIENT_ID:
+          "123456789012-testclient.apps.googleusercontent.com\n",
+        GOOGLE_CLIENT_SECRET: "test-client-secret-value\n",
+        GOOGLE_REDIRECT_URI: "https://api.ysello.com/auth/google/callback\n",
+      },
+    },
+  );
+
+  assert.equal(result.status, 0, result.stderr);
+  assert.deepEqual(JSON.parse(result.stdout.trim()), {
+    clientId: "123456789012-testclient.apps.googleusercontent.com",
+    redirectUri: "https://api.ysello.com/auth/google/callback",
+    containsEncodedNewline: false,
+  });
 });
 
 test("examples document Google credentials without embedding a secret", async () => {
