@@ -42,9 +42,7 @@ import { AppErrorBoundary } from "./components/AppErrorBoundary";
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
     <AppErrorBoundary>
-      <BrowserRouter
-        future={{ v7_startTransition: true, v7_relativeSplatPath: true }}
-      >
+      <BrowserRouter>
         <LocaleProvider>
           <AuthProvider>
             <CartProvider>
