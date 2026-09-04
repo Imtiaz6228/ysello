@@ -1,0 +1,644 @@
+/*
+ * Final marketplace product system.
+ * Product cards intentionally use interface icons instead of decorative
+ * product photography so sellers are not represented by unrelated imagery.
+ */
+
+.market-product-scroll.grid,
+.related-product-grid {
+  display: grid !important;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  gap: 18px !important;
+  align-items: stretch;
+}
+
+.ys-product-card,
+.market-product-scroll.grid .ys-product-card,
+.related-product-grid .ys-product-card {
+  min-width: 0 !important;
+  min-height: 0 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  overflow: hidden;
+  border: 1px solid #e5e7eb !important;
+  border-radius: 18px !important;
+  background: #fff !important;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06) !important;
+  transition:
+    transform 160ms ease,
+    border-color 160ms ease,
+    box-shadow 160ms ease;
+}
+
+.ys-product-card:hover {
+  transform: translateY(-3px);
+  border-color: #c7d2fe !important;
+  box-shadow: 0 16px 34px rgba(15, 23, 42, 0.1) !important;
+}
+
+.ys-product-card-top {
+  padding: 18px 18px 0;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.ys-product-glyph,
+.ys-home-product-icon,
+.store-product-icon,
+.admin-product-identity > span {
+  flex: 0 0 auto;
+  width: 52px;
+  height: 52px;
+  display: grid;
+  place-items: center;
+  border: 1px solid #dbeafe;
+  border-radius: 15px;
+  color: #1d4ed8;
+  background: linear-gradient(145deg, #eff6ff, #eef2ff);
+  text-decoration: none;
+}
+
+.ys-product-glyph svg,
+.ys-home-product-icon svg,
+.store-product-icon svg,
+.admin-product-identity svg {
+  width: 24px;
+  height: 24px;
+  stroke-width: 1.8;
+}
+
+.ys-product-badges {
+  min-width: 0;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.ys-product-badges .badge,
+.ys-product-kind {
+  position: static !important;
+  min-height: 26px;
+  padding: 5px 9px !important;
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid #e5e7eb;
+  border-radius: 999px !important;
+  color: #475569;
+  background: #f8fafc;
+  font-size: 10px !important;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: 0.02em;
+}
+
+.ys-product-badges .badge.green {
+  border-color: #bbf7d0;
+  color: #166534;
+  background: #f0fdf4;
+}
+
+.ys-product-card .market-product-body {
+  min-width: 0 !important;
+  min-height: 0 !important;
+  padding: 14px 18px 18px !important;
+  display: flex !important;
+  flex: 1;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.ys-product-card .market-product-category {
+  display: block;
+  overflow: hidden;
+  color: #64748b !important;
+  font-size: 11px !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.06em;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.ys-product-card h2 {
+  min-height: 48px !important;
+  margin: 5px 0 6px !important;
+  display: -webkit-box;
+  overflow: hidden;
+  color: #0f172a !important;
+  font-size: 18px !important;
+  font-weight: 760 !important;
+  line-height: 1.32 !important;
+  letter-spacing: -0.02em;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.ys-product-card .market-product-seller {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: #475569 !important;
+  font-size: 12px !important;
+  font-weight: 650;
+}
+
+.ys-product-card .market-product-seller svg {
+  width: 14px;
+  height: 14px;
+  color: #2563eb;
+}
+
+.ys-product-card .market-product-body > p {
+  min-height: 40px !important;
+  margin: 0 !important;
+  display: -webkit-box !important;
+  overflow: hidden;
+  color: #64748b !important;
+  font-size: 13px !important;
+  line-height: 1.5 !important;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.ys-product-card .market-product-meta {
+  margin-top: 2px;
+  display: flex !important;
+  flex-wrap: wrap;
+  gap: 6px !important;
+}
+
+.ys-product-card .market-product-meta > span {
+  min-height: 26px;
+  padding: 5px 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  color: #475569;
+  background: #f8fafc;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.ys-product-card .market-product-meta svg {
+  width: 13px;
+  height: 13px;
+}
+
+.ys-product-card .market-product-body > footer {
+  min-height: 0 !important;
+  margin-top: auto !important;
+  padding-top: 14px !important;
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) auto !important;
+  align-items: end !important;
+  gap: 12px !important;
+  border-top: 1px solid #eef2f7 !important;
+}
+
+.ys-product-card footer strong {
+  color: #0f172a !important;
+  font-size: 20px !important;
+  letter-spacing: -0.025em;
+}
+
+.ys-product-card footer small {
+  margin-top: 2px;
+  display: block;
+  color: #94a3b8 !important;
+  font-size: 9px !important;
+}
+
+.ys-product-card .market-card-actions {
+  display: flex !important;
+  gap: 7px !important;
+}
+
+.ys-product-card .market-card-actions > a,
+.ys-product-card .market-card-actions > button {
+  width: 38px !important;
+  min-width: 38px !important;
+  height: 38px !important;
+  min-height: 38px !important;
+  padding: 0 !important;
+  display: grid !important;
+  place-items: center;
+  overflow: hidden;
+  border-radius: 11px !important;
+  font-size: 0 !important;
+}
+
+.ys-product-card .market-card-actions > a {
+  border: 1px solid #dbe3ee !important;
+  color: #334155 !important;
+  background: #fff !important;
+}
+
+.ys-product-card .market-card-actions > button {
+  border: 1px solid #4f46e5 !important;
+  color: #fff !important;
+  background: #4f46e5 !important;
+}
+
+.ys-product-card .market-card-actions > button:disabled {
+  border-color: #cbd5e1 !important;
+  color: #94a3b8 !important;
+  background: #f1f5f9 !important;
+  cursor: not-allowed;
+}
+
+.ys-product-card .market-card-actions svg {
+  width: 17px !important;
+  height: 17px !important;
+}
+
+/* Catalog category icons use the same clean line system as product cards. */
+.catalog-department-grid > button > span:first-child,
+.category-directory .cat-icon,
+.catalog-results-context > div > span:first-child {
+  display: grid !important;
+  place-items: center;
+  border: 1px solid #dbeafe !important;
+  color: #2563eb !important;
+  background: #eff6ff !important;
+}
+
+.catalog-department-grid > button > span:first-child {
+  width: 34px !important;
+  height: 34px !important;
+  border-radius: 10px !important;
+}
+
+.category-directory .cat-icon {
+  width: 32px !important;
+  height: 32px !important;
+  border-radius: 9px !important;
+}
+
+.catalog-results-context > div > span:first-child {
+  width: 44px !important;
+  height: 44px !important;
+  border-radius: 12px !important;
+}
+
+.catalog-department-grid > button > span:first-child svg,
+.category-directory .cat-icon svg,
+.catalog-results-context > div > span:first-child svg {
+  width: 17px !important;
+  height: 17px !important;
+  stroke-width: 1.8 !important;
+}
+
+/* Homepage cards use the same image-free identity language. */
+.pro-home .lux-product-grid.marketplace-list,
+.lux-new-grid {
+  display: grid !important;
+  grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+  gap: 16px !important;
+}
+
+.ys-home-product-card {
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid #e5e7eb !important;
+  border-radius: 18px !important;
+  background: #fff !important;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.055) !important;
+}
+
+.ys-home-product-identity {
+  min-height: 86px;
+  padding: 18px 46px 10px 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.ys-home-product-identity > div {
+  min-width: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.ys-home-product-identity small {
+  width: 100%;
+  overflow: hidden;
+  color: #64748b;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.ys-home-product-identity .lux-badge,
+.ys-home-product-identity .lux-discount-badge {
+  position: static !important;
+  inset: auto !important;
+}
+
+.ys-home-product-card .lux-product-body {
+  min-height: 250px !important;
+  padding: 12px 16px 16px !important;
+}
+
+.ys-home-product-card .lux-product-main h3 {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.store-products {
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  gap: 16px !important;
+}
+
+.store-products > article {
+  min-width: 0;
+}
+
+.store-product-icon {
+  margin-bottom: 14px;
+}
+
+/* Product details retain useful preview information without fake artwork. */
+.product-icon-preview {
+  width: 100%;
+  min-height: 100%;
+  padding: clamp(28px, 5vw, 64px) !important;
+  display: flex !important;
+  align-items: flex-start !important;
+  justify-content: center;
+  text-align: left;
+}
+
+.product-icon-preview > svg {
+  width: 62px !important;
+  height: 62px !important;
+}
+
+/* Admin moderation cards are compact and status-led. */
+.admin-enterprise .admin-product-filter {
+  margin: 0 0 18px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.admin-enterprise .admin-product-filter button {
+  min-height: 38px;
+  padding: 8px 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid #dbe3ee;
+  border-radius: 10px;
+  color: #475569;
+  background: #fff;
+  font-size: 12px;
+  font-weight: 750;
+  text-transform: capitalize;
+}
+
+.admin-enterprise .admin-product-filter button.active {
+  border-color: #c7d2fe;
+  color: #3730a3;
+  background: #eef2ff;
+}
+
+.admin-enterprise .admin-product-filter button span {
+  min-width: 22px;
+  padding: 2px 6px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.8);
+  font-size: 10px;
+  text-align: center;
+}
+
+.admin-enterprise .admin-product-filter label {
+  margin-left: auto;
+}
+
+.admin-enterprise .admin-product-filter select {
+  min-height: 38px;
+  padding: 0 34px 0 12px;
+  border: 1px solid #d9e0ea;
+  border-radius: 10px;
+  background: #fff;
+  color: #172033;
+}
+
+.admin-existing-category-products {
+  margin: 4px 0 18px;
+  padding: 14px;
+  border: 1px solid #dfe6f0;
+  border-radius: 12px;
+  background: #f8fafc;
+}
+
+.admin-existing-category-products header,
+.admin-existing-category-products article {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.admin-existing-category-products header {
+  margin-bottom: 10px;
+}
+
+.admin-existing-category-products > div {
+  display: grid;
+  gap: 6px;
+}
+
+.admin-existing-category-products article {
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: #fff;
+}
+
+.admin-existing-category-products p,
+.admin-existing-category-products small {
+  margin: 0;
+  color: #667085;
+}
+
+.admin-enterprise .admin-product-grid {
+  display: grid !important;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  gap: 16px !important;
+}
+
+.admin-enterprise .admin-product-card {
+  min-width: 0;
+  display: flex !important;
+  flex-direction: column !important;
+  grid-template-columns: none !important;
+  border: 1px solid #e2e8f0 !important;
+  border-radius: 16px !important;
+  background: #fff !important;
+}
+
+.admin-enterprise .admin-product-identity {
+  padding: 16px 16px 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.admin-enterprise .admin-product-identity > span {
+  width: 44px;
+  height: 44px;
+  border-radius: 13px;
+}
+
+.admin-enterprise .admin-product-identity small {
+  color: #64748b;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+}
+
+.admin-enterprise .admin-product-copy {
+  min-width: 0;
+  padding: 14px 16px !important;
+}
+
+.admin-enterprise .admin-product-copy h3 {
+  margin: 8px 0;
+  font-size: 16px;
+  line-height: 1.35;
+}
+
+.admin-enterprise .admin-product-card footer {
+  margin-top: auto;
+  padding: 12px 16px 16px !important;
+  display: flex !important;
+  flex-wrap: wrap;
+  gap: 8px !important;
+  border-top: 1px solid #eef2f7;
+}
+
+.admin-enterprise .admin-product-card footer button {
+  min-height: 38px !important;
+  padding: 8px 12px !important;
+  border-radius: 10px !important;
+}
+
+/* Normalize touch navigation icons across mobile devices. */
+@media (max-width: 700px) {
+  .mobile-bottom-nav {
+    right: 8px !important;
+    bottom: max(8px, env(safe-area-inset-bottom)) !important;
+    left: 8px !important;
+    min-height: 64px !important;
+    padding: 6px !important;
+    border-radius: 18px !important;
+  }
+
+  .mobile-bottom-nav > a {
+    min-width: 0;
+    min-height: 52px !important;
+    gap: 3px !important;
+    font-size: 10px !important;
+    font-weight: 700 !important;
+  }
+
+  .mobile-bottom-nav > a svg {
+    width: 21px !important;
+    height: 21px !important;
+    stroke-width: 1.8 !important;
+  }
+}
+
+@media (max-width: 1100px) {
+  .market-product-scroll.grid,
+  .related-product-grid,
+  .admin-enterprise .admin-product-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  .pro-home .lux-product-grid.marketplace-list,
+  .lux-new-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  }
+}
+
+@media (max-width: 760px) {
+  .market-product-scroll.grid,
+  .related-product-grid,
+  .admin-enterprise .admin-product-grid,
+  .store-products {
+    grid-template-columns: 1fr !important;
+    gap: 12px !important;
+  }
+
+  .pro-home .lux-product-grid.marketplace-list,
+  .lux-new-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 10px !important;
+  }
+
+  .ys-product-card-top {
+    padding: 14px 14px 0;
+  }
+
+  .ys-product-glyph {
+    width: 46px;
+    height: 46px;
+    border-radius: 13px;
+  }
+
+  .ys-product-card .market-product-body {
+    padding: 12px 14px 14px !important;
+  }
+
+  .ys-product-card h2 {
+    min-height: 44px !important;
+    font-size: 16px !important;
+  }
+
+  .ys-product-card .market-product-meta > span:nth-child(4) {
+    display: none;
+  }
+}
+
+@media (max-width: 430px) {
+  .pro-home .lux-product-grid.marketplace-list,
+  .lux-new-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .ys-home-product-card .lux-product-body {
+    min-height: 220px !important;
+  }
+
+  .ys-product-card .market-product-body > footer {
+    grid-template-columns: minmax(0, 1fr) auto !important;
+  }
+
+  .admin-enterprise .admin-product-filter {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .admin-enterprise .admin-product-filter button {
+    justify-content: space-between;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ys-product-card {
+    transition: none;
+  }
+}

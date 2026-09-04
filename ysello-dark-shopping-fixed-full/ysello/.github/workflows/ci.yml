@@ -1,0 +1,66 @@
+name: Build and database check
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: ysello_ci
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d ysello_ci"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/ysello_ci?schema=public
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install locked dependencies
+        run: npm ci
+
+      - name: Lint source
+        run: npm run lint
+
+      - name: Build frontend and API
+        run: npm run build:railway
+
+      - name: Run tests
+        run: npm test
+
+      - name: Audit production dependencies
+        run: npm run audit:prod
+
+      - name: Validate Prisma schema
+        run: npm run prisma:validate
+
+      - name: Apply PostgreSQL migrations
+        run: npm run prisma:migrate
+
+      - name: Validate Sites artifact
+        run: bash scripts/validate-artifact.sh

@@ -1,0 +1,792 @@
+/*
+ * Ysello professional storefront v6
+ * Final visual-quality layer for the public marketplace. It replaces heavy
+ * display weights with a calmer commerce hierarchy, keeps product imagery
+ * compact, and presents official platform marks in their brand colors.
+ */
+
+:root {
+  --ys-pro-ink: #172033;
+  --ys-pro-ink-soft: #354052;
+  --ys-pro-muted: #697386;
+  --ys-pro-subtle: #8a93a3;
+  --ys-pro-canvas: #f4f6f9;
+  --ys-pro-surface: #ffffff;
+  --ys-pro-line: #e2e7ee;
+  --ys-pro-line-strong: #d4dbe5;
+  --ys-pro-blue: #1769e0;
+  --ys-pro-blue-hover: #0f57c4;
+  --ys-pro-green: #14845c;
+  --ys-pro-red: #d94355;
+  --ys-pro-font:
+    Inter, "Segoe UI Variable Text", "Segoe UI", Roboto, Helvetica, Arial,
+    sans-serif;
+}
+
+.g2-home-page,
+.ys-ref-page,
+.market-shell-header.g2-market-header,
+.market-site-footer.g2-site-footer {
+  color: var(--ys-pro-ink);
+  font-family: var(--ys-pro-font) !important;
+  font-synthesis: none;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+.g2-home-page,
+.ys-ref-page {
+  background: var(--ys-pro-canvas) !important;
+}
+
+/* Header: clear, restrained, and readable instead of visually heavy. */
+.market-shell-header.g2-market-header .g2-campaign-banner p > b {
+  font-size: 18px !important;
+  font-weight: 700 !important;
+  letter-spacing: -0.025em !important;
+}
+
+.market-shell-header.g2-market-header .g2-campaign-banner p > strong,
+.market-shell-header.g2-market-header .g2-campaign-banner > a {
+  font-weight: 600 !important;
+}
+
+.market-shell-header.g2-market-header .g2-campaign-banner p > span {
+  color: rgba(255, 255, 255, 0.72) !important;
+  font-size: 12px !important;
+  font-weight: 400 !important;
+}
+
+.market-shell-header.g2-market-header .market-wordmark strong {
+  font-size: 22px !important;
+  font-weight: 700 !important;
+  letter-spacing: -0.035em !important;
+}
+
+.market-shell-header.g2-market-header .g2-header-search > input,
+.market-shell-header.g2-market-header .g2-header-search select {
+  color: #2b3444 !important;
+  font-weight: 400 !important;
+}
+
+.market-shell-header.g2-market-header .market-sign-in small {
+  font-weight: 400 !important;
+}
+
+.market-shell-header.g2-market-header .market-sign-in strong,
+.market-shell-header.g2-market-header .g2-department-bar > button,
+.market-shell-header.g2-market-header .g2-department-bar > a {
+  font-weight: 600 !important;
+}
+
+/* Hero and section typography. */
+.g2-home-page .g2-home-hero .g2-hero-intro > span {
+  font-size: 10px !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.08em !important;
+}
+
+.g2-home-page .g2-home-hero .g2-hero-intro h1 {
+  color: #fff !important;
+  font-size: clamp(38px, 3.35vw, 52px) !important;
+  font-weight: 700 !important;
+  letter-spacing: -0.04em !important;
+  line-height: 1.04 !important;
+}
+
+.g2-home-page .g2-home-hero .g2-hero-intro p {
+  color: rgba(255, 255, 255, 0.72) !important;
+  font-size: 14px !important;
+  font-weight: 400 !important;
+  line-height: 1.65 !important;
+}
+
+.g2-home-page .g2-home-hero .g2-hero-intro > div a {
+  min-height: 43px !important;
+  font-size: 12px !important;
+  font-weight: 600 !important;
+}
+
+.g2-home-page .g2-home-hero .g2-hero-proof > span {
+  color: rgba(255, 255, 255, 0.82) !important;
+  font-size: 11px !important;
+  font-weight: 500 !important;
+}
+
+.g2-home-page .market-home-section.g2-home-section,
+.g2-home-page .reference-featured-products,
+.g2-home-page .reference-top-stores,
+.g2-home-page .top-gainers-section {
+  margin-top: 48px !important;
+}
+
+.g2-home-page .market-section-heading.g2-section-heading {
+  margin-bottom: 17px !important;
+}
+
+.g2-home-page .g2-section-heading h2 {
+  color: var(--ys-pro-ink) !important;
+  font-size: clamp(26px, 2.25vw, 34px) !important;
+  font-weight: 700 !important;
+  letter-spacing: -0.035em !important;
+  line-height: 1.12 !important;
+}
+
+.g2-home-page .g2-section-heading p {
+  max-width: 660px;
+  color: var(--ys-pro-muted) !important;
+  font-size: 14px !important;
+  font-weight: 400 !important;
+  line-height: 1.6 !important;
+}
+
+.g2-home-page .g2-section-heading > a {
+  min-height: 40px !important;
+  border-color: var(--ys-pro-line-strong) !important;
+  color: var(--ys-pro-ink-soft) !important;
+  font-size: 12px !important;
+  font-weight: 600 !important;
+}
+
+/* Category discovery uses softer tints and medium weights. */
+.g2-home-page .market-category-grid.g2-category-dock {
+  border-color: var(--ys-pro-line) !important;
+  box-shadow: 0 10px 28px rgba(23, 32, 51, 0.055) !important;
+}
+
+.g2-home-page .g2-category-dock .market-category-card {
+  min-height: 102px !important;
+  gap: 7px !important;
+}
+
+.g2-home-page
+  .g2-category-dock
+  .market-category-card
+  > .market-category-official-icon {
+  width: 46px !important;
+  height: 46px !important;
+  min-width: 46px !important;
+  min-height: 46px !important;
+  border: 1px solid transparent !important;
+  border-radius: 13px !important;
+  box-shadow: none !important;
+}
+
+.g2-home-page
+  .g2-category-dock
+  .market-category-card
+  > .market-category-official-icon
+  svg {
+  width: 21px !important;
+  height: 21px !important;
+}
+
+.g2-home-page
+  .g2-category-dock
+  .market-category-card
+  > .market-category-official-icon.brand-gaming {
+  border-color: #d9e6ff !important;
+  background: #edf4ff !important;
+  color: #2563d9 !important;
+}
+
+.g2-home-page
+  .g2-category-dock
+  .market-category-card
+  > .market-category-official-icon.brand-software {
+  border-color: #cfeaf9 !important;
+  background: #eaf7fe !important;
+  color: #0078d4 !important;
+}
+
+.g2-home-page
+  .g2-category-dock
+  .market-category-card
+  > .market-category-official-icon.brand-subscriptions {
+  border-color: #e5dafa !important;
+  background: #f4effd !important;
+  color: #7442c8 !important;
+}
+
+.g2-home-page
+  .g2-category-dock
+  .market-category-card
+  > .market-category-official-icon.brand-gift-cards {
+  border-color: #f4dfb9 !important;
+  background: #fff7e8 !important;
+  color: #c87512 !important;
+}
+
+.g2-home-page
+  .g2-category-dock
+  .market-category-card
+  > .market-category-official-icon.brand-social-media {
+  border-color: #f2d6e5 !important;
+  background: #fff0f7 !important;
+  color: #c93b7d !important;
+}
+
+.g2-home-page
+  .g2-category-dock
+  .market-category-card
+  > .market-category-official-icon.brand-outlet {
+  border-color: #cdebdc !important;
+  background: #eaf9f1 !important;
+  color: #16845c !important;
+}
+
+.g2-home-page .g2-category-dock .market-category-card strong {
+  color: var(--ys-pro-ink) !important;
+  font-size: 14px !important;
+  font-weight: 600 !important;
+  line-height: 1.3 !important;
+}
+
+.g2-home-page .g2-category-dock .market-category-card small {
+  color: var(--ys-pro-muted) !important;
+  font-size: 10px !important;
+  font-weight: 400 !important;
+}
+
+.g2-subcategory-preview .g2-subcategory-heading strong {
+  font-weight: 650 !important;
+}
+
+.g2-subcategory-preview .g2-subcategory-heading small,
+.g2-subcategory-preview .g2-subcategory-links > a {
+  font-weight: 500 !important;
+}
+
+/* Platform tiles: smaller, cleaner and easier to scan. */
+.g2-home-page .marketplace-platform-grid {
+  gap: 11px !important;
+}
+
+.g2-home-page .marketplace-platform-grid > a {
+  min-height: 102px !important;
+  padding: 13px !important;
+  grid-template-columns: 44px minmax(0, 1fr) !important;
+  gap: 2px 10px !important;
+  border-color: var(--ys-pro-line) !important;
+  border-radius: 13px !important;
+  box-shadow: 0 5px 16px rgba(23, 32, 51, 0.045) !important;
+}
+
+.g2-home-page .marketplace-platform-grid > a:hover,
+.g2-home-page .marketplace-platform-grid > a:focus-visible {
+  border-color: #bfccdc !important;
+  box-shadow: 0 12px 28px rgba(23, 32, 51, 0.09) !important;
+  transform: translateY(-2px) !important;
+}
+
+.g2-home-page .marketplace-platform-logo {
+  width: 44px !important;
+  height: 44px !important;
+  border-radius: 11px !important;
+}
+
+.g2-home-page .marketplace-platform-logo svg {
+  width: 21px !important;
+  height: 21px !important;
+}
+
+.g2-home-page .marketplace-platform-grid strong {
+  color: var(--ys-pro-ink) !important;
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  line-height: 1.3 !important;
+}
+
+.g2-home-page .marketplace-platform-grid small {
+  color: var(--ys-pro-muted) !important;
+  font-size: 10px !important;
+  font-weight: 400 !important;
+  line-height: 1.35 !important;
+}
+
+/* Official brand-color glyphs on desktop. */
+@media (min-width: 901px) {
+  .g2-home-page .marketplace-platform-logo[class*="brand-"],
+  .g2-home-page .platform-brand-icon[class*="brand-"] {
+    border: 1px solid color-mix(in srgb, var(--official-brand) 23%, #dfe4eb) !important;
+    background: #fff !important;
+    color: var(--official-brand) !important;
+    box-shadow: 0 4px 12px rgba(23, 32, 51, 0.07) !important;
+  }
+
+  .g2-home-page
+    :is(.marketplace-platform-logo, .platform-brand-icon).brand-steam {
+    --official-brand: #1b2838;
+  }
+
+  .g2-home-page
+    :is(.marketplace-platform-logo, .platform-brand-icon).brand-xbox {
+    --official-brand: #107c10;
+  }
+
+  .g2-home-page
+    :is(.marketplace-platform-logo, .platform-brand-icon).brand-playstation {
+    --official-brand: #0070d1;
+  }
+
+  .g2-home-page
+    :is(.marketplace-platform-logo, .platform-brand-icon).brand-epic-games {
+    --official-brand: #313131;
+  }
+
+  .g2-home-page :is(.marketplace-platform-logo, .platform-brand-icon).brand-ea {
+    --official-brand: #ff4747;
+  }
+
+  .g2-home-page
+    :is(.marketplace-platform-logo, .platform-brand-icon).brand-gog {
+    --official-brand: #713a93;
+  }
+
+  .g2-home-page
+    :is(.marketplace-platform-logo, .platform-brand-icon).brand-ubisoft {
+    --official-brand: #006ef5;
+  }
+
+  .g2-home-page
+    :is(.marketplace-platform-logo, .platform-brand-icon).brand-battle-net {
+    --official-brand: #148eff;
+  }
+
+  .g2-home-page
+    :is(.marketplace-platform-logo, .platform-brand-icon).brand-windows {
+    --official-brand: #0078d4;
+  }
+
+  .g2-home-page
+    :is(.marketplace-platform-logo, .platform-brand-icon).brand-apple {
+    --official-brand: #111111;
+  }
+
+  .g2-home-page
+    :is(.marketplace-platform-logo, .platform-brand-icon).brand-android {
+    --official-brand: #2a9f58;
+  }
+
+  .g2-home-page
+    :is(.marketplace-platform-logo, .platform-brand-icon).brand-discord {
+    --official-brand: #5865f2;
+  }
+
+  .g2-home-page
+    :is(.marketplace-platform-logo, .platform-brand-icon).brand-facebook {
+    --official-brand: #1877f2;
+  }
+
+  .g2-home-page
+    :is(.marketplace-platform-logo, .platform-brand-icon).brand-instagram {
+    --official-brand: #e4405f;
+  }
+
+  .g2-home-page
+    :is(.marketplace-platform-logo, .platform-brand-icon).brand-threads,
+  .g2-home-page :is(.marketplace-platform-logo, .platform-brand-icon).brand-x {
+    --official-brand: #111111;
+  }
+
+  .g2-home-page
+    :is(.marketplace-platform-logo, .platform-brand-icon).brand-tiktok {
+    --official-brand: #111111;
+  }
+
+  .g2-home-page
+    :is(.marketplace-platform-logo, .platform-brand-icon).brand-tiktok
+    svg {
+    filter: drop-shadow(-1px 0 #25f4ee) drop-shadow(1px 0 #fe2c55);
+  }
+
+  .g2-home-page
+    :is(.marketplace-platform-logo, .platform-brand-icon).brand-telegram {
+    --official-brand: #26a5e4;
+  }
+
+  .g2-home-page
+    :is(.marketplace-platform-logo, .platform-brand-icon).brand-snapchat {
+    --official-brand: #111111;
+    border-color: #e9e400 !important;
+    background: #fffc00 !important;
+  }
+
+  .g2-home-page
+    :is(.marketplace-platform-logo, .platform-brand-icon).brand-whatsapp {
+    --official-brand: #20a95b;
+  }
+
+  .g2-home-page
+    :is(.marketplace-platform-logo, .platform-brand-icon).brand-youtube {
+    --official-brand: #ff0000;
+  }
+
+  .g2-home-page
+    :is(.marketplace-platform-logo, .platform-brand-icon).brand-streaming {
+    --official-brand: #9146ff;
+  }
+
+  .g2-home-page
+    :is(.marketplace-platform-logo, .platform-brand-icon).brand-linkedin {
+    --official-brand: #0a66c2;
+  }
+
+  .g2-home-page
+    :is(.marketplace-platform-logo, .platform-brand-icon).brand-pinterest {
+    --official-brand: #bd081c;
+  }
+}
+
+/* Social platform cards use normal sentence weight and calmer copy. */
+.g2-home-page .social-account-showcase {
+  border-color: var(--ys-pro-line) !important;
+  background: var(--ys-pro-surface) !important;
+  box-shadow: 0 10px 28px rgba(23, 32, 51, 0.045);
+}
+
+.g2-home-page .social-account-platform-grid > a {
+  border-color: var(--ys-pro-line) !important;
+  background: #fafbfd !important;
+}
+
+.g2-home-page .social-account-platform-grid > a strong {
+  color: var(--ys-pro-ink) !important;
+  font-size: 14px !important;
+  font-weight: 600 !important;
+}
+
+.g2-home-page .social-account-platform-grid > a small {
+  color: var(--ys-pro-blue) !important;
+  font-weight: 500 !important;
+}
+
+.g2-home-page .social-account-platform-grid > a p {
+  color: var(--ys-pro-muted) !important;
+  font-weight: 400 !important;
+}
+
+/* Compact, image-first product cards shared by home, catalog and stores. */
+.ys-ref-product-card.g2-product-card {
+  border-color: var(--ys-pro-line) !important;
+  border-radius: 13px !important;
+  background: var(--ys-pro-surface) !important;
+  box-shadow: 0 6px 20px rgba(23, 32, 51, 0.055) !important;
+}
+
+.ys-ref-product-card.g2-product-card:hover,
+.ys-ref-product-card.g2-product-card:focus-within {
+  border-color: #c4cedb !important;
+  box-shadow: 0 14px 32px rgba(23, 32, 51, 0.105) !important;
+  transform: translateY(-2px) !important;
+}
+
+.ys-ref-product-card.g2-product-card .g2-card-offer {
+  height: 30px !important;
+  padding-inline: 11px !important;
+  border-bottom-color: #edf0f4 !important;
+  background: #fbfcfd !important;
+  color: #667185 !important;
+  font-size: 9px !important;
+  font-weight: 500 !important;
+  letter-spacing: 0.01em !important;
+}
+
+.ys-ref-product-card.g2-product-card .g2-card-offer svg {
+  color: var(--ys-pro-blue) !important;
+}
+
+.ys-ref-product-card.g2-product-card.grid
+  > .ys-ref-product-media.g2-product-media {
+  width: calc(100% - 20px) !important;
+  max-height: 180px;
+  margin: 10px 10px 0 !important;
+  aspect-ratio: 16 / 10 !important;
+  border: 1px solid #e8ecf1;
+  border-radius: 9px !important;
+  background: #eef1f5 !important;
+}
+
+.ys-ref-product-card.g2-product-card.grid .g2-product-image-link {
+  width: 100% !important;
+  height: 100% !important;
+  aspect-ratio: auto !important;
+}
+
+.ys-ref-product-card.g2-product-card.grid .g2-product-image-link img {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover !important;
+  object-position: center !important;
+}
+
+.ys-ref-product-card.g2-product-card.grid .g2-product-media > button {
+  top: 7px !important;
+  right: 7px !important;
+  width: 30px !important;
+  height: 30px !important;
+  border: 1px solid rgba(23, 32, 51, 0.09) !important;
+  color: #4d586a !important;
+  box-shadow: 0 4px 12px rgba(23, 32, 51, 0.14) !important;
+}
+
+.ys-ref-product-card.g2-product-card.grid .g2-product-media > button.saved {
+  color: var(--ys-pro-red) !important;
+}
+
+.ys-ref-product-card.g2-product-card.grid .ys-ref-product-symbol i {
+  width: 58px !important;
+  height: 58px !important;
+  border-radius: 15px !important;
+  font-weight: 600 !important;
+}
+
+.ys-ref-product-card.g2-product-card.grid .ys-ref-product-symbol small {
+  font-size: 10px !important;
+  font-weight: 500 !important;
+}
+
+.ys-ref-product-card.g2-product-card.grid .ys-ref-product-copy.g2-product-copy {
+  padding: 12px 13px 13px !important;
+}
+
+.ys-ref-product-card.g2-product-card.grid
+  .g2-product-copy
+  .ys-ref-product-title {
+  min-height: 2.8em !important;
+  color: var(--ys-pro-ink) !important;
+  font-size: 13.5px !important;
+  font-weight: 600 !important;
+  line-height: 1.4 !important;
+}
+
+.ys-ref-product-card.g2-product-card.grid .g2-product-facts {
+  min-height: 25px !important;
+  margin-top: 7px !important;
+  gap: 5px !important;
+}
+
+.ys-ref-product-card.g2-product-card.grid .g2-product-facts span {
+  min-height: 23px !important;
+  padding: 4px 7px !important;
+  border: 1px solid #e8ecf1 !important;
+  border-radius: 6px !important;
+  background: #f7f8fa !important;
+  color: #5d687a !important;
+  font-size: 9px !important;
+  font-weight: 500 !important;
+}
+
+.ys-ref-product-card.g2-product-card.grid
+  .ys-ref-product-meta.g2-product-meta.product-commerce-metrics {
+  min-height: 44px !important;
+  margin: 8px 0 0 !important;
+  padding: 7px 0 !important;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  gap: 0 !important;
+  border-top: 1px solid #edf0f4 !important;
+  border-bottom: 1px solid #edf0f4 !important;
+}
+
+.ys-ref-product-card.g2-product-card.grid
+  .ys-ref-product-meta.g2-product-meta.product-commerce-metrics
+  > span {
+  min-height: 28px !important;
+  padding: 0 5px !important;
+  grid-template-columns: 12px minmax(0, 1fr) !important;
+  gap: 0 4px !important;
+  border: 0 !important;
+  border-left: 1px solid #edf0f4 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+}
+
+.ys-ref-product-card.g2-product-card.grid
+  .ys-ref-product-meta.g2-product-meta.product-commerce-metrics
+  > span:first-child {
+  border-left: 0 !important;
+}
+
+.ys-ref-product-card.g2-product-card.grid
+  .ys-ref-product-meta.g2-product-meta.product-commerce-metrics
+  svg {
+  width: 11px !important;
+  height: 11px !important;
+}
+
+.ys-ref-product-card.g2-product-card.grid
+  .ys-ref-product-meta.g2-product-meta.product-commerce-metrics
+  b {
+  color: #354052 !important;
+  font-size: 10px !important;
+  font-weight: 600 !important;
+}
+
+.ys-ref-product-card.g2-product-card.grid
+  .ys-ref-product-meta.g2-product-meta.product-commerce-metrics
+  small {
+  color: #8a93a3 !important;
+  font-size: 7.5px !important;
+  font-weight: 400 !important;
+}
+
+.ys-ref-product-card.g2-product-card.grid .g2-product-price-row {
+  min-height: 35px !important;
+  margin-top: 8px !important;
+  align-items: center !important;
+}
+
+.ys-ref-product-card.g2-product-card.grid .g2-product-price-row strong {
+  color: var(--ys-pro-ink) !important;
+  font-size: 18px !important;
+  font-weight: 700 !important;
+  letter-spacing: -0.025em !important;
+}
+
+.ys-ref-product-card.g2-product-card.grid .g2-product-price-row small {
+  color: var(--ys-pro-subtle) !important;
+  font-size: 9px !important;
+  font-weight: 400 !important;
+}
+
+.ys-ref-product-card.g2-product-card.grid .g2-product-price-row > b {
+  padding: 4px 6px !important;
+  border-radius: 5px !important;
+  background: #eaf8f2 !important;
+  color: var(--ys-pro-green) !important;
+  font-size: 9px !important;
+  font-weight: 600 !important;
+}
+
+.ys-ref-product-card.g2-product-card.grid .g2-product-stock {
+  display: none !important;
+}
+
+.ys-ref-product-card.g2-product-card.grid
+  .ys-ref-product-card-actions.g2-product-actions {
+  position: static !important;
+  min-height: 38px !important;
+  margin-top: 8px !important;
+  opacity: 1 !important;
+  transform: none !important;
+}
+
+.ys-ref-product-card.g2-product-card.grid .g2-product-actions > button {
+  width: 100% !important;
+  height: 38px !important;
+  min-height: 38px !important;
+  border: 1px solid var(--ys-pro-blue) !important;
+  border-radius: 8px !important;
+  background: var(--ys-pro-blue) !important;
+  color: #fff !important;
+  font-size: 11px !important;
+  font-weight: 600 !important;
+  box-shadow: none !important;
+}
+
+.ys-ref-product-card.g2-product-card.grid
+  .g2-product-actions
+  > button:hover:not(:disabled) {
+  border-color: var(--ys-pro-blue-hover) !important;
+  background: var(--ys-pro-blue-hover) !important;
+}
+
+/* Store cards and secondary commerce sections. */
+.g2-home-page .reference-store-card {
+  border-color: var(--ys-pro-line) !important;
+  box-shadow: 0 7px 22px rgba(23, 32, 51, 0.055) !important;
+}
+
+.g2-home-page .reference-store-profile h3 a {
+  color: var(--ys-pro-ink) !important;
+  font-weight: 600 !important;
+}
+
+.g2-home-page .reference-store-profile h3 > span,
+.g2-home-page .reference-store-cover span {
+  font-weight: 600 !important;
+}
+
+.g2-home-page .reference-store-profile p {
+  color: var(--ys-pro-muted) !important;
+  font-weight: 400 !important;
+}
+
+.g2-home-page .reference-store-visit {
+  font-weight: 600 !important;
+}
+
+.g2-home-page .g2-faq summary,
+.g2-home-page .g2-bundle-item strong,
+.g2-home-page .g2-newsletter strong,
+.g2-home-page .g2-trust-row strong {
+  font-weight: 600 !important;
+}
+
+.g2-home-page .g2-faq details p,
+.g2-home-page .g2-newsletter small,
+.g2-home-page .g2-trust-row small {
+  color: var(--ys-pro-muted) !important;
+  font-weight: 400 !important;
+}
+
+/* Keep the professional cards compact across common desktop widths. */
+@media (min-width: 1280px) {
+  .g2-home-page .market-product-grid.g2-product-rail,
+  .g2-home-page .reference-featured-product-grid.premium-product-grid,
+  .ys-ref-page .ys-ref-catalog-grid.grid,
+  .ys-ref-page .store-products.store-products-premium {
+    grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
+    gap: 15px !important;
+  }
+}
+
+@media (min-width: 1121px) and (max-width: 1279px) {
+  .g2-home-page .market-product-grid.g2-product-rail,
+  .g2-home-page .reference-featured-product-grid.premium-product-grid,
+  .ys-ref-page .ys-ref-catalog-grid.grid,
+  .ys-ref-page .store-products.store-products-premium {
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+    gap: 15px !important;
+  }
+}
+
+@media (min-width: 901px) and (max-width: 1120px) {
+  .g2-home-page .market-product-grid.g2-product-rail,
+  .g2-home-page .reference-featured-product-grid.premium-product-grid,
+  .ys-ref-page .ys-ref-catalog-grid.grid,
+  .ys-ref-page .store-products.store-products-premium {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    gap: 15px !important;
+  }
+}
+
+@media (max-width: 900px) {
+  .g2-home-page .g2-section-heading h2 {
+    font-size: 25px !important;
+    font-weight: 700 !important;
+  }
+
+  .g2-home-page .g2-section-heading p {
+    font-size: 13px !important;
+  }
+
+  .g2-home-page .g2-category-dock .market-category-card strong {
+    font-size: 14px !important;
+    font-weight: 600 !important;
+  }
+
+  .ys-ref-product-card.g2-product-card.grid
+    .g2-product-copy
+    .ys-ref-product-title {
+    font-weight: 600 !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ys-ref-product-card.g2-product-card,
+  .ys-ref-product-card.g2-product-card img,
+  .g2-home-page .marketplace-platform-grid > a {
+    transition: none !important;
+  }
+}
