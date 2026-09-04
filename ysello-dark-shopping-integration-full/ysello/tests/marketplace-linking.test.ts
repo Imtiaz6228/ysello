@@ -1,0 +1,109 @@
+import assert from "node:assert/strict";
+import test from "node:test";
+import { discoverCategoryProducts } from "../src/commerce/catalogDiscovery";
+import { categoryMatches } from "../src/commerce/catalogHierarchy";
+import {
+  mergeSellerTaxonomy,
+  sellerCategorySelection,
+} from "../src/commerce/sellerTaxonomy";
+import type { CatalogCategory } from "../src/data/catalog";
+import { g2aDemoProducts } from "../src/data/g2aDemoCatalog";
+import {
+  marketplaceTaxonomy,
+  marketplaceTaxonomySlugs,
+  type MarketplaceTaxonomyNode,
+} from "../src/data/marketplaceTaxonomy";
+
+function catalogCategories() {
+  const result: CatalogCategory[] = [];
+  const append = (
+    nodes: MarketplaceTaxonomyNode[],
+    parentSlug: string,
+    icon: string,
+    depth: number,
+  ) => {
+    nodes.forEach((node) => {
+      result.push({
+        id: `test-${node.slug}`,
+        slug: node.slug,
+        parentSlug,
+        name: node.name,
+        description: node.description,
+        icon,
+        depth,
+      });
+      if (node.children) append(node.children, node.slug, icon, depth + 1);
+    });
+  };
+  marketplaceTaxonomy.forEach((root) => {
+    result.push({
+      id: `test-${root.slug}`,
+      slug: root.slug,
+      name: root.name,
+      description: root.description,
+      icon: root.icon,
+      depth: 0,
+    });
+    append(root.subcategories, root.slug, root.icon, 1);
+  });
+  return result;
+}
+
+test("every hamburger category is available in the seller listing flow", () => {
+  const remoteRoots = marketplaceTaxonomy.flatMap((root, rootIndex) => [
+    {
+      id: `remote-root-${rootIndex}`,
+      slug: root.slug,
+      name: root.name,
+      parentId: null,
+    },
+    ...root.subcategories.map((group, groupIndex) => ({
+      id: `remote-group-${rootIndex}-${groupIndex}`,
+      slug: group.slug,
+      name: group.name,
+      parentId: `remote-root-${rootIndex}`,
+    })),
+  ]);
+  const merged = mergeSellerTaxonomy(remoteRoots);
+  const slugs = new Set(merged.map((category) => category.slug));
+
+  for (const slug of marketplaceTaxonomySlugs) {
+    assert.equal(slugs.has(slug), true, `${slug} should be selectable`);
+    const category = merged.find((item) => item.slug === slug);
+    assert.ok(category);
+    const selection = sellerCategorySelection(category.id, merged);
+    assert.ok(selection?.backingId, `${slug} needs a valid backing category`);
+    assert.equal(selection?.slug, slug);
+    assert.ok(selection?.pathLabel);
+  }
+});
+
+test("category discovery never fills an empty category with unrelated products", () => {
+  const categories = catalogCategories();
+  for (const slug of marketplaceTaxonomySlugs) {
+    const discovery = discoverCategoryProducts(
+      slug,
+      categories,
+      g2aDemoProducts,
+    );
+    assert.equal(discovery.isFallback, false);
+    assert.ok(
+      discovery.products.every((product) =>
+        categoryMatches(product.categorySlug, slug, categories),
+      ),
+      `${slug} must only show products assigned to its category branch`,
+    );
+  }
+
+  const steam = discoverCategoryProducts(
+    "steam-games",
+    categories,
+    g2aDemoProducts,
+  );
+  assert.ok(steam.products.length > 0, "Steam should have a focused catalog");
+  assert.ok(
+    steam.products.every((product) =>
+      categoryMatches(product.categorySlug, "steam-games", categories),
+    ),
+  );
+});
