@@ -1,7 +1,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { ApiError } from "../src/middleware/error-handler.js";
-import { DarkShoppingClient } from "../src/services/dark-shopping.client.js";
+import {
+  DARK_SHOPPING_USER_AGENT,
+  DarkShoppingClient,
+} from "../src/services/dark-shopping.client.js";
 
 const fakeKey = "test-dark-shopping-key-never-use";
 
@@ -64,6 +67,10 @@ test("Dark Shopping catalog requests serialize documented filters and redact res
   assert.equal(
     new Headers(capturedInit?.headers).get("accept"),
     "application/json",
+  );
+  assert.equal(
+    new Headers(capturedInit?.headers).get("user-agent"),
+    DARK_SHOPPING_USER_AGENT,
   );
   assert.equal(result._links?.self.href.includes(fakeKey), false);
   assert.equal(

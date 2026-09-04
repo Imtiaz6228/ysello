@@ -38,7 +38,9 @@ an empty Ysello catalog.
 Never expose the key through a `VITE_*` variable. The API key is sent from the
 server using Dark Shopping's documented `key` parameter, responses are forced
 to JSON, provider pagination links are scrubbed of credentials, and requests
-are serialized to respect the provider's limit of two requests per second.
+are serialized to respect the provider's limit of two requests per second. The
+HTTP identity also matches Dark Shopping's official PHP client so authorized
+requests from Railway are not rejected by provider-side bot filtering.
 
 All integration routes require an authenticated `ADMIN` or `SUPER_ADMIN`
 session:

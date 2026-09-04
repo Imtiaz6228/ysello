@@ -2,6 +2,8 @@ import { ApiError } from "../middleware/error-handler.js";
 
 export const DARK_SHOPPING_DEFAULT_BASE_URL = "https://dark.shopping/api/v1";
 export const DARK_SHOPPING_REQUESTS_PER_SECOND = 2;
+export const DARK_SHOPPING_USER_AGENT =
+  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36";
 
 type FetchImplementation = typeof fetch;
 type RequestMethod = "GET" | "POST";
@@ -375,7 +377,13 @@ export class DarkShoppingClient {
   ) {
     return this.throttled(async () => {
       const url = new URL(`${this.baseUrl}/${endpoint.replace(/^\/+/, "")}`);
-      const headers = new Headers({ accept: "application/json" });
+      // Dark Shopping's official PHP client sends this browser-compatible
+      // identity. Match it so provider-side bot/WAF rules do not reject
+      // otherwise authorized server requests from Railway.
+      const headers = new Headers({
+        accept: "application/json",
+        "user-agent": DARK_SHOPPING_USER_AGENT,
+      });
       const init: RequestInit = {
         method,
         headers,
