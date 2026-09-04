@@ -8,6 +8,7 @@ export const DARK_SHOPPING_USER_AGENT =
 
 type FetchImplementation = typeof fetch;
 type RequestMethod = "GET" | "POST";
+type PostEncoding = "json" | "multipart";
 type RequestValue = string | number | boolean | null | undefined;
 type RequestParameters = Record<
   string,
@@ -15,7 +16,7 @@ type RequestParameters = Record<
 >;
 
 type DarkShoppingEnvelope<T> = {
-  success: boolean;
+  success: unknown;
   data: T | DarkShoppingRemoteError;
 };
 
@@ -506,7 +507,7 @@ export class DarkShoppingClient {
   }
 
   private appendParameters(
-    target: URLSearchParams,
+    target: { append(name: string, value: string): void },
     parameters: RequestParameters,
   ) {
     for (const [name, value] of Object.entries(parameters)) {
@@ -541,6 +542,49 @@ export class DarkShoppingClient {
         typeof value === "boolean" ? (value ? "1" : "0") : String(value),
       );
     }
+  }
+
+  private jsonParameters(parameters: RequestParameters) {
+    const output: Record<string, unknown> = {};
+    for (const [name, value] of Object.entries(parameters)) {
+      if (value === undefined || value === null || value === "") continue;
+      if (name === "filter_attributes" && Array.isArray(value)) {
+        output[name] = (value as DarkShoppingAttributeFilter[]).map((filter) => ({
+          id: filter.id,
+          value: filter.value,
+          filter_type: filter.filterType,
+        }));
+        continue;
+      }
+      output[name] = value;
+    }
+    return output;
+  }
+
+  private invalidResponseError(
+    response: Response,
+    endpoint: string,
+    method: RequestMethod,
+    responseBytes: number,
+  ) {
+    const contentType = response.headers.get("content-type") ?? "unknown";
+    const status = response.status || 502;
+    const statusMessage = !response.ok
+      ? `Dark Shopping returned HTTP ${status} instead of a valid JSON API response.`
+      : "Dark Shopping returned a non-JSON API response.";
+    return new ApiError(
+      status >= 400 && status <= 599 ? status : 502,
+      `${statusMessage} Retry the supplier request; if it continues, check Dark Shopping API access and gateway status.`,
+      "DARK_SHOPPING_INVALID_RESPONSE",
+      {
+        provider: "dark.shopping",
+        endpoint,
+        method,
+        providerStatus: status,
+        contentType,
+        responseBytes,
+      },
+    );
   }
 
   private redact<T>(value: T): T {
@@ -602,6 +646,7 @@ export class DarkShoppingClient {
     endpoint: string,
     parameters: RequestParameters = {},
     method: RequestMethod = "GET",
+    postEncoding: PostEncoding = "json",
   ) {
     return this.throttled(async () => {
       const url = new URL(`${this.baseUrl}/${endpoint.replace(/^\/+/, "")}`);
@@ -624,17 +669,19 @@ export class DarkShoppingClient {
           ...parameters,
           key: this.apiKey,
         });
-      } else {
-        // Dark.shopping documents POST authentication and filters as ordinary
-        // POST parameters. Use form encoding rather than JSON so Yii/PHP-style
-        // parameter parsing receives arrays and nested filters exactly as documented.
-        headers.set(
-          "content-type",
-          "application/x-www-form-urlencoded;charset=UTF-8",
-        );
-        const body = new URLSearchParams();
+      } else if (postEncoding === "multipart") {
+        // Dark.shopping explicitly documents multipart form-data as a supported
+        // POST transport. Let fetch set the boundary automatically.
+        const body = new FormData();
         this.appendParameters(body, { ...parameters, key: this.apiKey });
-        init.body = body.toString();
+        init.body = body;
+      } else {
+        // Dark.shopping explicitly documents JSON for POST requests, including
+        // array filters such as ids. Keep the API key in the request body.
+        headers.set("content-type", "application/json");
+        init.body = JSON.stringify(
+          this.jsonParameters({ ...parameters, key: this.apiKey }),
+        );
       }
 
       let response: Response;
@@ -654,28 +701,46 @@ export class DarkShoppingClient {
       }
 
       const responseText = await response.text();
+      const normalizedResponseText = responseText.replace(/^\uFEFF/, "").trim();
       let envelope: DarkShoppingEnvelope<T> | undefined;
       try {
-        envelope = responseText
-          ? (JSON.parse(responseText) as DarkShoppingEnvelope<T>)
+        envelope = normalizedResponseText
+          ? (JSON.parse(normalizedResponseText) as DarkShoppingEnvelope<T>)
           : undefined;
       } catch {
-        throw new ApiError(
-          502,
-          "Dark Shopping returned an invalid response.",
-          "DARK_SHOPPING_INVALID_RESPONSE",
+        throw this.invalidResponseError(
+          response,
+          endpoint,
+          method,
+          Buffer.byteLength(responseText),
         );
       }
 
-      if (!envelope || typeof envelope.success !== "boolean") {
-        throw new ApiError(
-          502,
-          "Dark Shopping returned an invalid response.",
-          "DARK_SHOPPING_INVALID_RESPONSE",
+      if (!envelope || !isRecord(envelope)) {
+        throw this.invalidResponseError(
+          response,
+          endpoint,
+          method,
+          Buffer.byteLength(responseText),
         );
       }
 
-      if (!response.ok || !envelope.success) {
+      const successFlag =
+        envelope.success === true || envelope.success === 1 || envelope.success === "1" || envelope.success === "true"
+          ? true
+          : envelope.success === false || envelope.success === 0 || envelope.success === "0" || envelope.success === "false"
+            ? false
+            : null;
+      if (successFlag === null) {
+        throw this.invalidResponseError(
+          response,
+          endpoint,
+          method,
+          Buffer.byteLength(responseText),
+        );
+      }
+
+      if (!response.ok || !successFlag) {
         throw this.providerError(
           response.status,
           isRecord(envelope.data) ? envelope.data : undefined,
@@ -739,11 +804,27 @@ export class DarkShoppingClient {
   }
 
   async listProducts(input: DarkShoppingProductFilters = {}) {
-    const data = await this.request<unknown>(
-      "product/list",
-      productFilters(input),
-      "POST",
-    );
+    const filters = productFilters(input);
+    let data: unknown;
+    try {
+      data = await this.request<unknown>("product/list", filters, "POST", "json");
+    } catch (error) {
+      // Product import is the one place where ids[] arrays are commonly sent.
+      // Dark.shopping documents both JSON and multipart form-data. If its gateway
+      // rejects one encoding, safely retry this read-only catalog request once
+      // using the other documented transport. Never retry auth/rate-limit errors.
+      const retryable =
+        error instanceof ApiError &&
+        (error.code === "DARK_SHOPPING_INVALID_RESPONSE" ||
+          [400, 415, 422, 500, 502, 503, 504].includes(error.statusCode));
+      if (!retryable) throw error;
+      data = await this.request<unknown>(
+        "product/list",
+        filters,
+        "POST",
+        "multipart",
+      );
+    }
     return normalizePaginated(data, normalizeProduct);
   }
 

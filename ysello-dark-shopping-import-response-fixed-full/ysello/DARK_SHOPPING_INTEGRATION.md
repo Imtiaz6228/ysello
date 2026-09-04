@@ -1,6 +1,6 @@
 # Ysello ↔ Dark.shopping supplier integration
 
-Current integration marker: **2026-09-04.3**. The admin supplier panel displays this marker after the matching Railway API/frontend build is deployed.
+Current integration marker: **2026-09-04.4**. The admin supplier panel displays this marker after the matching Railway API/frontend build is deployed.
 
 This project uses the official Dark.shopping v1 supplier API at
 `https://dark.shopping/api/v1`. The supplier credential is server-side only and
@@ -12,7 +12,7 @@ logs, notifications, or source control.
 
 - `category/list` — load supplier categories.
 - `group/list` and `attribute/list` — supplier taxonomy/filter metadata.
-- `product/list` (POST form parameters) and `product/view` — product catalog,
+- `product/list` (documented JSON POST with one safe multipart fallback) and `product/view` — product catalog,
   price, stock, minimum quantity, and automatic/manual delivery information.
 - `user/balance` — connection/balance check before supplier purchase.
 - `order/create` — supplier purchase with a stable Ysello order-item
@@ -21,7 +21,7 @@ logs, notifications, or source control.
 - `order/download` — obtain the protected delivery link after completion.
 
 Requests are throttled to at most two per second. Responses are requested as
-JSON. Provider links and errors are scrubbed so the API key does not propagate
+JSON. Product-list POST requests use Dark.shopping's documented JSON body format; if the read-only catalog request is rejected by an upstream gateway/transport layer, Ysello retries it once with the other documented multipart form-data format. Provider links and errors are scrubbed so the API key does not propagate
 into Ysello responses or logs.
 
 ## Admin workflow

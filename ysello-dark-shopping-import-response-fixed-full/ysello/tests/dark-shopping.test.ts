@@ -50,16 +50,16 @@ test("Dark Shopping catalog requests serialize documented filters and redact res
     deliveryType: "auto",
     perPage: 20,
   });
-  const body = new URLSearchParams(String(capturedInit?.body));
+  const body = JSON.parse(String(capturedInit?.body)) as Record<string, unknown>;
 
   assert.equal(capturedUrl?.pathname, "/api/v1/product/list");
   assert.equal(capturedUrl?.searchParams.has("key"), false);
   assert.equal(capturedUrl?.searchParams.get("_format"), "json");
-  assert.deepEqual(body.getAll("ids[]"), ["12", "34"]);
-  assert.equal(body.get("only_in_stock"), "1");
-  assert.equal(body.get("delivery_type"), "auto");
-  assert.equal(body.get("per-page"), "20");
-  assert.equal(body.get("key"), fakeKey);
+  assert.deepEqual(body.ids, [12, 34]);
+  assert.equal(body.only_in_stock, true);
+  assert.equal(body.delivery_type, "auto");
+  assert.equal(body["per-page"], 20);
+  assert.equal(body.key, fakeKey);
   assert.equal(capturedInit?.method, "POST");
   assert.equal(
     new Headers(capturedInit?.headers).get("accept"),
@@ -71,7 +71,7 @@ test("Dark Shopping catalog requests serialize documented filters and redact res
   );
   assert.equal(
     new Headers(capturedInit?.headers).get("content-type"),
-    "application/x-www-form-urlencoded;charset=UTF-8",
+    "application/json",
   );
   assert.equal(result._links?.self.href.includes(fakeKey), false);
   assert.equal(
@@ -132,7 +132,7 @@ test("Dark Shopping rejects non-official API origins before attaching credential
   );
 });
 
-test("Dark Shopping product POST filters follow the documented nested form encoding", async () => {
+test("Dark Shopping product POST filters follow the documented JSON encoding", async () => {
   let capturedInit: RequestInit | undefined;
   const client = new DarkShoppingClient({
     apiKey: fakeKey,
@@ -149,14 +149,53 @@ test("Dark Shopping product POST filters follow the documented nested form encod
       { id: 6, value: false, filterType: "exclude" },
     ],
   });
-  const body = new URLSearchParams(String(capturedInit?.body));
+  const body = JSON.parse(String(capturedInit?.body)) as {
+    filter_attributes: Array<Record<string, unknown>>;
+  };
 
-  assert.equal(body.get("filter_attributes[0][id]"), "3");
-  assert.equal(body.get("filter_attributes[0][value]"), "2");
-  assert.equal(body.get("filter_attributes[0][filter_type]"), "include");
-  assert.equal(body.get("filter_attributes[1][id]"), "6");
-  assert.equal(body.get("filter_attributes[1][value]"), "0");
-  assert.equal(body.get("filter_attributes[1][filter_type]"), "exclude");
+  assert.deepEqual(body.filter_attributes, [
+    { id: 3, value: 2, filter_type: "include" },
+    { id: 6, value: false, filter_type: "exclude" },
+  ]);
+});
+
+
+test("Dark Shopping accepts a UTF-8 BOM and string success flag", async () => {
+  const client = new DarkShoppingClient({
+    apiKey: fakeKey,
+    minimumRequestIntervalMs: 0,
+    fetchImplementation: async () =>
+      new Response(
+        `\uFEFF${JSON.stringify({ success: "true", data: { balance: "10.50", currency: "RUB" } })}`,
+        { status: 200, headers: { "content-type": "application/json" } },
+      ),
+  });
+
+  assert.deepEqual(await client.getBalance(), { balance: 10.5, currency: "RUB" });
+});
+
+test("Dark Shopping retries product/list with multipart when JSON transport gets an upstream invalid response", async () => {
+  const requests: RequestInit[] = [];
+  const client = new DarkShoppingClient({
+    apiKey: fakeKey,
+    minimumRequestIntervalMs: 0,
+    fetchImplementation: async (_input, init = {}) => {
+      requests.push(init);
+      if (requests.length === 1) {
+        return new Response("<html>Bad Gateway</html>", {
+          status: 502,
+          headers: { "content-type": "text/html" },
+        });
+      }
+      return jsonResponse({ success: true, data: { items: [] } });
+    },
+  });
+
+  const result = await client.listProducts({ ids: [12, 34] });
+  assert.deepEqual(result.items, []);
+  assert.equal(requests.length, 2);
+  assert.equal(new Headers(requests[0]?.headers).get("content-type"), "application/json");
+  assert.equal(requests[1]?.body instanceof FormData, true);
 });
 
 
