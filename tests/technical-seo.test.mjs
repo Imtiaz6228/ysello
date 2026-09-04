@@ -66,6 +66,21 @@ test("404 and deployment configuration prevent soft-404 indexing", () => {
   assert.match(html, /<h1>That page does not exist<\/h1>/);
   assert.equal(vercel.trailingSlash, false);
   assert.ok(!vercel.rewrites.some((rewrite) => rewrite.source === "/(.*)"));
+  assert.ok(
+    vercel.rewrites.some(
+      (rewrite) => rewrite.source === "/admin" && rewrite.destination === "/",
+    ),
+  );
+  assert.ok(
+    vercel.rewrites.some(
+      (rewrite) =>
+        rewrite.source === "/admin/:path*" && rewrite.destination === "/",
+    ),
+  );
+  assert.ok(
+    !vercel.rewrites.some((rewrite) => rewrite.destination === "/index.html"),
+    "clean URL deployments must not rewrite private SPA routes through the redirected /index.html path",
+  );
 });
 
 test("category and product routes ship crawlable G2A-style marketplace SEO", () => {
