@@ -316,13 +316,15 @@ Choose one Railway deployment path explicitly:
 - For GitHub Actions CLI deployment, add `RAILWAY_TOKEN` and
   `RAILWAY_SERVICE_ID` as secrets in the GitHub `production` environment.
 - For Railway's native GitHub autodeploy, connect the API service to
-  `Imtiaz6228/ysello`, select branch `main`, and set the GitHub Actions variable
-  `RAILWAY_DEPLOYMENT_MANAGED_EXTERNALLY=true` in the `production` environment.
+  `Imtiaz6228/ysello` and select branch `main`. No Railway secret is required in
+  GitHub for this mode; the workflow verifies Railway's exact-commit deployment
+  status after CI succeeds.
 
-The deployment workflow fails when neither path is configured. It must not show
-a green deployment while silently skipping Railway. `railway.json` controls
-build and runtime settings but cannot change the repository connected in the
-Railway dashboard.
+The deployment workflow fails when CLI credentials are only partially
+configured or when Railway's native integration does not report a successful
+deployment for the exact commit. It must not show a green deployment while
+silently skipping Railway. `railway.json` controls build and runtime settings
+but cannot change the repository connected in the Railway dashboard.
 
 ## Staff accounts
 
