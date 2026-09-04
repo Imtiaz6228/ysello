@@ -6,6 +6,7 @@ import { asyncHandler } from "../middleware/error-handler.js";
 import {
   darkShoppingClient,
   darkShoppingConfiguration,
+  darkShoppingSupplierStatus,
 } from "../services/dark-shopping.service.js";
 import {
   importDarkShoppingProducts,
@@ -99,16 +100,18 @@ darkShoppingRouter.get(
   "/resale",
   asyncHandler(async (_req, res) => {
     const configuration = darkShoppingConfiguration();
-    const [listings, fulfillments, balance] = await Promise.all([
+    const [listings, fulfillments, supplier] = await Promise.all([
       listDarkShoppingListings(),
       listDarkShoppingFulfillments(),
-      configuration.configured
-        ? darkShoppingClient()
-            .getBalance()
-            .catch(() => null)
-        : Promise.resolve(null),
+      darkShoppingSupplierStatus(),
     ]);
-    res.json({ configuration, balance, listings, fulfillments });
+    res.json({
+      configuration,
+      supplierAccess: supplier.access,
+      balance: supplier.balance,
+      listings,
+      fulfillments,
+    });
   }),
 );
 

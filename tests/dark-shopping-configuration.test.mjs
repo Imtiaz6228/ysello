@@ -98,3 +98,43 @@ test("Dark Shopping configuration reports a mismatched Railway source safely", (
   );
   assert.equal(configuration.deployment.sourceMatchesExpectedRepository, false);
 });
+
+test("Dark Shopping supplier access errors explain provider approval failures", () => {
+  const result = spawnSync(
+    process.execPath,
+    [
+      "--import",
+      "tsx",
+      "--input-type=module",
+      "--eval",
+      'const { ApiError } = await import("./src/middleware/error-handler.ts"); const { darkShoppingSupplierAccessError } = await import("./src/services/dark-shopping.service.ts"); console.log(JSON.stringify([401, 403, 429, 502].map((status) => darkShoppingSupplierAccessError(new ApiError(status, "provider message")))));',
+    ],
+    {
+      cwd: projectRoot,
+      encoding: "utf8",
+      env: {
+        ...process.env,
+        NODE_ENV: "test",
+        DATABASE_URL: "postgresql://user:pass@localhost:5432/ysello",
+        APP_URL: "http://localhost:5173",
+        API_URL: "http://localhost:4000",
+        JWT_SECRET: "j".repeat(40),
+        CSRF_SECRET: "c".repeat(40),
+        DARK_SHOPPING_API_KEY: "",
+      },
+    },
+  );
+
+  assert.equal(result.status, 0, result.stderr);
+  const statuses = JSON.parse(result.stdout.trim());
+  assert.deepEqual(
+    statuses.map((entry) => entry.status),
+    ["invalid_key", "access_denied", "rate_limited", "unavailable"],
+  );
+  assert.match(statuses[1].message, /obtain approval/i);
+  assert.equal(statuses[1].providerStatus, 403);
+  assert.equal(
+    statuses[1].settingsUrl,
+    "https://dark.shopping/customer/settings/api",
+  );
+});

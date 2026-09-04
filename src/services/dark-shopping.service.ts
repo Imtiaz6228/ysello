@@ -4,6 +4,23 @@ import { DarkShoppingClient } from "./dark-shopping.client.js";
 
 const EXPECTED_REPOSITORY = "Imtiaz6228/ysello";
 const EXPECTED_BRANCH = "main";
+const DARK_SHOPPING_API_SETTINGS_URL =
+  "https://dark.shopping/customer/settings/api";
+
+export type DarkShoppingSupplierAccessStatus =
+  | "ready"
+  | "not_configured"
+  | "invalid_key"
+  | "access_denied"
+  | "rate_limited"
+  | "unavailable";
+
+export type DarkShoppingSupplierAccess = {
+  status: DarkShoppingSupplierAccessStatus;
+  message: string;
+  providerStatus: number | null;
+  settingsUrl: string;
+};
 
 function runtimeValue(name: string) {
   const value = process.env[name]?.trim();
@@ -24,6 +41,82 @@ const client = env.DARK_SHOPPING_API_KEY
     })
   : null;
 
+export function darkShoppingSupplierAccessError(
+  error: unknown,
+): DarkShoppingSupplierAccess {
+  const providerStatus = error instanceof ApiError ? error.statusCode : null;
+
+  if (providerStatus === 401) {
+    return {
+      status: "invalid_key",
+      message:
+        "Dark Shopping rejected the configured API key. Generate a new key in the approved Dark Shopping account and update the Railway API service.",
+      providerStatus,
+      settingsUrl: DARK_SHOPPING_API_SETTINGS_URL,
+    };
+  }
+
+  if (providerStatus === 403) {
+    return {
+      status: "access_denied",
+      message:
+        "Dark Shopping recognized the request but denied API access for this account. Complete and obtain approval for the API access application in Dark Shopping account settings.",
+      providerStatus,
+      settingsUrl: DARK_SHOPPING_API_SETTINGS_URL,
+    };
+  }
+
+  if (providerStatus === 429) {
+    return {
+      status: "rate_limited",
+      message:
+        "Dark Shopping temporarily rate-limited this account. Wait a few minutes before retrying.",
+      providerStatus,
+      settingsUrl: DARK_SHOPPING_API_SETTINGS_URL,
+    };
+  }
+
+  return {
+    status: "unavailable",
+    message:
+      "Dark Shopping could not confirm supplier access. Check the provider account and try again.",
+    providerStatus,
+    settingsUrl: DARK_SHOPPING_API_SETTINGS_URL,
+  };
+}
+
+export async function darkShoppingSupplierStatus(): Promise<{
+  access: DarkShoppingSupplierAccess;
+  balance: Awaited<ReturnType<DarkShoppingClient["getBalance"]>> | null;
+}> {
+  if (!client) {
+    return {
+      access: {
+        status: "not_configured",
+        message: "DARK_SHOPPING_API_KEY is missing from this API process.",
+        providerStatus: null,
+        settingsUrl: DARK_SHOPPING_API_SETTINGS_URL,
+      },
+      balance: null,
+    };
+  }
+
+  try {
+    const balance = await client.getBalance();
+    return {
+      access: {
+        status: "ready",
+        message: "Dark Shopping API access is active.",
+        providerStatus: 200,
+        settingsUrl: DARK_SHOPPING_API_SETTINGS_URL,
+      },
+      balance,
+    };
+  } catch (error) {
+    return { access: darkShoppingSupplierAccessError(error), balance: null };
+  }
+}
+
 export function darkShoppingConfiguration() {
   const repository = railwayRepository();
   const branch = runtimeValue("RAILWAY_GIT_BRANCH");
@@ -38,6 +131,7 @@ export function darkShoppingConfiguration() {
     requestsPerSecond: 2,
     marginPercent: env.DARK_SHOPPING_MARGIN_PERCENT,
     documentationUrl: "https://dark.shopping/developer",
+    settingsUrl: DARK_SHOPPING_API_SETTINGS_URL,
     deployment: {
       project: runtimeValue("RAILWAY_PROJECT_NAME"),
       service: runtimeValue("RAILWAY_SERVICE_NAME"),

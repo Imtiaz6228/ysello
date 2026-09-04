@@ -27,6 +27,14 @@ not injected merely because it exists: reference it from the API service as
 `DARK_SHOPPING_API_KEY=${{shared.DARK_SHOPPING_API_KEY}}`, deploy the staged
 change, and verify the new deployment rather than restarting an older one.
 
+Dark Shopping also requires provider-side approval before a generated key can
+use catalog or balance operations. Their published application criteria are a
+site balance above zero and a linked, verified Telegram account. Submit the API
+application from `https://dark.shopping/customer/settings/api`, choose resale
+as the purpose, and include `https://ysello.com`. A provider `403` response
+means the account has not been permitted to perform the API operation; it is not
+an empty Ysello catalog.
+
 Never expose the key through a `VITE_*` variable. The API key is sent from the
 server using Dark Shopping's documented `key` parameter, responses are forced
 to JSON, provider pagination links are scrubbed of credentials, and requests

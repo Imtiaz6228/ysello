@@ -248,6 +248,18 @@ type DarkShoppingResale = {
       sourceMatchesExpectedRepository: boolean | null;
     };
   };
+  supplierAccess?: {
+    status:
+      | "ready"
+      | "not_configured"
+      | "invalid_key"
+      | "access_denied"
+      | "rate_limited"
+      | "unavailable";
+    message: string;
+    providerStatus: number | null;
+    settingsUrl: string;
+  };
   balance: { balance: number; currency: string } | null;
   listings: DarkShoppingListing[];
   fulfillments: DarkShoppingFulfillment[];
@@ -760,7 +772,10 @@ export function OperationsAdminPage() {
           "/api/admin/categories",
         );
         setCategories(categoryData.categories);
-        if (resale.configuration.configured) {
+        if (
+          resale.configuration.configured &&
+          (!resale.supplierAccess || resale.supplierAccess.status === "ready")
+        ) {
           const remoteCategories = await apiRequest<{
             data: { items: DarkShoppingCategory[] };
           }>("/api/admin/dark-shopping/categories?perPage=1000");
@@ -2016,6 +2031,33 @@ export function OperationsAdminPage() {
                     </strong>
                   </>
                 )}
+              </div>
+            ) : darkResale.supplierAccess &&
+              darkResale.supplierAccess.status !== "ready" ? (
+              <div className="ops-message error">
+                <strong>{darkResale.supplierAccess.message}</strong>
+                {darkResale.supplierAccess.status === "access_denied" && (
+                  <>
+                    <p>
+                      Dark Shopping requires an account balance above zero, a
+                      linked and verified Telegram account, and an approved API
+                      application. Select resale as the purpose and include
+                      https://ysello.com as the website.
+                    </p>
+                    <p>
+                      Categories and products are loaded live after Dark
+                      Shopping approves the account; they are not uploaded into
+                      Ysello manually.
+                    </p>
+                  </>
+                )}
+                <a
+                  href={darkResale.supplierAccess.settingsUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  Open Dark Shopping API settings
+                </a>
               </div>
             ) : (
               <>
