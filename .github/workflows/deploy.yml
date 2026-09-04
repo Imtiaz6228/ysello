@@ -20,13 +20,28 @@ jobs:
     env:
       RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
       RAILWAY_SERVICE_ID: ${{ secrets.RAILWAY_SERVICE_ID }}
+      RAILWAY_DEPLOYMENT_MANAGED_EXTERNALLY: ${{ vars.RAILWAY_DEPLOYMENT_MANAGED_EXTERNALLY }}
     steps:
       - uses: actions/checkout@v4
         with:
           ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+      - name: Validate Railway deployment configuration
+        shell: bash
+        run: |
+          if [[ -n "$RAILWAY_TOKEN" && -n "$RAILWAY_SERVICE_ID" ]]; then
+            exit 0
+          fi
+
+          if [[ -z "$RAILWAY_TOKEN" && -z "$RAILWAY_SERVICE_ID" && "$RAILWAY_DEPLOYMENT_MANAGED_EXTERNALLY" == "true" ]]; then
+            echo "Railway deployment is explicitly managed by its GitHub integration."
+            exit 0
+          fi
+
+          echo "::error::Railway was not deployed. Add RAILWAY_TOKEN and RAILWAY_SERVICE_ID to the GitHub production environment, or explicitly set RAILWAY_DEPLOYMENT_MANAGED_EXTERNALLY=true after connecting Railway to Imtiaz6228/ysello main."
+          exit 1
       - name: Deploy to Railway
         if: ${{ env.RAILWAY_TOKEN != '' && env.RAILWAY_SERVICE_ID != '' }}
         run: npx --yes @railway/cli@latest up --service "$RAILWAY_SERVICE_ID" --detach
-      - name: Railway deployment is managed externally
-        if: ${{ env.RAILWAY_TOKEN == '' || env.RAILWAY_SERVICE_ID == '' }}
-        run: echo "Railway secrets are not configured in GitHub; skipping CLI deployment."
+      - name: Confirm external Railway deployment mode
+        if: ${{ env.RAILWAY_TOKEN == '' && env.RAILWAY_SERVICE_ID == '' && env.RAILWAY_DEPLOYMENT_MANAGED_EXTERNALLY == 'true' }}
+        run: echo "Railway deployment is managed by the explicitly configured GitHub integration."

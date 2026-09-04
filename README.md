@@ -21,6 +21,12 @@ DARK_SHOPPING_MARGIN_PERCENT=15
 DARK_SHOPPING_RUB_PER_USD=91.5
 ```
 
+On Railway, add these values to the API service instance in the `production`
+environment—the service that owns `api.ysello.com`. A Railway shared variable is
+not injected merely because it exists: reference it from the API service as
+`DARK_SHOPPING_API_KEY=${{shared.DARK_SHOPPING_API_KEY}}`, deploy the staged
+change, and verify the new deployment rather than restarting an older one.
+
 Never expose the key through a `VITE_*` variable. The API key is sent from the
 server using Dark Shopping's documented `key` parameter, responses are forced
 to JSON, provider pagination links are scrubbed of credentials, and requests
@@ -304,6 +310,19 @@ After deploying this update, redeploy Railway so the Ysello origin allowlist is 
 Vercel and Railway automatically deploy new commits after their GitHub integrations are connected. In Railway's service settings, enable **Wait for CI** so releases start only after the included GitHub Actions workflow passes.
 
 The workflow installs the locked dependencies, runs lint and tests, audits production dependencies, validates and migrates the Prisma schema on PostgreSQL 16, builds the frontend and API, and validates the Sites artifact. The included deploy workflow starts only after this verification workflow succeeds.
+
+Choose one Railway deployment path explicitly:
+
+- For GitHub Actions CLI deployment, add `RAILWAY_TOKEN` and
+  `RAILWAY_SERVICE_ID` as secrets in the GitHub `production` environment.
+- For Railway's native GitHub autodeploy, connect the API service to
+  `Imtiaz6228/ysello`, select branch `main`, and set the GitHub Actions variable
+  `RAILWAY_DEPLOYMENT_MANAGED_EXTERNALLY=true` in the `production` environment.
+
+The deployment workflow fails when neither path is configured. It must not show
+a green deployment while silently skipping Railway. `railway.json` controls
+build and runtime settings but cannot change the repository connected in the
+Railway dashboard.
 
 ## Staff accounts
 

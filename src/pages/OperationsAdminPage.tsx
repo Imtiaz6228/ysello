@@ -233,8 +233,20 @@ type DarkShoppingFulfillment = {
 type DarkShoppingResale = {
   configuration: {
     configured: boolean;
+    configurationIssue?: string | null;
     marginPercent: number;
     requestsPerSecond: number;
+    deployment?: {
+      project: string | null;
+      service: string | null;
+      environment: string | null;
+      repository: string | null;
+      branch: string | null;
+      commit: string | null;
+      expectedRepository: string;
+      expectedBranch: string;
+      sourceMatchesExpectedRepository: boolean | null;
+    };
   };
   balance: { balance: number; currency: string } | null;
   listings: DarkShoppingListing[];
@@ -707,6 +719,7 @@ export function OperationsAdminPage() {
   const load = useCallback(async () => {
     setMessage("");
     setLoading(true);
+    if (tab === "suppliers") setDarkResale(null);
     const paths: Record<Tab, string> = {
       overview: "/api/admin/overview",
       sellers: "/api/admin/seller-applications",
@@ -1948,10 +1961,61 @@ export function OperationsAdminPage() {
               </div>
             </header>
 
-            {!darkResale?.configuration.configured ? (
+            {!darkResale ? (
               <div className="ops-message error">
-                Add DARK_SHOPPING_API_KEY to Railway, rotate the key shared in
-                chat, and redeploy before selecting products.
+                <strong>Dark Shopping status did not load.</strong> The frontend
+                may be calling an outdated or incorrect API deployment. Confirm
+                the ysello.com <code>/api</code> rewrite points to the Railway
+                service serving api.ysello.com, then reconnect that service to
+                Imtiaz6228/ysello branch main and redeploy the latest commit.
+              </div>
+            ) : !darkResale.configuration.configured ? (
+              <div className="ops-message error">
+                <strong>
+                  {darkResale.configuration.configurationIssue ??
+                    "Dark Shopping configuration has not loaded."}
+                </strong>{" "}
+                Add a newly rotated key to the Railway service serving
+                api.ysello.com—not Vercel, Postgres, or another service—then
+                deploy the staged variable change.
+                {darkResale.configuration.deployment && (
+                  <>
+                    <br />
+                    <span>
+                      Runtime:{" "}
+                      {darkResale.configuration.deployment.project ??
+                        "unknown project"}
+                      {" / "}
+                      {darkResale.configuration.deployment.service ??
+                        "unknown service"}
+                      {" / "}
+                      {darkResale.configuration.deployment.environment ??
+                        "unknown environment"}
+                      . Source:{" "}
+                      {darkResale.configuration.deployment.repository ??
+                        "unknown"}
+                      {darkResale.configuration.deployment.branch
+                        ? ` (${darkResale.configuration.deployment.branch})`
+                        : ""}
+                      {darkResale.configuration.deployment.commit
+                        ? ` @ ${darkResale.configuration.deployment.commit}`
+                        : ""}
+                      .
+                    </span>
+                  </>
+                )}
+                {darkResale.configuration.deployment
+                  ?.sourceMatchesExpectedRepository === false && (
+                  <>
+                    <br />
+                    <strong>
+                      Wrong Railway source detected. Reconnect this service to{" "}
+                      {darkResale.configuration.deployment.expectedRepository},
+                      branch{" "}
+                      {darkResale.configuration.deployment.expectedBranch}.
+                    </strong>
+                  </>
+                )}
               </div>
             ) : (
               <>

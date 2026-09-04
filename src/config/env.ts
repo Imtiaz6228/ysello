@@ -216,7 +216,7 @@ const envSchema = z.object({
   CRYPTO_WEBHOOK_SECRET: z.preprocess(emptyToUndefined, z.string().optional()),
   DARK_SHOPPING_API_KEY: z.preprocess(
     trimmedStringToUndefined,
-    z.string().min(20).max(255).optional(),
+    z.string().min(1).max(255).optional(),
   ),
   DARK_SHOPPING_API_BASE_URL: darkShoppingApiBaseUrl,
   DARK_SHOPPING_TIMEOUT_MS: z.coerce

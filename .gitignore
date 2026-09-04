@@ -2,6 +2,8 @@ node_modules/
 node_modules
 .sites-runtime/
 .npm-cache/
+.git_disabled/
+scripts.zip
 dist/
 dist-api/
 *.tsbuildinfo
