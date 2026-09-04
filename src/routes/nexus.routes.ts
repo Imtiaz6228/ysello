@@ -21,6 +21,7 @@ const earnings = new EarningsAnalyticsService();
 
 const supportInput = z.object({
   message: z.string().trim().min(1).max(4000),
+  subject: z.string().trim().min(3).max(120).optional(),
   sessionId: z.string().uuid().optional(),
   visitorToken: z.string().trim().min(20).max(200).optional(),
   guestName: z.string().trim().min(2).max(100).optional(),
@@ -54,10 +55,10 @@ nexusRouter.post(
     const owner = publicSupportOwner(req.auth?.id, input.visitorToken);
     let session = input.sessionId
       ? await prisma.chatSession.findFirst({
-          where: { id: input.sessionId, ...owner },
+          where: { id: input.sessionId, ...owner, kind: "SUPPORT" },
         })
       : await prisma.chatSession.findFirst({
-          where: owner,
+          where: { ...owner, kind: "SUPPORT" },
           orderBy: { lastMessageAt: "desc" },
         });
 
@@ -65,9 +66,10 @@ nexusRouter.post(
       session = await prisma.chatSession.create({
         data: {
           ...owner,
+          kind: "SUPPORT",
           guestName: req.auth ? null : input.guestName,
           guestEmail: req.auth ? null : input.guestEmail,
-          subject: input.message.slice(0, 80),
+          subject: input.subject ?? input.message.slice(0, 80),
           status: "HUMAN",
         },
       });
@@ -119,7 +121,7 @@ nexusRouter.get(
         : undefined;
     const owner = publicSupportOwner(req.auth?.id, visitorToken);
     const sessions = await prisma.chatSession.findMany({
-      where: owner,
+      where: { ...owner, kind: "SUPPORT" },
       include: { messages: { orderBy: { createdAt: "asc" } } },
       orderBy: { lastMessageAt: "desc" },
       take: 30,
@@ -140,7 +142,11 @@ nexusRouter.post(
       .parse(req.body);
     const owner = publicSupportOwner(req.auth?.id, input.visitorToken);
     const session = await prisma.chatSession.findFirst({
-      where: { id: z.string().uuid().parse(req.params.id), ...owner },
+      where: {
+        id: z.string().uuid().parse(req.params.id),
+        ...owner,
+        kind: "SUPPORT",
+      },
     });
     if (!session)
       throw new ApiError(404, "Chat session not found.", "CHAT_NOT_FOUND");
@@ -219,7 +225,7 @@ nexusRouter.get(
   "/chat/sessions",
   asyncHandler(async (req, res) => {
     const sessions = await prisma.chatSession.findMany({
-      where: { userId: req.auth!.id },
+      where: { userId: req.auth!.id, kind: "SUPPORT" },
       include: { messages: { orderBy: { createdAt: "asc" } } },
       orderBy: { updatedAt: "desc" },
       take: 30,
@@ -388,6 +394,7 @@ nexusRouter.get(
   staff,
   asyncHandler(async (_req, res) => {
     const sessions = await prisma.chatSession.findMany({
+      where: { kind: "SUPPORT" },
       include: {
         user: {
           select: { firstName: true, lastName: true, email: true, role: true },
@@ -451,8 +458,8 @@ nexusRouter.post(
     const { body } = z
       .object({ body: z.string().trim().min(1).max(4000) })
       .parse(req.body);
-    const session = await prisma.chatSession.findUnique({
-      where: { id: String(req.params.id) },
+    const session = await prisma.chatSession.findFirst({
+      where: { id: String(req.params.id), kind: "SUPPORT" },
     });
     if (!session)
       throw new ApiError(404, "Chat session not found.", "CHAT_NOT_FOUND");

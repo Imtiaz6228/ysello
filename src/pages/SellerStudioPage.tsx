@@ -358,6 +358,21 @@ type SellerTicket = {
   creator?: { firstName: string; email: string };
   messages?: Array<{ id: string; body: string }>;
 };
+type SellerInquiry = {
+  id: string;
+  subject?: string | null;
+  contextLabel?: string | null;
+  contextUrl?: string | null;
+  status: string;
+  lastMessageAt: string;
+  user?: { firstName: string; lastName: string; email: string } | null;
+  messages: Array<{
+    id: string;
+    role: string;
+    body: string;
+    createdAt: string;
+  }>;
+};
 
 function MediaPreview({
   src,
@@ -558,6 +573,8 @@ export function SellerStudioPage() {
   const [finance, setFinance] = useState<FinanceSummary | null>(null);
   const [withdrawals, setWithdrawals] = useState<Withdrawal[]>([]);
   const [tickets, setTickets] = useState<SellerTicket[]>([]);
+  const [inquiries, setInquiries] = useState<SellerInquiry[]>([]);
+  const [inquiryReply, setInquiryReply] = useState<Record<string, string>>({});
   const [disputes, setDisputes] = useState<SellerDispute[]>([]);
   const [reviews, setReviews] = useState<SellerReview[]>([]);
   const [reviewReply, setReviewReply] = useState<Record<string, string>>({});
@@ -865,6 +882,9 @@ export function SellerStudioPage() {
       ),
       apiRequest<{ tickets: SellerTicket[] }>("/api/seller/tickets").then(
         (data) => setTickets(data.tickets),
+      ),
+      apiRequest<{ inquiries: SellerInquiry[] }>("/api/seller/inquiries").then(
+        (data) => setInquiries(data.inquiries),
       ),
       apiRequest<{ disputes: SellerDispute[] }>("/api/seller/disputes").then(
         (data) => setDisputes(data.disputes),
@@ -1534,6 +1554,25 @@ export function SellerStudioPage() {
       await load();
     } catch (error) {
       showMessage(errorText(error, "Ticket reply could not be sent."), "error");
+    }
+  }
+
+  async function replyToInquiry(inquiryId: string) {
+    const body = inquiryReply[inquiryId]?.trim();
+    if (!body) return showMessage("Write a reply first.", "error");
+    setBusy(true);
+    try {
+      await apiRequest(`/api/seller/inquiries/${inquiryId}/reply`, {
+        method: "POST",
+        body: { body },
+      });
+      setInquiryReply((current) => ({ ...current, [inquiryId]: "" }));
+      showMessage("Reply sent to the buyer.", "success");
+      await load();
+    } catch (error) {
+      showMessage(errorText(error, "Reply could not be sent."), "error");
+    } finally {
+      setBusy(false);
     }
   }
 
@@ -3645,17 +3684,71 @@ export function SellerStudioPage() {
           <section className="seller-message-center">
             <header>
               <div>
-                <span className="section-index">ORDER INBOX</span>
+                <span className="section-index">BUYER INBOX</span>
                 <h2>Buyer conversations</h2>
                 <p>
-                  Chats are tied to real orders, keeping delivery and dispute
-                  history protected.
+                  Answer pre-sale questions here. Paid-order chats remain tied
+                  to each order for delivery and dispute protection.
                 </p>
               </div>
-              <span>{conversationOrders.length} conversations</span>
+              <span>{inquiries.length + conversationOrders.length} conversations</span>
             </header>
+            {inquiries.length ? (
+              <div className="seller-preorder-inquiries">
+                {inquiries.map((inquiry) => (
+                  <article key={inquiry.id}>
+                    <header>
+                      <span>
+                        {(inquiry.user?.firstName?.[0] ?? "B")}
+                        {(inquiry.user?.lastName?.[0] ?? "")}
+                      </span>
+                      <div>
+                        <strong>
+                          {inquiry.user
+                            ? `${inquiry.user.firstName} ${inquiry.user.lastName}`
+                            : "Marketplace buyer"}
+                        </strong>
+                        <small>{inquiry.subject ?? inquiry.contextLabel ?? "Store inquiry"}</small>
+                      </div>
+                      <b className="status-pill pending">PRE-SALE</b>
+                      {inquiry.contextUrl ? (
+                        <Link to={inquiry.contextUrl}>View item <ArrowRight /></Link>
+                      ) : null}
+                    </header>
+                    <div className="seller-inquiry-thread">
+                      {inquiry.messages.map((entry) => (
+                        <p className={entry.role} key={entry.id}>
+                          <small>{entry.role === "seller" ? "You" : "Buyer"}</small>
+                          {entry.body}
+                        </p>
+                      ))}
+                    </div>
+                    <form
+                      onSubmit={(event) => {
+                        event.preventDefault();
+                        void replyToInquiry(inquiry.id);
+                      }}
+                    >
+                      <input
+                        value={inquiryReply[inquiry.id] ?? ""}
+                        onChange={(event) =>
+                          setInquiryReply((current) => ({
+                            ...current,
+                            [inquiry.id]: event.target.value,
+                          }))
+                        }
+                        placeholder="Reply to this buyer…"
+                      />
+                      <button disabled={busy || !inquiryReply[inquiry.id]?.trim()}>
+                        Send reply <ArrowRight />
+                      </button>
+                    </form>
+                  </article>
+                ))}
+              </div>
+            ) : null}
             {conversationOrders.length ? (
-              <div>
+              <div className="seller-order-conversations">
                 {conversationOrders.map((item) => (
                   <Link to={`/orders/${item.order.id}`} key={item.order.id}>
                     <span>
@@ -3679,15 +3772,15 @@ export function SellerStudioPage() {
                   </Link>
                 ))}
               </div>
-            ) : (
+            ) : !inquiries.length ? (
               <div className="dashboard-empty">
                 <MessageSquare />
                 <h2>No conversations yet</h2>
                 <p>
-                  Buyer chats become available as soon as you receive an order.
+                  Pre-sale questions and paid-order chats will appear here.
                 </p>
               </div>
-            )}
+            ) : null}
           </section>
         ) : null}
 

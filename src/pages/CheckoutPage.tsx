@@ -44,7 +44,7 @@ const icons: Record<MethodId, typeof CreditCard> = {
 export function CheckoutPage() {
   const { formatMoney, formatProductMoney, t } = useLocale();
   const { user, setUser } = useAuth();
-  const { items, subtotalCents, clear } = useCart();
+  const { items, subtotalCents, clear, updateProductPrices } = useCart();
   const navigate = useNavigate();
   const [methods, setMethods] = useState<Method[]>([]);
   const [balanceCents, setBalanceCents] = useState(user?.balanceCents ?? 0);
@@ -87,6 +87,7 @@ export function CheckoutPage() {
     const cartItems = items.map((item) => ({
       productId: item.product.id,
       quantity: item.quantity,
+      expectedUnitPriceCents: item.product.priceCents,
     }));
     try {
       if (method === "WALLET") {
@@ -136,6 +137,26 @@ export function CheckoutPage() {
         state: { instructions: data.instructions },
       });
     } catch (caught) {
+      if (
+        caught instanceof ApiError &&
+        caught.code === "PRODUCT_PRICE_CHANGED"
+      ) {
+        const details = caught.details as
+          | {
+              productId?: string;
+              currentUnitPriceCents?: number;
+              currentPriceCnyCents?: number;
+              currentPriceRubCents?: number;
+            }
+          | undefined;
+        if (details?.productId && details.currentUnitPriceCents) {
+          updateProductPrices(details.productId, {
+            priceCents: details.currentUnitPriceCents,
+            priceCnyCents: details.currentPriceCnyCents,
+            priceRubCents: details.currentPriceRubCents,
+          });
+        }
+      }
       setError(
         caught instanceof ApiError
           ? caught.message

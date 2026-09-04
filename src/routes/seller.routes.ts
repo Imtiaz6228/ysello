@@ -1403,6 +1403,47 @@ sellerRouter.get(
   }),
 );
 
+sellerRouter.get(
+  "/inquiries",
+  requireSeller,
+  asyncHandler(async (req, res) => {
+    const inquiries = await prisma.chatSession.findMany({
+      where: { recipientId: req.auth!.id, kind: "SELLER_INQUIRY" },
+      include: {
+        user: { select: { firstName: true, lastName: true, email: true } },
+        messages: { orderBy: { createdAt: "asc" } },
+      },
+      orderBy: { lastMessageAt: "desc" },
+      take: 100,
+    });
+    res.json({ inquiries });
+  }),
+);
+
+sellerRouter.post(
+  "/inquiries/:id/reply",
+  requireSeller,
+  asyncHandler(async (req, res) => {
+    const id = z.string().uuid().parse(req.params.id);
+    const { body } = z
+      .object({ body: z.string().trim().min(1).max(4000) })
+      .parse(req.body);
+    const session = await prisma.chatSession.findFirst({
+      where: { id, recipientId: req.auth!.id, kind: "SELLER_INQUIRY" },
+    });
+    if (!session)
+      throw new ApiError(404, "Buyer inquiry not found.", "INQUIRY_NOT_FOUND");
+    const message = await prisma.chatMessage.create({
+      data: { sessionId: id, authorId: req.auth!.id, role: "seller", body },
+    });
+    await prisma.chatSession.update({
+      where: { id },
+      data: { status: "REPLIED", resolved: false, lastMessageAt: new Date() },
+    });
+    res.status(201).json({ message });
+  }),
+);
+
 sellerRouter.post(
   "/orders/:id/deliver",
   requireSeller,

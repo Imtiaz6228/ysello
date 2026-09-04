@@ -1454,10 +1454,343 @@
 .admin-enterprise .ops-empty strong {
   font-size: 16px;
 }
+.dark-resale-workspace {
+  display: grid;
+  gap: 18px;
+}
+.dark-resale-heading {
+  background:
+    radial-gradient(
+      circle at 90% 20%,
+      rgba(99, 102, 241, 0.16),
+      transparent 32%
+    ),
+    linear-gradient(125deg, #fff, #f7f7ff) !important;
+}
+.dark-resale-balance {
+  min-width: 210px;
+  padding: 16px 18px;
+  display: grid;
+  gap: 3px;
+  border: 1px solid #dbe3ef;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.9);
+}
+.dark-resale-balance small,
+.dark-resale-balance span {
+  color: #64748b;
+  font-size: 11px;
+}
+.dark-resale-balance strong {
+  color: #172033;
+  font-size: 22px;
+}
+.dark-resale-controls,
+.dark-resale-import-bar {
+  padding: 18px;
+  display: grid;
+  grid-template-columns: minmax(180px, 0.7fr) minmax(220px, 1fr) auto;
+  align-items: end;
+  gap: 13px;
+  border: 1px solid #e1e7ef;
+  border-radius: 18px;
+  background: #fff;
+}
+.dark-resale-controls label,
+.dark-resale-import-bar label {
+  display: grid;
+  gap: 7px;
+  color: #4b5567;
+  font-size: 11px;
+  font-weight: 800;
+}
+.dark-resale-controls input,
+.dark-resale-controls select,
+.dark-resale-import-bar input,
+.dark-resale-import-bar select {
+  width: 100%;
+  min-height: 44px;
+  padding: 0 12px;
+  border: 1px solid #d9e1ec;
+  border-radius: 11px;
+  color: #172033;
+  background: #fbfcfe;
+}
+.dark-resale-controls button,
+.dark-resale-import-bar button {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+.dark-resale-import-bar {
+  grid-template-columns: minmax(180px, 1fr) 100px minmax(230px, 1fr) auto auto;
+  position: sticky;
+  top: 78px;
+  z-index: 4;
+  box-shadow: 0 16px 40px rgba(15, 23, 42, 0.09);
+}
+.dark-resale-import-bar > div {
+  display: grid;
+  gap: 4px;
+}
+.dark-resale-import-bar > div small {
+  color: #64748b;
+}
+.dark-resale-publish {
+  min-height: 44px;
+  grid-template-columns: auto 1fr !important;
+  align-items: center;
+}
+.dark-resale-publish input {
+  width: 18px;
+  min-height: 18px;
+}
+.dark-resale-product-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 15px;
+}
+.dark-resale-product-grid > article {
+  overflow: hidden;
+  display: grid;
+  grid-template-rows: 170px 1fr;
+  border: 2px solid #e1e7ef;
+  border-radius: 19px;
+  background: #fff;
+  box-shadow: 0 13px 34px rgba(15, 23, 42, 0.055);
+  transition:
+    border-color 160ms ease,
+    transform 160ms ease;
+}
+.dark-resale-product-grid > article.selected {
+  border-color: #4f46e5;
+  transform: translateY(-2px);
+}
+.dark-resale-product-grid > article.unsupported {
+  opacity: 0.7;
+}
+.dark-resale-product-image {
+  position: relative;
+  min-height: 170px;
+  display: grid;
+  place-items: center;
+  color: #4f46e5;
+  background: linear-gradient(145deg, #eef2ff, #f8fafc);
+}
+.dark-resale-product-image > img {
+  width: 100%;
+  height: 170px;
+  object-fit: contain;
+  background: #fff;
+}
+.dark-resale-product-image > svg {
+  width: 52px;
+  height: 52px;
+}
+.dark-resale-product-image > label {
+  position: absolute;
+  right: 10px;
+  bottom: 10px;
+  padding: 8px 10px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  border-radius: 10px;
+  color: #fff;
+  background: rgba(15, 23, 42, 0.9);
+  font-size: 11px;
+  font-weight: 800;
+}
+.dark-resale-product-image input {
+  width: 16px;
+  height: 16px;
+}
+.dark-resale-product-grid > article > div:last-child {
+  padding: 17px;
+  display: grid;
+  align-content: start;
+  gap: 8px;
+}
+.dark-resale-product-grid h3,
+.dark-resale-section h2 {
+  margin: 0;
+  color: #172033;
+}
+.dark-resale-product-grid h3 {
+  font-size: 16px;
+  line-height: 1.35;
+}
+.dark-resale-product-grid p,
+.dark-resale-section p {
+  margin: 0;
+  color: #64748b;
+  font-size: 11px;
+  line-height: 1.55;
+}
+.dark-resale-product-grid dl {
+  margin: 4px 0 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+.dark-resale-product-grid dl div {
+  padding: 9px;
+  display: grid;
+  gap: 2px;
+  border-radius: 10px;
+  background: #f5f7fb;
+}
+.dark-resale-product-grid dt {
+  color: #718096;
+  font-size: 9px;
+  text-transform: uppercase;
+}
+.dark-resale-product-grid dd {
+  margin: 0;
+  color: #172033;
+  font-size: 12px;
+  font-weight: 850;
+}
+.dark-resale-product-grid b,
+.dark-resale-list b {
+  color: #b4233f;
+  font-size: 10px;
+  line-height: 1.45;
+}
+.dark-resale-section {
+  overflow: hidden;
+  border: 1px solid #e1e7ef;
+  border-radius: 20px;
+  background: #fff;
+}
+.dark-resale-section > header {
+  padding: 18px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  border-bottom: 1px solid #edf0f4;
+}
+.dark-resale-section > header div {
+  display: grid;
+  gap: 4px;
+}
+.dark-resale-section > header button,
+.dark-resale-list button {
+  min-height: 38px;
+  padding: 0 11px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid #dbe3ef;
+  border-radius: 9px;
+  color: #354052;
+  background: #fff;
+  font-size: 10px;
+  font-weight: 800;
+}
+.dark-resale-list > article {
+  padding: 15px 20px;
+  display: grid;
+  grid-template-columns:
+    minmax(220px, 2fr) repeat(3, minmax(100px, 0.65fr))
+    auto;
+  align-items: center;
+  gap: 14px;
+  border-bottom: 1px solid #edf0f4;
+}
+.dark-resale-list > article:last-child {
+  border-bottom: 0;
+}
+.dark-resale-list > article > div:first-child,
+.dark-resale-list > article > span {
+  display: grid;
+  gap: 4px;
+}
+.dark-resale-list small {
+  color: #718096;
+  font-size: 10px;
+}
+.dark-resale-list .row-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.dark-resale-list .row-actions .danger {
+  color: #ad3049;
+  border-color: #efc4cd;
+  background: #fff4f6;
+}
+.dark-resale-list .row-actions .approve {
+  color: #117157;
+  border-color: #bde6d8;
+  background: #edfbf6;
+}
+.dark-resale-pagination {
+  padding: 14px 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  border: 1px solid #e1e7ef;
+  border-radius: 15px;
+  color: #64748b;
+  background: #fff;
+  font-size: 12px;
+  font-weight: 800;
+}
+.dark-resale-pagination button {
+  min-height: 38px;
+  padding: 0 14px;
+  border: 1px solid #dbe3ef;
+  border-radius: 9px;
+  color: #354052;
+  background: #fff;
+  font-weight: 800;
+}
+.dark-resale-pagination button:disabled {
+  opacity: 0.45;
+}
 .admin-theme-dark {
   --admin-ink: #f8fafc;
   --admin-muted: #a8b3c7;
   --admin-line: #27344a;
+}
+.admin-theme-dark .dark-resale-heading,
+.admin-theme-dark .dark-resale-controls,
+.admin-theme-dark .dark-resale-import-bar,
+.admin-theme-dark .dark-resale-product-grid > article,
+.admin-theme-dark .dark-resale-section,
+.admin-theme-dark .dark-resale-balance {
+  border-color: var(--admin-line);
+  color: var(--admin-ink);
+  background: #151e2e !important;
+}
+.admin-theme-dark .dark-resale-product-grid h3,
+.admin-theme-dark .dark-resale-product-grid dd,
+.admin-theme-dark .dark-resale-section h2,
+.admin-theme-dark .dark-resale-balance strong {
+  color: var(--admin-ink);
+}
+.admin-theme-dark .dark-resale-controls input,
+.admin-theme-dark .dark-resale-controls select,
+.admin-theme-dark .dark-resale-import-bar input,
+.admin-theme-dark .dark-resale-import-bar select,
+.admin-theme-dark .dark-resale-list button {
+  border-color: var(--admin-line);
+  color: var(--admin-ink);
+  background: #101827;
+}
+.admin-theme-dark .dark-resale-product-grid dl div {
+  background: #101827;
+}
+.admin-theme-dark .dark-resale-pagination,
+.admin-theme-dark .dark-resale-pagination button {
+  border-color: var(--admin-line);
+  color: var(--admin-ink);
+  background: #151e2e;
 }
 .admin-theme-dark .ops-main {
   color: #f8fafc;
@@ -1812,6 +2145,27 @@
   .admin-enterprise .admin-workspace-toolbar .primary-button {
     width: 100%;
     justify-content: center;
+  }
+  .dark-resale-controls,
+  .dark-resale-import-bar,
+  .dark-resale-list > article {
+    position: static;
+    grid-template-columns: 1fr;
+    align-items: stretch;
+  }
+  .dark-resale-controls button,
+  .dark-resale-import-bar button {
+    width: 100%;
+  }
+  .dark-resale-product-grid {
+    grid-template-columns: 1fr;
+  }
+  .dark-resale-section > header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+  .dark-resale-list .row-actions {
+    justify-content: flex-start;
   }
   .admin-enterprise .admin-category-workspace {
     grid-template-columns: 1fr;

@@ -825,10 +825,7 @@ adminRouter.post(
           "CATEGORY_NOT_FOUND",
         );
 
-      await ensureAdminSellerProfile(
-        req.auth!.id,
-        input.officialStoreName,
-      );
+      await ensureAdminSellerProfile(req.auth!.id, input.officialStoreName);
       const inventoryLines = parseAdminInventoryLines(input.inventoryLines);
       const canPublish =
         input.publish &&
@@ -950,6 +947,14 @@ adminRouter.patch(
           where: { isActive: true, orderItemId: null },
           select: { id: true },
         },
+        darkShoppingListing: {
+          select: {
+            id: true,
+            isEnabled: true,
+            remoteQuantity: true,
+            remoteMinimumOrder: true,
+          },
+        },
       },
     });
     if (!productForModeration)
@@ -961,18 +966,31 @@ adminRouter.patch(
     const deliveryReady =
       productForModeration.type !== ProductType.DOWNLOAD ||
       productForModeration.files.length > 0 ||
-      productForModeration.inventoryItems.length > 0;
-    const product = await prisma.product.update({
-      where: { id },
-      data: {
-        status: input.status,
-        rejectionReason: input.status === "APPROVED" ? null : input.reason,
-        publishedAt:
-          input.status === "APPROVED"
-            ? (productForModeration.publishedAt ?? new Date())
-            : null,
-      },
-    });
+      productForModeration.inventoryItems.length > 0 ||
+      (productForModeration.darkShoppingListing !== null &&
+        productForModeration.darkShoppingListing.remoteQuantity >=
+          productForModeration.darkShoppingListing.remoteMinimumOrder);
+    const [product] = await prisma.$transaction([
+      prisma.product.update({
+        where: { id },
+        data: {
+          status: input.status,
+          rejectionReason: input.status === "APPROVED" ? null : input.reason,
+          publishedAt:
+            input.status === "APPROVED"
+              ? (productForModeration.publishedAt ?? new Date())
+              : null,
+        },
+      }),
+      ...(productForModeration.darkShoppingListing
+        ? [
+            prisma.darkShoppingListing.update({
+              where: { id: productForModeration.darkShoppingListing.id },
+              data: { isEnabled: input.status === "APPROVED" },
+            }),
+          ]
+        : []),
+    ]);
     res.json({
       product,
       deliveryReady,

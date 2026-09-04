@@ -58,6 +58,7 @@ type ApiProduct = {
   };
   seller: { sellerProfile?: { storeName: string; slug: string } | null };
   _count?: { inventoryItems?: number; files?: number };
+  stockQuantity?: number;
   galleryUrls?: string[];
   videoUrl?: string | null;
   productAttributes?: Record<string, unknown>;
@@ -306,10 +307,12 @@ function mapProduct(
     stockCount:
       product.type === "SERVICE"
         ? 999
-        : Math.max(
-            product._count?.inventoryItems ?? 0,
-            product._count?.files ?? 0,
-          ),
+        : product.productAttributes?.supplierFulfilled === true
+          ? (product.stockQuantity ?? 0)
+          : Math.max(
+              product._count?.inventoryItems ?? 0,
+              product._count?.files ?? 0,
+            ),
     galleryUrls: product.galleryUrls?.map(
       (url) => normalizePublicMediaUrl(url) ?? url,
     ),
@@ -383,7 +386,7 @@ function mapCategories(categories: ApiCategory[]): CatalogCategory[] {
 
 export function useMarketplaceProducts() {
   const { locale } = useLocale();
-  const [products, setProducts] = useState<CatalogProduct[]>(localProducts);
+  const [products, setProducts] = useState<CatalogProduct[]>([]);
   useEffect(() => {
     void apiRequest<{ products: ApiProduct[] }>(
       "/api/marketplace/products?take=500&sort=newest",
@@ -397,7 +400,7 @@ export function useMarketplaceProducts() {
         // only and must never be mixed into a live, purchasable catalog.
         setProducts(remoteProducts);
       })
-      .catch(() => undefined);
+      .catch(() => setProducts([]));
   }, [locale]);
   return products;
 }
@@ -419,30 +422,26 @@ export function useMarketplaceCategories() {
 
 export function useMarketplaceProduct(slug?: string) {
   const { locale } = useLocale();
-  const localProduct = localProducts.find((item) => item.slug === slug);
-  const [product, setProduct] = useState<CatalogProduct | undefined>(
-    localProduct,
-  );
-  const [loading, setLoading] = useState(Boolean(slug && !localProduct));
+  const [product, setProduct] = useState<CatalogProduct | undefined>();
+  const [loading, setLoading] = useState(Boolean(slug));
   useEffect(() => {
     if (!slug) {
       setProduct(undefined);
       setLoading(false);
       return;
     }
-    const fallback = localProducts.find((item) => item.slug === slug);
-    setProduct(fallback);
-    setLoading(!fallback);
+    setProduct(undefined);
+    setLoading(true);
     void apiRequest<{ product: ApiProduct }>(
       `/api/marketplace/products/${encodeURIComponent(slug)}`,
     )
       .then((data) => setProduct(mapProduct(data.product, 0, locale)))
       .catch((error) => {
-        // Remove a preview fallback when the live API explicitly says the
-        // listing does not exist. Network-only previews retain local content.
-        if (!fallback || (error instanceof ApiError && error.status === 404)) {
+        if (error instanceof ApiError && error.status === 404) {
           setProduct(undefined);
+          return;
         }
+        setProduct(undefined);
       })
       .finally(() => setLoading(false));
   }, [locale, slug]);
@@ -579,70 +578,14 @@ export function useMarketplaceStores() {
 
 export function useMarketplaceStore(slug?: string) {
   const { locale } = useLocale();
-  const fallbackProducts = localProducts.filter(
-    (product) => product.sellerSlug === slug,
-  );
-  const fallbackStore = fallbackProducts.length
-    ? {
-        name: fallbackProducts[0].seller,
-        about:
-          "A verified marketplace seller offering clear product details, protected delivery and order-linked support.",
-        policy:
-          "Ysello buyer protection and the listing-specific delivery terms apply to every order.",
-        isOfficial: fallbackProducts[0].isOfficial === true,
-        rating:
-          fallbackProducts.reduce((sum, product) => sum + product.rating, 0) /
-          fallbackProducts.length,
-        sales: fallbackProducts
-          .reduce((sum, product) => sum + product.reviews, 0)
-          .toLocaleString(),
-        joined: "2026",
-        mark: fallbackProducts[0].seller
-          .split(/\s+/)
-          .map((word) => word[0])
-          .join("")
-          .slice(0, 2)
-          .toUpperCase(),
-      }
-    : undefined;
-  const [store, setStore] = useState<PublicStore | undefined>(fallbackStore);
-  const [products, setProducts] = useState<CatalogProduct[]>(fallbackProducts);
-  const [loading, setLoading] = useState(Boolean(slug && !fallbackStore));
+  const [store, setStore] = useState<PublicStore | undefined>();
+  const [products, setProducts] = useState<CatalogProduct[]>([]);
+  const [loading, setLoading] = useState(Boolean(slug));
   useEffect(() => {
     if (!slug) return;
-    const localStoreProducts = localProducts.filter(
-      (product) => product.sellerSlug === slug,
-    );
-    if (localStoreProducts.length) {
-      const localName = localStoreProducts[0].seller;
-      setStore({
-        name: localName,
-        about:
-          "A verified marketplace seller offering clear product details, protected delivery and order-linked support.",
-        policy:
-          "Ysello buyer protection and the listing-specific delivery terms apply to every order.",
-        isOfficial: localStoreProducts[0].isOfficial === true,
-        rating:
-          localStoreProducts.reduce((sum, product) => sum + product.rating, 0) /
-          localStoreProducts.length,
-        sales: localStoreProducts
-          .reduce((sum, product) => sum + product.reviews, 0)
-          .toLocaleString(),
-        joined: "2026",
-        mark: localName
-          .split(/\s+/)
-          .map((word) => word[0])
-          .join("")
-          .slice(0, 2)
-          .toUpperCase(),
-      });
-      setProducts(localStoreProducts);
-      setLoading(false);
-    } else {
-      setStore(undefined);
-      setProducts([]);
-      setLoading(true);
-    }
+    setStore(undefined);
+    setProducts([]);
+    setLoading(true);
     void apiRequest<{
       store: {
         storeName: string;
@@ -694,7 +637,10 @@ export function useMarketplaceStore(slug?: string) {
           ),
         );
       })
-      .catch(() => undefined)
+      .catch(() => {
+        setStore(undefined);
+        setProducts([]);
+      })
       .finally(() => setLoading(false));
   }, [locale, slug]);
   return { store, products, loading };

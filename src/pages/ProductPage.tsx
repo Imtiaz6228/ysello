@@ -20,12 +20,10 @@ import {
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 import { useCart } from "../commerce/CartContext";
-import {
-  productCategoryPath,
-  productPath,
-} from "../commerce/marketplaceUrls";
+import { productCategoryPath, productPath } from "../commerce/marketplaceUrls";
 import { MarketFooter, MarketHeader } from "../components/MarketHeader";
 import { Seo } from "../components/Seo";
+import { SellerContactDialog } from "../components/SellerContactDialog";
 import {
   useMarketplaceProduct,
   useMarketplaceProducts,
@@ -114,7 +112,7 @@ export function ProductPage() {
   if (!product) return <NotFoundPage />;
 
   function addToCart() {
-    for (let index = 0; index < effectiveQuantity; index += 1) add(product!);
+    add(product!, effectiveQuantity);
     setAdded(true);
     navigate("/cart");
   }
@@ -320,6 +318,15 @@ export function ProductPage() {
               </strong>
             </div>
           </Link>
+          {product.sellerSlug ? (
+            <SellerContactDialog
+              storeSlug={product.sellerSlug}
+              storeName={product.seller}
+              productSlug={product.slug}
+              productTitle={product.title}
+              className="product-seller-contact"
+            />
+          ) : null}
           <div className="detail-highlights">
             <span>
               <Clock3 /> {product.delivery}

@@ -4,6 +4,135 @@ Ysello is a full-stack marketplace for reviewed digital downloads and service-ba
 
 The trust policy is enforced throughout the product: account and credential trading, hacking tools, stolen files, fake reviews, spam, and bot services are prohibited.
 
+## Dark Shopping supplier API
+
+The Express API includes an optional, server-side client for the documented
+Dark Shopping v1 supplier API. The integration supports categories, groups,
+attributes, product search and details, the top-products feed, account balance,
+idempotent order creation, order status, and order download links.
+
+Configure the integration only on Railway or another trusted API host:
+
+```env
+DARK_SHOPPING_API_KEY=YOUR_ROTATED_DARK_SHOPPING_API_KEY
+DARK_SHOPPING_API_BASE_URL=https://dark.shopping/api/v1
+DARK_SHOPPING_TIMEOUT_MS=15000
+DARK_SHOPPING_MARGIN_PERCENT=15
+DARK_SHOPPING_RUB_PER_USD=91.5
+```
+
+Never expose the key through a `VITE_*` variable. The API key is sent from the
+server using Dark Shopping's documented `key` parameter, responses are forced
+to JSON, provider pagination links are scrubbed of credentials, and requests
+are serialized to respect the provider's limit of two requests per second.
+
+All integration routes require an authenticated `ADMIN` or `SUPER_ADMIN`
+session:
+
+| Method | Ysello route                                 | Dark Shopping operation                           |
+| ------ | -------------------------------------------- | ------------------------------------------------- |
+| `GET`  | `/api/admin/dark-shopping/configuration`     | Safe configuration status (never returns the key) |
+| `GET`  | `/api/admin/dark-shopping/categories`        | `category/list`                                   |
+| `GET`  | `/api/admin/dark-shopping/groups`            | `group/list`                                      |
+| `GET`  | `/api/admin/dark-shopping/attributes`        | `attribute/list`                                  |
+| `GET`  | `/api/admin/dark-shopping/products`          | `product/list`                                    |
+| `GET`  | `/api/admin/dark-shopping/products/top`      | `product/top`                                     |
+| `GET`  | `/api/admin/dark-shopping/products/:id`      | `product/view`                                    |
+| `GET`  | `/api/admin/dark-shopping/balance`           | `user/balance`                                    |
+| `POST` | `/api/admin/dark-shopping/orders`            | `order/create`                                    |
+| `GET`  | `/api/admin/dark-shopping/orders/:id/status` | `order/status`                                    |
+| `GET`  | `/api/admin/dark-shopping/orders/:id`        | `order/download`                                  |
+
+Resale management adds these protected operations:
+
+| Method  | Ysello route                                             | Purpose                                        |
+| ------- | -------------------------------------------------------- | ---------------------------------------------- |
+| `GET`   | `/api/admin/dark-shopping/resale`                        | Listings, supplier balance, and fulfillment    |
+| `POST`  | `/api/admin/dark-shopping/resale/import`                 | Import selected remote products                |
+| `POST`  | `/api/admin/dark-shopping/resale/sync`                   | Refresh supplier prices and stock              |
+| `PATCH` | `/api/admin/dark-shopping/resale/listings/:id`           | Change margin or pause/enable a listing        |
+| `POST`  | `/api/admin/dark-shopping/resale/fulfillments/:id/retry` | Retry a failed or delayed supplier fulfillment |
+
+Product-list query names follow the TypeScript-friendly forms `categoryId`,
+`groupId`, `onlyInStock`, `onlyExclusive`, `deliveryType`, `minimumOrderFrom`,
+`minimumOrderTo`, `priceFrom`, `priceTo`, `ratingFrom`, `ratingTo`,
+`quantityFrom`, `quantityTo`, `page`, and `perPage`. `ids` accepts either a
+comma-separated list or repeated values. `filterAttributes` accepts a JSON
+array such as
+`[{"id":3,"value":2,"filterType":"include"}]`. Product searches are sent to
+the provider as POST JSON, matching the official client and avoiding long-URL
+failures.
+
+Creating an order spends the balance of the configured Dark Shopping account.
+It therefore requires a caller-supplied `idempotenceId` (maximum 255 characters):
+
+```json
+{
+  "productId": 1542,
+  "quantity": 10,
+  "promoCode": "OPTIONAL",
+  "sendEmailCopy": false,
+  "idempotenceId": "ysello-order-item-unique-id"
+}
+```
+
+### Selecting products for resale
+
+After deploying the migration, sign in as an administrator and open **Admin →
+Marketplace → Dark Shopping resale**. The workflow is:
+
+1. Select a Dark Shopping category or search by product name.
+2. Review supplier cost, automatic/manual delivery, minimum order, stock, and
+   quality information.
+3. Select only the products you want to resell.
+4. Choose the matching Ysello category.
+5. Leave the margin at `15` or enter a different whole percentage.
+6. Import as drafts for review, or explicitly select immediate publication.
+
+Draft imports keep their supplier mapping disabled until an administrator
+approves the product in **Product approvals**. Pausing a live resale listing
+hides it from checkout without deleting its mapping or fulfillment history.
+
+The RUB retail price is calculated as
+`ceil(supplier price × (100 + margin) / 100)`. The 15% margin is therefore
+applied before currency conversion and rounded upward so fractional kopecks do
+not reduce it. USD and CNY prices use Ysello's existing storefront rates.
+The margin is a supplier-cost markup and is separate from the marketplace's
+configured commission accounting.
+
+Set `DARK_SHOPPING_RUB_PER_USD` to the conservative RUB value received for one
+USD after your real conversion costs. Review this deployment value regularly;
+using an optimistic or stale rate can reduce the realized margin even though
+the displayed RUB markup remains 15%.
+
+Selected listing prices and stock synchronize every 15 minutes and again at
+the start of every checkout. Automatic supplier products are purchased only
+after Ysello confirms buyer payment. Checkout also verifies that the configured
+Dark Shopping account has enough RUB balance for the supplier cost. Each
+purchase uses the Ysello order-item ID
+as Dark Shopping's `idempotence_id`, preventing duplicate supplier orders when
+callbacks or retries overlap. Pending supplier orders are polled in the
+background, and completed delivery files are downloaded only from the official
+`dark.shopping/storage/` host and stored in the buyer's protected order
+delivery.
+
+If supplier price increases after checkout enough to reduce the configured
+margin, automatic purchasing stops and the fulfillment is marked for admin
+review instead of selling at a loss. The admin supplier workspace includes
+listing synchronization, pause/enable controls, per-listing margin changes,
+supplier balance, fulfillment status, and retry actions.
+
+Dark Shopping contains categories that conflict with Ysello's
+prohibited-products policy. The integration never mirrors the whole catalog,
+rejects manual-delivery supplier products, and requires staff to review
+legality, licensing, delivery, and policy compatibility before publication.
+
+Apply the resale migration before using the workspace:
+
+```sh
+npm run prisma:migrate
+```
+
 ## Wallet, top-ups, and seller settlement
 
 The marketplace wallet keeps buyer funds and seller proceeds in separate

@@ -59,6 +59,8 @@ export function SupportWidgetPro() {
   const [typing, setTyping] = useState(false);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [handoffMessage, setHandoffMessage] = useState("");
+  const [guestName, setGuestName] = useState("");
+  const [guestEmail, setGuestEmail] = useState("");
   const [visitorToken] = useState(supportVisitorToken);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const dialogRef = useRef<HTMLDivElement>(null);
@@ -183,6 +185,9 @@ export function SupportWidgetPro() {
             },
           });
         } else {
+          if (!user && (!guestName.trim() || !guestEmail.trim())) {
+            throw new Error("Guest details are required");
+          }
           const result = await apiRequest<{
             session: { id: string; messages: Message[] };
             message: string;
@@ -191,6 +196,9 @@ export function SupportWidgetPro() {
             body: {
               message: text,
               visitorToken: user ? undefined : visitorToken,
+              guestName: user ? undefined : guestName.trim(),
+              guestEmail: user ? undefined : guestEmail.trim(),
+              subject: "Marketplace support request",
             },
           });
           setSessionId(result.session.id);
@@ -208,7 +216,7 @@ export function SupportWidgetPro() {
         setTyping(false);
       }
     },
-    [sessionId, user, visitorToken],
+    [guestEmail, guestName, sessionId, user, visitorToken],
   );
 
   const requestHuman = useCallback(async () => {
@@ -221,6 +229,9 @@ export function SupportWidgetPro() {
           sessionId: sessionId ?? undefined,
           visitorToken: user ? undefined : visitorToken,
           message: "I would like to chat with an administrator.",
+          guestName: user ? undefined : guestName.trim() || "Guest visitor",
+          guestEmail: user ? undefined : guestEmail.trim() || undefined,
+          subject: "Administrator support request",
         },
       });
       setSessionId(result.session.id);
@@ -231,7 +242,7 @@ export function SupportWidgetPro() {
     } catch {
       setHandoffMessage("Admin handoff could not start. Please try again.");
     }
-  }, [sessionId, user, visitorToken]);
+  }, [guestEmail, guestName, sessionId, user, visitorToken]);
 
   const handleQuickAction = useCallback(
     (action: string) => {
@@ -248,23 +259,6 @@ export function SupportWidgetPro() {
         className="support-widget-fab support-fab-polished"
         onClick={() => setOpen(true)}
         aria-label="Open support chat"
-        style={{
-          position: "fixed",
-          bottom: "24px",
-          right: "24px",
-          width: "56px",
-          height: "56px",
-          borderRadius: "50%",
-          background: "#7c3aed",
-          color: "white",
-          border: "none",
-          cursor: "pointer",
-          boxShadow: "0 4px 12px rgba(124, 58, 237, 0.4)",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          zIndex: 9999,
-        }}
       >
         <MessageCircle size={24} aria-hidden="true" />
         <span
@@ -291,21 +285,6 @@ export function SupportWidgetPro() {
       aria-modal="true"
       aria-labelledby="support-dialog-title"
       onKeyDown={handleDialogKeyDown}
-      style={{
-        position: "fixed",
-        bottom: "12px",
-        right: "12px",
-        width: "min(380px, calc(100vw - 24px))",
-        maxHeight: "min(600px, calc(100dvh - 24px))",
-        background: "#0A0A0B",
-        borderRadius: "16px",
-        boxShadow: "0 8px 32px rgba(0,0,0,0.4)",
-        display: "flex",
-        flexDirection: "column",
-        zIndex: 9999,
-        border: "1px solid #27272a",
-        overflow: "hidden",
-      }}
     >
       <div
         style={{
@@ -363,7 +342,10 @@ export function SupportWidgetPro() {
           type="button"
           className="admin-handoff-button"
           onClick={() => void requestHuman()}
-          disabled={Boolean(sessionId)}
+          disabled={
+            Boolean(sessionId) ||
+            (!user && (!guestName.trim() || !guestEmail.trim()))
+          }
         >
           <UserRoundCheck size={16} aria-hidden="true" />{" "}
           {sessionId ? "Admin chat active" : "Start admin chat"}
@@ -401,6 +383,29 @@ export function SupportWidgetPro() {
             here to see the reply.
           </div>
         )}
+        {!user && !sessionId ? (
+          <div className="support-guest-fields">
+            <label>
+              <span>Your name</span>
+              <input
+                value={guestName}
+                onChange={(event) => setGuestName(event.target.value)}
+                placeholder="Name"
+                autoComplete="name"
+              />
+            </label>
+            <label>
+              <span>Email for replies</span>
+              <input
+                value={guestEmail}
+                onChange={(event) => setGuestEmail(event.target.value)}
+                placeholder="you@example.com"
+                type="email"
+                autoComplete="email"
+              />
+            </label>
+          </div>
+        ) : null}
         {messages.map((msg) => (
           <div
             key={msg.id}
@@ -521,7 +526,10 @@ export function SupportWidgetPro() {
         <button
           type="submit"
           aria-label="Send support message"
-          disabled={!input.trim()}
+          disabled={
+            !input.trim() ||
+            (!user && !sessionId && (!guestName.trim() || !guestEmail.trim()))
+          }
           style={{
             background: "#7c3aed",
             border: "none",

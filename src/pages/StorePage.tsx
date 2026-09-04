@@ -9,6 +9,7 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import { useCart } from "../commerce/CartContext";
 import { MarketFooter, MarketHeader } from "../components/MarketHeader";
 import { Seo } from "../components/Seo";
+import { SellerContactDialog } from "../components/SellerContactDialog";
 import { YselloReferenceProductCard } from "../components/YselloReferenceLayout";
 import { useMarketplaceStore } from "../commerce/useMarketplace";
 import { NotFoundPage } from "./NotFoundPage";
@@ -47,9 +48,11 @@ export function StorePage() {
       />
       <MarketHeader />
       <section
-        className="store-banner has-store-banner"
+        className={`store-banner has-store-banner professional-store-hero ${store.bannerUrl ? "has-live-banner" : "no-live-banner"}`}
         style={{
-          backgroundImage: `linear-gradient(100deg, rgba(8,12,26,.96), rgba(31,38,102,.72)), url(${store.bannerUrl || "/marketplace-assets/seller-growth.webp"})`,
+          backgroundImage: store.bannerUrl
+            ? `linear-gradient(100deg, rgba(8,12,26,.94), rgba(31,38,102,.62)), url(${store.bannerUrl})`
+            : undefined,
         }}
       >
         <div className="store-monogram store-logo">
@@ -76,9 +79,7 @@ export function StorePage() {
             </span>
           </div>
         </div>
-        <Link to="/support">
-          <MessageCircle /> Contact seller
-        </Link>
+        <SellerContactDialog storeSlug={slug} storeName={store.name} />
       </section>
       <section className="store-body">
         <div>
@@ -90,7 +91,7 @@ export function StorePage() {
             <span>{products.length} live listings</span>
           </div>
           {products.length ? (
-            <div className="store-products store-products-premium store-product-icon-grid">
+            <div className="store-products store-products-premium store-product-icon-grid store-live-product-grid">
               {products.map((product) => (
                 <YselloReferenceProductCard
                   key={product.id}

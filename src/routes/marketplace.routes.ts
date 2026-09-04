@@ -2,7 +2,8 @@ import { Router } from "express";
 import { ProductStatus } from "@prisma/client";
 import { z } from "zod";
 import { prisma } from "../lib/prisma.js";
-import { asyncHandler } from "../middleware/error-handler.js";
+import { requireAuth } from "../middleware/auth.js";
+import { ApiError, asyncHandler } from "../middleware/error-handler.js";
 import { equivalentCategorySlugs } from "../data/categoryAliases.js";
 import { marketplaceTaxonomySlugs } from "../data/marketplaceTaxonomy.js";
 
@@ -102,6 +103,12 @@ marketplaceRouter.get(
           { type: "SERVICE" },
           { files: { some: { isActive: true } } },
           { inventoryItems: { some: { isActive: true, orderItemId: null } } },
+          {
+            stockQuantity: { gt: 0 },
+            darkShoppingListing: {
+              is: { isEnabled: true },
+            },
+          },
         ],
       });
     }
@@ -320,6 +327,135 @@ marketplaceRouter.get(
       },
       products,
     });
+  }),
+);
+
+marketplaceRouter.get(
+  "/seller-inquiries",
+  requireAuth,
+  asyncHandler(async (req, res) => {
+    const sessions = await prisma.chatSession.findMany({
+      where: { userId: req.auth!.id, kind: "SELLER_INQUIRY" },
+      include: {
+        recipient: {
+          select: {
+            sellerProfile: { select: { storeName: true, slug: true } },
+          },
+        },
+        messages: { orderBy: { createdAt: "asc" } },
+      },
+      orderBy: { lastMessageAt: "desc" },
+      take: 50,
+    });
+    res.json({ sessions });
+  }),
+);
+
+marketplaceRouter.post(
+  "/stores/:slug/contact",
+  requireAuth,
+  asyncHandler(async (req, res) => {
+    const slug = z.string().min(1).max(160).parse(req.params.slug);
+    const input = z
+      .object({
+        message: z.string().trim().min(10).max(4000),
+        subject: z.string().trim().min(3).max(120),
+        productSlug: z.string().trim().min(1).max(160).optional(),
+        contextLabel: z.string().trim().min(1).max(200).optional(),
+      })
+      .parse(req.body);
+    const store = await prisma.sellerProfile.findFirst({
+      where: {
+        slug,
+        isVerified: true,
+        isSuspended: false,
+        user: { isSuspended: false },
+      },
+      select: { userId: true, storeName: true },
+    });
+    if (!store) throw new ApiError(404, "Store not found.", "STORE_NOT_FOUND");
+    if (store.userId === req.auth!.id)
+      throw new ApiError(
+        400,
+        "You cannot contact your own store.",
+        "OWN_STORE",
+      );
+
+    const contextUrl = input.productSlug
+      ? `/product/${input.productSlug}`
+      : `/stores/${slug}`;
+    let session = await prisma.chatSession.findFirst({
+      where: {
+        userId: req.auth!.id,
+        recipientId: store.userId,
+        kind: "SELLER_INQUIRY",
+        contextUrl,
+        resolved: false,
+      },
+    });
+    if (!session) {
+      session = await prisma.chatSession.create({
+        data: {
+          userId: req.auth!.id,
+          recipientId: store.userId,
+          kind: "SELLER_INQUIRY",
+          subject: input.subject,
+          contextLabel: input.contextLabel ?? store.storeName,
+          contextUrl,
+          status: "OPEN",
+        },
+      });
+    }
+    await prisma.$transaction([
+      prisma.chatMessage.create({
+        data: {
+          sessionId: session.id,
+          authorId: req.auth!.id,
+          role: "buyer",
+          body: input.message,
+        },
+      }),
+      prisma.chatSession.update({
+        where: { id: session.id },
+        data: { status: "OPEN", resolved: false, lastMessageAt: new Date() },
+      }),
+    ]);
+    const updated = await prisma.chatSession.findUniqueOrThrow({
+      where: { id: session.id },
+      include: { messages: { orderBy: { createdAt: "asc" } } },
+    });
+    res.status(201).json({
+      session: updated,
+      message: "Your message was sent to the seller.",
+    });
+  }),
+);
+
+marketplaceRouter.post(
+  "/seller-inquiries/:id/messages",
+  requireAuth,
+  asyncHandler(async (req, res) => {
+    const id = z.string().uuid().parse(req.params.id);
+    const { body } = z
+      .object({ body: z.string().trim().min(1).max(4000) })
+      .parse(req.body);
+    const session = await prisma.chatSession.findFirst({
+      where: { id, kind: "SELLER_INQUIRY", userId: req.auth!.id },
+    });
+    if (!session)
+      throw new ApiError(
+        404,
+        "Seller conversation not found.",
+        "INQUIRY_NOT_FOUND",
+      );
+    const message = await prisma.chatMessage.create({
+      data: { sessionId: id, authorId: req.auth!.id, role: "buyer", body },
+    });
+    await prisma.chatSession.update({
+      where: { id },
+      data: { status: "OPEN", resolved: false, lastMessageAt: new Date() },
+    });
+    res.status(201).json({ message });
   }),
 );
 

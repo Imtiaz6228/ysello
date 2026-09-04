@@ -218,6 +218,7 @@ const walletItemsSchema = z
     z.object({
       productId: z.string().uuid(),
       quantity: z.number().int().min(1).max(20).default(1),
+      expectedUnitPriceCents: z.number().int().min(1).optional(),
     }),
   )
   .min(1)
@@ -230,7 +231,7 @@ walletRouter.post(
     const result = await createWalletCheckout(req.auth!.id, input.items);
     res.status(201).json({
       message:
-        "Purchase completed with wallet balance. Downloads are ready in your dashboard.",
+        "Purchase completed with wallet balance. Ready downloads appear in your dashboard; supplier-fulfilled items may remain processing briefly.",
       ...result,
     });
   }),
@@ -243,15 +244,20 @@ walletRouter.post(
       .object({
         productId: z.string().uuid(),
         quantity: z.number().int().min(1).max(20).default(1),
+        expectedUnitPriceCents: z.number().int().min(1).optional(),
       })
       .parse(req.body);
 
     const result = await createWalletCheckout(req.auth!.id, [
-      { productId: input.productId, quantity: input.quantity },
+      {
+        productId: input.productId,
+        quantity: input.quantity,
+        expectedUnitPriceCents: input.expectedUnitPriceCents,
+      },
     ]);
     res.status(201).json({
       message:
-        "Purchase completed with wallet balance. Downloads are ready in your dashboard.",
+        "Purchase completed with wallet balance. Ready downloads appear in your dashboard; supplier-fulfilled items may remain processing briefly.",
       ...result,
     });
   }),

@@ -29,6 +29,7 @@ import { MarketFooter, MarketHeader } from "../components/MarketHeader";
 import {
   MarketplaceCategoryIcon,
   MarketplacePlatformIcon,
+  marketplacePlatformBrandSlug,
 } from "../components/MarketplaceBrandIcon";
 import { Seo } from "../components/Seo";
 import { YselloReferenceProductCard } from "../components/YselloReferenceLayout";
@@ -282,36 +283,6 @@ function ProductRail({
   );
 }
 
-function storeFallbacks(products: CatalogProduct[]): FeaturedStore[] {
-  const stores = new Map<string, FeaturedStore>();
-  products.forEach((product) => {
-    const slug =
-      product.sellerSlug ||
-      product.seller
-        .toLowerCase()
-        .replace(/[^a-z0-9]+/g, "-")
-        .replace(/^-|-$/g, "");
-    if (!slug || stores.has(slug)) return;
-    stores.set(slug, {
-      name: product.seller,
-      slug,
-      about:
-        "Verified digital products with clear delivery terms and order-linked buyer support.",
-      isOfficial: product.isOfficial === true,
-      rating: product.rating,
-      sales: salesNumber(product),
-      joined: "2026",
-      mark: product.seller
-        .split(/\s+/)
-        .map((word) => word[0])
-        .join("")
-        .slice(0, 2)
-        .toUpperCase(),
-    });
-  });
-  return [...stores.values()];
-}
-
 function TopStoreCard({ store }: { store: FeaturedStore }) {
   const isOfficial =
     store.isOfficial || ["Official", "Ysello Official"].includes(store.name);
@@ -322,7 +293,9 @@ function TopStoreCard({ store }: { store: FeaturedStore }) {
         to={`/stores/${store.slug}`}
         aria-label={`Visit ${store.name}`}
         style={{
-          backgroundImage: `linear-gradient(135deg, rgba(7, 12, 28, .08), rgba(7, 12, 28, .48)), url(${store.bannerUrl || "/marketplace-assets/seller-growth.webp"})`,
+          backgroundImage: store.bannerUrl
+            ? `linear-gradient(135deg, rgba(7, 12, 28, .08), rgba(7, 12, 28, .48)), url(${store.bannerUrl})`
+            : undefined,
         }}
       >
         <span>
@@ -477,15 +450,7 @@ export function MarketplaceHomePage() {
     (total, product) => total + product.priceCents,
     0,
   );
-  const featuredStores = useMemo(() => {
-    const merged = new Map<string, FeaturedStore>();
-    [...remoteStores, ...storeFallbacks(products)].forEach((store) => {
-      if (merged.size < 12 && !merged.has(store.slug)) {
-        merged.set(store.slug, store);
-      }
-    });
-    return [...merged.values()];
-  }, [products, remoteStores]);
+  const featuredStores = remoteStores.slice(0, 12);
 
   function buy(product: CatalogProduct) {
     add(product);
@@ -660,24 +625,31 @@ export function MarketplaceHomePage() {
           action="View all accounts"
         />
         <div className="social-account-platform-grid">
-          {socialAccountPlatforms.map((platform) => (
-            <Link
-              key={platform.slug}
-              to={categoryPath(platform.slug, categories)}
-            >
-              <span className={`platform-brand-icon brand-${platform.slug}`}>
-                <MarketplacePlatformIcon slug={platform.slug} />
-              </span>
-              <div>
-                <strong>{platform.name}</strong>
-                <small>Accounts</small>
-                <p>
-                  {platform.accountTypes.map((type) => type.name).join(" · ")}
-                </p>
-              </div>
-              <ArrowRight aria-hidden="true" />
-            </Link>
-          ))}
+          {socialAccountPlatforms.map((platform) => {
+            const brandSlug = marketplacePlatformBrandSlug(platform.slug);
+
+            return (
+              <Link
+                key={platform.slug}
+                to={categoryPath(platform.slug, categories)}
+              >
+                <span className={`platform-brand-icon brand-${brandSlug}`}>
+                  <MarketplacePlatformIcon slug={brandSlug} />
+                </span>
+                <div>
+                  <strong>{platform.name}</strong>
+                  <small>{platform.accountTypes.length} account types</small>
+                  <p>
+                    {platform.accountTypes
+                      .slice(0, 3)
+                      .map((type) => type.name)
+                      .join(" · ")}
+                  </p>
+                </div>
+                <ArrowRight aria-hidden="true" />
+              </Link>
+            );
+          })}
         </div>
       </section>
 
@@ -735,9 +707,18 @@ export function MarketplaceHomePage() {
           action="Browse marketplace"
         />
         <div className="reference-store-grid">
-          {featuredStores.slice(0, 12).map((store) => (
-            <TopStoreCard key={store.slug} store={store} />
-          ))}
+          {featuredStores.length ? (
+            featuredStores.slice(0, 12).map((store) => (
+              <TopStoreCard key={store.slug} store={store} />
+            ))
+          ) : (
+            <div className="g2-empty-rail reference-store-empty">
+              <Store aria-hidden="true" />
+              <strong>No verified stores are live yet.</strong>
+              <span>Approved seller storefronts will appear here automatically.</span>
+              <Link to="/seller/apply">Start selling</Link>
+            </div>
+          )}
         </div>
       </section>
 

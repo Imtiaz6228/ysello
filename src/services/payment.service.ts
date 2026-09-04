@@ -15,8 +15,17 @@ import {
   createSellerEarningsForOrderItems,
   reverseSellerEarningsForOrder,
 } from "./finance.service.js";
+import {
+  assertDarkShoppingBalance,
+  fulfillDarkShoppingOrder,
+  refreshDarkShoppingProductsForCheckout,
+} from "./dark-shopping-resale.service.js";
 
-export type CheckoutItemInput = { productId: string; quantity: number };
+export type CheckoutItemInput = {
+  productId: string;
+  quantity: number;
+  expectedUnitPriceCents?: number;
+};
 
 type ProviderResult = {
   redirectUrl?: string;
@@ -282,12 +291,26 @@ async function checkoutBuyer(buyerId: string) {
 
 async function checkoutProducts(items: CheckoutItemInput[]) {
   const normalized = new Map<string, number>();
-  for (const item of items)
+  const expectedUnitPrices = new Map<string, number>();
+  for (const item of items) {
     normalized.set(
       item.productId,
       (normalized.get(item.productId) ?? 0) + item.quantity,
     );
+    if (item.expectedUnitPriceCents !== undefined) {
+      const previous = expectedUnitPrices.get(item.productId);
+      if (previous !== undefined && previous !== item.expectedUnitPriceCents) {
+        throw new ApiError(
+          400,
+          "Conflicting expected prices were submitted for the same product.",
+          "CHECKOUT_PRICE_INVALID",
+        );
+      }
+      expectedUnitPrices.set(item.productId, item.expectedUnitPriceCents);
+    }
+  }
   const productIds = [...normalized.keys()];
+  await refreshDarkShoppingProductsForCheckout(productIds);
   const products = await prisma.product.findMany({
     where: {
       id: { in: productIds },
@@ -302,6 +325,15 @@ async function checkoutProducts(items: CheckoutItemInput[]) {
       inventoryItems: {
         where: { isActive: true, orderItemId: null },
         select: { id: true },
+      },
+      darkShoppingListing: {
+        select: {
+          id: true,
+          isEnabled: true,
+          remoteQuantity: true,
+          remoteMinimumOrder: true,
+          supplierPriceRubCents: true,
+        },
       },
     },
   });
@@ -318,6 +350,51 @@ async function checkoutProducts(items: CheckoutItemInput[]) {
   }
   for (const product of products) {
     const requestedQuantity = normalized.get(product.id) ?? 1;
+    if (requestedQuantity < product.minimumOrder) {
+      throw new ApiError(
+        409,
+        `${product.name} requires a minimum quantity of ${product.minimumOrder}.`,
+        "PRODUCT_MINIMUM_ORDER",
+      );
+    }
+    if (
+      product.maximumOrder !== null &&
+      requestedQuantity > product.maximumOrder
+    ) {
+      throw new ApiError(
+        409,
+        `${product.name} allows a maximum quantity of ${product.maximumOrder}.`,
+        "PRODUCT_MAXIMUM_ORDER",
+      );
+    }
+    if (product.darkShoppingListing) {
+      const expectedPrice = expectedUnitPrices.get(product.id);
+      if (expectedPrice === undefined || expectedPrice !== product.priceCents) {
+        throw new ApiError(
+          409,
+          `${product.name}'s supplier price changed. Review the updated price before paying.`,
+          "PRODUCT_PRICE_CHANGED",
+          {
+            productId: product.id,
+            currentUnitPriceCents: product.priceCents,
+            currentPriceCnyCents: product.priceCnyCents,
+            currentPriceRubCents: product.priceRubCents,
+          },
+        );
+      }
+      if (
+        !product.darkShoppingListing.isEnabled ||
+        product.darkShoppingListing.remoteQuantity < requestedQuantity ||
+        requestedQuantity < product.darkShoppingListing.remoteMinimumOrder
+      ) {
+        throw new ApiError(
+          409,
+          `${product.name} is no longer available in the requested quantity from the supplier.`,
+          "PRODUCT_OUT_OF_STOCK",
+        );
+      }
+      continue;
+    }
     const isLineInventoryProduct =
       product.type === ProductType.DOWNLOAD && product.files.length === 0;
     if (
@@ -331,6 +408,14 @@ async function checkoutProducts(items: CheckoutItemInput[]) {
       );
     }
   }
+  const supplierCostRubCents = products.reduce(
+    (total, product) =>
+      total +
+      (product.darkShoppingListing?.supplierPriceRubCents ?? 0) *
+        (normalized.get(product.id) ?? 1),
+    0,
+  );
+  await assertDarkShoppingBalance(supplierCostRubCents);
   const subtotalCents = products.reduce(
     (total, product) =>
       total + product.priceCents * (normalized.get(product.id) ?? 1),
@@ -358,6 +443,13 @@ export async function createCheckout(
 
   const buyer = await checkoutBuyer(buyerId);
   const { normalized, products, subtotalCents } = await checkoutProducts(items);
+  if (couponCode && products.some((product) => product.darkShoppingListing)) {
+    throw new ApiError(
+      400,
+      "Coupons cannot be applied to supplier-fulfilled products because their configured resale margin must be protected.",
+      "SUPPLIER_COUPON_NOT_ALLOWED",
+    );
+  }
   const now = new Date();
   const coupon = couponCode
     ? await prisma.coupon.findFirst({
@@ -702,6 +794,13 @@ export async function completePayment(orderId: string, approvedById?: string) {
                 where: { isActive: true },
                 select: { id: true, displayName: true },
               },
+              darkShoppingListing: {
+                select: {
+                  id: true,
+                  supplierPriceRubCents: true,
+                  isEnabled: true,
+                },
+              },
             },
           },
         },
@@ -715,7 +814,9 @@ export async function completePayment(orderId: string, approvedById?: string) {
   const rawLinks: Array<{ name: string; token: string }> = [];
   const paidAt = new Date();
   const autoDeliver = order.items.every(
-    (item) => item.product.type === ProductType.DOWNLOAD,
+    (item) =>
+      item.product.type === ProductType.DOWNLOAD &&
+      !item.product.darkShoppingListing,
   );
 
   const completedNow = await prisma.$transaction(async (tx) => {
@@ -754,7 +855,11 @@ export async function completePayment(orderId: string, approvedById?: string) {
       },
     });
     const automaticItemIds = order.items
-      .filter((item) => item.product.type === ProductType.DOWNLOAD)
+      .filter(
+        (item) =>
+          item.product.type === ProductType.DOWNLOAD &&
+          !item.product.darkShoppingListing,
+      )
       .map((item) => item.id);
     if (automaticItemIds.length) {
       await tx.orderItem.updateMany({
@@ -786,7 +891,20 @@ export async function completePayment(orderId: string, approvedById?: string) {
         where: { userId: item.sellerId },
         data: { totalSales: { increment: item.quantity } },
       });
-      if (item.product.type === ProductType.DOWNLOAD) {
+      if (item.product.darkShoppingListing) {
+        await tx.darkShoppingFulfillment.upsert({
+          where: { orderItemId: item.id },
+          create: {
+            listingId: item.product.darkShoppingListing.id,
+            orderItemId: item.id,
+            idempotenceId: `ysello-${item.id}`,
+            supplierUnitPriceRubCents:
+              item.product.darkShoppingListing.supplierPriceRubCents,
+            quantity: item.quantity,
+          },
+          update: {},
+        });
+      } else if (item.product.type === ProductType.DOWNLOAD) {
         for (const file of item.product.files) {
           const token = randomToken(40);
           await tx.downloadGrant.create({
@@ -847,6 +965,15 @@ export async function completePayment(orderId: string, approvedById?: string) {
     }
     return true;
   });
+
+  if (completedNow) {
+    await fulfillDarkShoppingOrder(orderId).catch((error) => {
+      console.error(
+        `Order ${order.orderNumber} is paid, but supplier fulfillment is still pending:`,
+        error instanceof Error ? error.message : error,
+      );
+    });
+  }
 
   if (completedNow) {
     try {

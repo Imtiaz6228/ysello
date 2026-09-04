@@ -92,6 +92,7 @@ export function CartPage() {
                 <div className="quantity-control">
                   <button
                     aria-label={`Decrease ${product.title} quantity`}
+                    disabled={quantity <= (product.minimumOrder ?? 1)}
                     onClick={() => setQuantity(product.id, quantity - 1)}
                   >
                     <Minus />
@@ -99,6 +100,16 @@ export function CartPage() {
                   <span aria-live="polite">{quantity}</span>
                   <button
                     aria-label={`Increase ${product.title} quantity`}
+                    disabled={
+                      quantity >=
+                      Math.min(
+                        20,
+                        product.maximumOrder ?? 20,
+                        product.type === "SERVICE"
+                          ? 20
+                          : (product.stockCount ?? 0),
+                      )
+                    }
                     onClick={() => setQuantity(product.id, quantity + 1)}
                   >
                     <Plus />

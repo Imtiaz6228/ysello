@@ -24,6 +24,7 @@ import { marketplaceRouter } from "./routes/marketplace.routes.js";
 import { commerceRouter } from "./routes/commerce.routes.js";
 import { walletRouter } from "./routes/wallet.routes.js";
 import { nexusRouter } from "./routes/nexus.routes.js";
+import { darkShoppingRouter } from "./routes/dark-shopping.routes.js";
 import { prisma } from "./lib/prisma.js";
 import { blogPosts } from "./content/blog.js";
 import { publicPages, siteContentLastModified } from "./content/publicPages.js";
@@ -408,6 +409,7 @@ app.use("/api/marketplace", marketplaceRouter);
 app.use("/api/commerce", commerceRouter);
 app.use("/api/wallet", walletRouter);
 app.use("/api/seller", sellerRouter);
+app.use("/api/admin/dark-shopping", darkShoppingRouter);
 app.use("/api/admin", adminRouter);
 app.use("/api/nexus", nexusRouter);
 
@@ -747,6 +749,12 @@ if (isProduction && fs.existsSync(frontendIndex)) {
           : product.priceCents;
       const inStock =
         product.type === "SERVICE" ||
+        (typeof product.productAttributes === "object" &&
+          product.productAttributes !== null &&
+          !Array.isArray(product.productAttributes) &&
+          (product.productAttributes as Record<string, unknown>)
+            .supplierFulfilled === true &&
+          product.stockQuantity > 0) ||
         product._count.files > 0 ||
         product._count.inventoryItems > 0;
       const canonicalPath = productSeoPath(product);

@@ -107,6 +107,27 @@ const booleanFromEnv = z.preprocess((value) => {
   return value;
 }, z.boolean());
 
+const darkShoppingApiBaseUrl = z.preprocess(
+  trimmedStringToUndefined,
+  z
+    .string()
+    .url()
+    .refine((value) => {
+      const url = new URL(value);
+      return (
+        url.protocol === "https:" &&
+        url.hostname === "dark.shopping" &&
+        !url.port &&
+        !url.username &&
+        !url.password &&
+        url.pathname.replace(/\/+$/, "") === "/api/v1" &&
+        !url.search &&
+        !url.hash
+      );
+    }, "must be the official https://dark.shopping/api/v1 endpoint")
+    .default("https://dark.shopping/api/v1"),
+);
+
 const envSchema = z.object({
   NODE_ENV: z
     .enum(["development", "test", "production"])
@@ -193,6 +214,28 @@ const envSchema = z.object({
     .max(240)
     .default(30),
   CRYPTO_WEBHOOK_SECRET: z.preprocess(emptyToUndefined, z.string().optional()),
+  DARK_SHOPPING_API_KEY: z.preprocess(
+    trimmedStringToUndefined,
+    z.string().min(20).max(255).optional(),
+  ),
+  DARK_SHOPPING_API_BASE_URL: darkShoppingApiBaseUrl,
+  DARK_SHOPPING_TIMEOUT_MS: z.coerce
+    .number()
+    .int()
+    .min(1_000)
+    .max(30_000)
+    .default(15_000),
+  DARK_SHOPPING_MARGIN_PERCENT: z.coerce
+    .number()
+    .int()
+    .min(0)
+    .max(500)
+    .default(15),
+  DARK_SHOPPING_RUB_PER_USD: z.coerce
+    .number()
+    .positive()
+    .max(10_000)
+    .default(91.5),
   REDIS_URL: z.preprocess(emptyToUndefined, z.string().optional()),
   TOPUP_TRC20_ADDRESS: z.preprocess(
     emptyToUndefined,

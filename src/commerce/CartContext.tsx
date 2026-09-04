@@ -14,9 +14,17 @@ type CartContextValue = {
   items: CartItem[];
   count: number;
   subtotalCents: number;
-  add: (product: CatalogProduct) => void;
+  add: (product: CatalogProduct, quantity?: number) => void;
   remove: (productId: string) => void;
   setQuantity: (productId: string, quantity: number) => void;
+  updateProductPrices: (
+    productId: string,
+    prices: {
+      priceCents: number;
+      priceCnyCents?: number;
+      priceRubCents?: number;
+    },
+  ) => void;
   clear: () => void;
 };
 
@@ -44,18 +52,40 @@ export function CartProvider({ children }: { children: ReactNode }) {
         (sum, item) => sum + item.product.priceCents * item.quantity,
         0,
       ),
-      add(product) {
+      add(product, quantity = product.minimumOrder ?? 1) {
         setItems((current) => {
           const existing = current.find(
             (item) => item.product.id === product.id,
           );
+          const minimum = Math.max(1, product.minimumOrder ?? 1);
+          const maximum = Math.max(
+            minimum,
+            Math.min(
+              20,
+              product.maximumOrder ?? 20,
+              product.type === "SERVICE" ? 20 : (product.stockCount ?? 0),
+            ),
+          );
           return existing
             ? current.map((item) =>
                 item.product.id === product.id
-                  ? { ...item, quantity: Math.min(20, item.quantity + 1) }
+                  ? {
+                      ...item,
+                      product,
+                      quantity: Math.max(
+                        minimum,
+                        Math.min(maximum, item.quantity + quantity),
+                      ),
+                    }
                   : item,
               )
-            : [...current, { product, quantity: 1 }];
+            : [
+                ...current,
+                {
+                  product,
+                  quantity: Math.max(minimum, Math.min(maximum, quantity)),
+                },
+              ];
         });
       },
       remove(productId) {
@@ -67,7 +97,29 @@ export function CartProvider({ children }: { children: ReactNode }) {
         setItems((current) =>
           current.map((item) =>
             item.product.id === productId
-              ? { ...item, quantity: Math.max(1, Math.min(20, quantity)) }
+              ? {
+                  ...item,
+                  quantity: Math.max(
+                    item.product.minimumOrder ?? 1,
+                    Math.min(
+                      20,
+                      item.product.maximumOrder ?? 20,
+                      item.product.type === "SERVICE"
+                        ? 20
+                        : (item.product.stockCount ?? 0),
+                      quantity,
+                    ),
+                  ),
+                }
+              : item,
+          ),
+        );
+      },
+      updateProductPrices(productId, prices) {
+        setItems((current) =>
+          current.map((item) =>
+            item.product.id === productId
+              ? { ...item, product: { ...item.product, ...prices } }
               : item,
           ),
         );

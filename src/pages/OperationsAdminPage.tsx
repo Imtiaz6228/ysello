@@ -72,6 +72,7 @@ type Tab =
   | "overview"
   | "sellers"
   | "products"
+  | "suppliers"
   | "users"
   | "orders"
   | "payments"
@@ -168,6 +169,76 @@ type Product = {
     username: string;
     sellerProfile?: { storeName: string; isSuspended: boolean } | null;
   };
+};
+
+type DarkShoppingCategory = {
+  id: number;
+  name: string;
+  icon?: string;
+};
+
+type DarkShoppingProduct = {
+  id: number;
+  name: string;
+  miniature?: string;
+  description: string;
+  price: number;
+  minimum_order: number;
+  quantity: number;
+  is_manual_order_delivery: 0 | 1 | boolean;
+  category: DarkShoppingCategory;
+  group?: { id: number; name: string };
+  rating?: number | string | null;
+  quality_percent?: number | null;
+};
+
+type DarkShoppingListing = {
+  id: string;
+  remoteProductId: number;
+  supplierPriceRubCents: number;
+  marginPercent: number;
+  remoteQuantity: number;
+  remoteMinimumOrder: number;
+  isEnabled: boolean;
+  lastSyncedAt: string;
+  lastError?: string | null;
+  product: {
+    id: string;
+    name: string;
+    slug: string;
+    status: string;
+    priceUsdCents: number;
+    priceRubCents: number;
+    stockQuantity: number;
+    category: { id: string; name: string; slug: string };
+  };
+};
+
+type DarkShoppingFulfillment = {
+  id: string;
+  remoteOrderId?: number | null;
+  status: string;
+  supplierUnitPriceRubCents: number;
+  quantity: number;
+  attempts: number;
+  lastError?: string | null;
+  lastCheckedAt?: string | null;
+  fulfilledAt?: string | null;
+  orderItem: {
+    productName: string;
+    order: { id: string; orderNumber: string };
+  };
+};
+
+type DarkShoppingResale = {
+  configuration: {
+    configured: boolean;
+    marginPercent: number;
+    requestsPerSecond: number;
+  };
+  balance: { balance: number; currency: string } | null;
+  listings: DarkShoppingListing[];
+  fulfillments: DarkShoppingFulfillment[];
 };
 
 type Order = {
@@ -361,6 +432,7 @@ const nav: NavItem[] = [
   { id: "overview", label: "Overview", icon: BarChart3 },
   { id: "sellers", label: "Seller applications", icon: Store },
   { id: "products", label: "Product approvals", icon: Boxes },
+  { id: "suppliers", label: "Dark Shopping resale", icon: Database },
   { id: "users", label: "Users & sellers", icon: Users },
   { id: "orders", label: "All orders", icon: PackageCheck },
   { id: "payments", label: "Order approvals", icon: CircleDollarSign },
@@ -381,7 +453,14 @@ const navGroups: Array<{ label: string; icon: LucideIcon; items: Tab[] }> = [
   {
     label: "Marketplace",
     icon: Store,
-    items: ["products", "categories", "sellers", "homepage", "coupons"],
+    items: [
+      "products",
+      "suppliers",
+      "categories",
+      "sellers",
+      "homepage",
+      "coupons",
+    ],
   },
   { label: "Users & access", icon: Users, items: ["users"] },
   {
@@ -411,6 +490,17 @@ const adminPathTabs: Record<string, Tab> = {
 
 function money(cents = 0) {
   return `$${(cents / 100).toFixed(2)}`;
+}
+
+function rubles(cents = 0) {
+  return new Intl.NumberFormat("ru-RU", {
+    style: "currency",
+    currency: "RUB",
+  }).format(cents / 100);
+}
+
+function supplierRetailRubCents(priceRub: number, marginPercent: number) {
+  return Math.ceil((Math.round(priceRub * 100) * (100 + marginPercent)) / 100);
 }
 
 function categoryPath(category: Category, categories: Category[]) {
@@ -544,6 +634,21 @@ export function OperationsAdminPage() {
     productAttributes: {} as Record<string, string>,
     publish: true,
   });
+  const [darkResale, setDarkResale] = useState<DarkShoppingResale | null>(null);
+  const [darkCategories, setDarkCategories] = useState<DarkShoppingCategory[]>(
+    [],
+  );
+  const [darkProducts, setDarkProducts] = useState<DarkShoppingProduct[]>([]);
+  const [darkProductPage, setDarkProductPage] = useState(1);
+  const [darkProductPageCount, setDarkProductPageCount] = useState(1);
+  const [darkCategoryId, setDarkCategoryId] = useState("");
+  const [darkProductSearch, setDarkProductSearch] = useState("");
+  const [darkSelectedProductIds, setDarkSelectedProductIds] = useState<
+    number[]
+  >([]);
+  const [darkTargetCategoryId, setDarkTargetCategoryId] = useState("");
+  const [darkMarginPercent, setDarkMarginPercent] = useState(15);
+  const [darkPublish, setDarkPublish] = useState(false);
 
   function selectTab(next: Tab) {
     setTabState(next);
@@ -606,6 +711,7 @@ export function OperationsAdminPage() {
       overview: "/api/admin/overview",
       sellers: "/api/admin/seller-applications",
       products: "/api/admin/products",
+      suppliers: "/api/admin/dark-shopping/resale",
       users: "/api/admin/users",
       orders: "/api/admin/orders",
       payments: "/api/admin/orders",
@@ -632,6 +738,23 @@ export function OperationsAdminPage() {
           "/api/admin/categories",
         );
         setCategories(categoryData.categories);
+      }
+      if (tab === "suppliers") {
+        const resale = data as unknown as DarkShoppingResale;
+        setDarkResale(resale);
+        setDarkMarginPercent(resale.configuration.marginPercent ?? 15);
+        const categoryData = await apiRequest<{ categories: Category[] }>(
+          "/api/admin/categories",
+        );
+        setCategories(categoryData.categories);
+        if (resale.configuration.configured) {
+          const remoteCategories = await apiRequest<{
+            data: { items: DarkShoppingCategory[] };
+          }>("/api/admin/dark-shopping/categories?perPage=1000");
+          setDarkCategories(remoteCategories.data.items);
+        } else {
+          setDarkCategories([]);
+        }
       }
       if (tab === "users") setUsers(data.users as AdminUser[]);
       if (tab === "orders" || tab === "payments")
@@ -677,6 +800,147 @@ export function OperationsAdminPage() {
     await post(activeChatId, `/api/nexus/admin/chats/${activeChatId}/reply`, {
       body: text,
     });
+  }
+
+  async function searchDarkShoppingProducts(event?: FormEvent, page = 1) {
+    event?.preventDefault();
+    setBusy("dark-shopping-search");
+    setMessage("");
+    try {
+      const query = new URLSearchParams({
+        onlyInStock: "true",
+        deliveryType: "auto",
+        perPage: "100",
+        page: String(page),
+      });
+      if (darkCategoryId) query.set("categoryId", darkCategoryId);
+      if (darkProductSearch.trim()) query.set("name", darkProductSearch.trim());
+      const result = await apiRequest<{
+        data: {
+          items: DarkShoppingProduct[];
+          _meta?: { currentPage: number; pageCount: number };
+        };
+      }>(`/api/admin/dark-shopping/products?${query.toString()}`);
+      setDarkProducts(result.data.items);
+      setDarkProductPage(result.data._meta?.currentPage ?? page);
+      setDarkProductPageCount(result.data._meta?.pageCount ?? 1);
+    } catch (error) {
+      setMessage(
+        error instanceof ApiError
+          ? error.message
+          : "Supplier products could not be loaded.",
+      );
+    } finally {
+      setBusy("");
+    }
+  }
+
+  function toggleDarkProduct(productId: number) {
+    setDarkSelectedProductIds((current) => {
+      if (current.includes(productId)) {
+        return current.filter((id) => id !== productId);
+      }
+      if (current.length >= 100) {
+        setMessage("Select at most 100 supplier products per import.");
+        return current;
+      }
+      return [...current, productId];
+    });
+  }
+
+  async function importDarkProducts() {
+    if (!darkSelectedProductIds.length || !darkTargetCategoryId) {
+      setMessage("Select supplier products and a Ysello category first.");
+      return;
+    }
+    setBusy("dark-shopping-import");
+    setMessage("");
+    try {
+      const result = await apiRequest<{
+        imported: Array<{ remoteProductId: number }>;
+        skipped: Array<{ remoteProductId: number; reason: string }>;
+      }>("/api/admin/dark-shopping/resale/import", {
+        method: "POST",
+        body: {
+          remoteProductIds: darkSelectedProductIds,
+          categoryId: darkTargetCategoryId,
+          marginPercent: darkMarginPercent,
+          publish: darkPublish,
+        },
+      });
+      setDarkSelectedProductIds([]);
+      setMessage(
+        `${result.imported.length} supplier product${result.imported.length === 1 ? "" : "s"} imported${darkPublish ? " and published" : " as draft"}.${result.skipped.length ? ` ${result.skipped.length} skipped: ${result.skipped.map((item) => item.reason).join("; ")}` : ""}`,
+      );
+      await load();
+    } catch (error) {
+      setMessage(
+        error instanceof ApiError
+          ? error.message
+          : "Supplier products could not be imported.",
+      );
+    } finally {
+      setBusy("");
+    }
+  }
+
+  async function syncDarkListings(listingId?: string) {
+    setBusy(listingId ?? "dark-shopping-sync");
+    setMessage("");
+    try {
+      const result = await apiRequest<{ synced: number; unavailable: number }>(
+        "/api/admin/dark-shopping/resale/sync",
+        { method: "POST", body: { listingId } },
+      );
+      setMessage(
+        `${result.synced} supplier listing${result.synced === 1 ? "" : "s"} synchronized.${result.unavailable ? ` ${result.unavailable} unavailable.` : ""}`,
+      );
+      await load();
+    } catch (error) {
+      setMessage(error instanceof ApiError ? error.message : "Sync failed.");
+    } finally {
+      setBusy("");
+    }
+  }
+
+  async function updateDarkListing(
+    listing: DarkShoppingListing,
+    input: { isEnabled?: boolean; marginPercent?: number },
+  ) {
+    setBusy(listing.id);
+    setMessage("");
+    try {
+      await apiRequest(
+        `/api/admin/dark-shopping/resale/listings/${listing.id}`,
+        {
+          method: "PATCH",
+          body: input,
+        },
+      );
+      setMessage("Supplier listing updated.");
+      await load();
+    } catch (error) {
+      setMessage(error instanceof ApiError ? error.message : "Update failed.");
+    } finally {
+      setBusy("");
+    }
+  }
+
+  async function retryDarkFulfillment(fulfillmentId: string) {
+    setBusy(fulfillmentId);
+    setMessage("");
+    try {
+      await apiRequest(
+        `/api/admin/dark-shopping/resale/fulfillments/${fulfillmentId}/retry`,
+        { method: "POST" },
+      );
+      setMessage("Supplier fulfillment retry started.");
+      await load();
+    } catch (error) {
+      setMessage(error instanceof ApiError ? error.message : "Retry failed.");
+    } finally {
+      setBusy("");
+    }
   }
 
   useEffect(() => {
@@ -943,10 +1207,7 @@ export function OperationsAdminPage() {
     setMessage("");
     const data = new FormData();
     data.append("categoryId", adminSelectedCategoryId);
-    data.append(
-      "officialStoreName",
-      adminProductForm.officialStoreName.trim(),
-    );
+    data.append("officialStoreName", adminProductForm.officialStoreName.trim());
     data.append("name", adminProductForm.name);
     data.append("shortDescription", adminProductForm.shortDescription);
     data.append("description", adminProductForm.description);
@@ -1122,10 +1383,11 @@ export function OperationsAdminPage() {
               .map((id) => nav.find((entry) => entry.id === id)!)
               .filter(
                 (item) =>
-                  !menuSearch.trim() ||
-                  item.label
-                    .toLowerCase()
-                    .includes(menuSearch.trim().toLowerCase()),
+                  (item.id !== "suppliers" || canManageCatalog) &&
+                  (!menuSearch.trim() ||
+                    item.label
+                      .toLowerCase()
+                      .includes(menuSearch.trim().toLowerCase())),
               );
             if (!items.length) return null;
             const open =
@@ -1656,6 +1918,451 @@ export function OperationsAdminPage() {
                 <EmptyState
                   label={`No ${productStatusFilter === "ALL" ? "" : productStatusFilter.toLowerCase()} products found.`}
                 />
+              )}
+            </section>
+          </section>
+        )}
+
+        {tab === "suppliers" && (
+          <section className="dark-resale-workspace">
+            <header className="admin-workspace-toolbar dark-resale-heading">
+              <div>
+                <span className="section-index">DARK SHOPPING SUPPLIER</span>
+                <h2>Select products and apply your margin</h2>
+                <p>
+                  Only selected automatic-delivery products are imported. Price
+                  and stock are rechecked before every Ysello checkout.
+                </p>
+              </div>
+              <div className="dark-resale-balance">
+                <small>Supplier balance</small>
+                <strong>
+                  {darkResale?.balance
+                    ? `${darkResale.balance.balance.toFixed(2)} ${darkResale.balance.currency}`
+                    : "Not available"}
+                </strong>
+                <span>
+                  Default margin {darkResale?.configuration.marginPercent ?? 15}
+                  %
+                </span>
+              </div>
+            </header>
+
+            {!darkResale?.configuration.configured ? (
+              <div className="ops-message error">
+                Add DARK_SHOPPING_API_KEY to Railway, rotate the key shared in
+                chat, and redeploy before selecting products.
+              </div>
+            ) : (
+              <>
+                <form
+                  className="dark-resale-controls"
+                  onSubmit={searchDarkShoppingProducts}
+                >
+                  <label>
+                    <span>Dark Shopping category</span>
+                    <select
+                      value={darkCategoryId}
+                      onChange={(event) =>
+                        setDarkCategoryId(event.target.value)
+                      }
+                    >
+                      <option value="">Every supplier category</option>
+                      {darkCategories.map((category) => (
+                        <option key={category.id} value={category.id}>
+                          {category.name}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label>
+                    <span>Find supplier products</span>
+                    <input
+                      value={darkProductSearch}
+                      onChange={(event) =>
+                        setDarkProductSearch(event.target.value)
+                      }
+                      placeholder="Search product name"
+                    />
+                  </label>
+                  <button
+                    className="primary-button"
+                    disabled={busy === "dark-shopping-search"}
+                  >
+                    <Search size={16} />
+                    {busy === "dark-shopping-search"
+                      ? "Loading…"
+                      : "Load products"}
+                  </button>
+                </form>
+
+                {darkProducts.length ? (
+                  <>
+                    <section className="dark-resale-import-bar">
+                      <div>
+                        <strong>
+                          {darkSelectedProductIds.length} selected
+                        </strong>
+                        <small>
+                          Retail price = supplier RUB cost + {darkMarginPercent}
+                          %
+                        </small>
+                      </div>
+                      <label>
+                        <span>Margin %</span>
+                        <input
+                          type="number"
+                          min={0}
+                          max={500}
+                          value={darkMarginPercent}
+                          onChange={(event) =>
+                            setDarkMarginPercent(
+                              Number(event.target.value) || 0,
+                            )
+                          }
+                        />
+                      </label>
+                      <label>
+                        <span>Ysello category</span>
+                        <select
+                          value={darkTargetCategoryId}
+                          onChange={(event) =>
+                            setDarkTargetCategoryId(event.target.value)
+                          }
+                        >
+                          <option value="">Choose destination category</option>
+                          {categories
+                            .filter((category) => category.isActive)
+                            .map((category) => (
+                              <option key={category.id} value={category.id}>
+                                {categoryPath(category, categories)}
+                              </option>
+                            ))}
+                        </select>
+                      </label>
+                      <label className="dark-resale-publish">
+                        <input
+                          type="checkbox"
+                          checked={darkPublish}
+                          onChange={(event) =>
+                            setDarkPublish(event.target.checked)
+                          }
+                        />
+                        <span>Publish immediately after review</span>
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const eligible = darkProducts
+                            .filter(
+                              (product) =>
+                                product.is_manual_order_delivery !== true &&
+                                product.is_manual_order_delivery !== 1 &&
+                                product.minimum_order <= 20,
+                            )
+                            .map((product) => product.id);
+                          setDarkSelectedProductIds((current) => {
+                            if (eligible.every((id) => current.includes(id))) {
+                              return current.filter(
+                                (id) => !eligible.includes(id),
+                              );
+                            }
+                            return [
+                              ...new Set([...current, ...eligible]),
+                            ].slice(0, 100);
+                          });
+                        }}
+                      >
+                        Select eligible page
+                      </button>
+                      <button
+                        type="button"
+                        className="primary-button"
+                        disabled={
+                          busy === "dark-shopping-import" ||
+                          !darkSelectedProductIds.length ||
+                          !darkTargetCategoryId
+                        }
+                        onClick={() => void importDarkProducts()}
+                      >
+                        <PackagePlus size={16} />
+                        {busy === "dark-shopping-import"
+                          ? "Importing…"
+                          : "Import selected"}
+                      </button>
+                    </section>
+                    <section className="dark-resale-product-grid">
+                      {darkProducts.map((product) => {
+                        const selected = darkSelectedProductIds.includes(
+                          product.id,
+                        );
+                        const unsupported =
+                          Boolean(product.is_manual_order_delivery) ||
+                          product.minimum_order > 20;
+                        const retailRubCents = supplierRetailRubCents(
+                          product.price,
+                          darkMarginPercent,
+                        );
+                        return (
+                          <article
+                            className={`${selected ? "selected" : ""} ${unsupported ? "unsupported" : ""}`}
+                            key={product.id}
+                          >
+                            <div className="dark-resale-product-image">
+                              {product.miniature ? (
+                                <img
+                                  src={product.miniature}
+                                  alt=""
+                                  loading="lazy"
+                                />
+                              ) : (
+                                <PackageOpen />
+                              )}
+                              <label>
+                                <input
+                                  type="checkbox"
+                                  checked={selected}
+                                  disabled={unsupported}
+                                  onChange={() => toggleDarkProduct(product.id)}
+                                />
+                                <span>{selected ? "Selected" : "Select"}</span>
+                              </label>
+                            </div>
+                            <div>
+                              <small>
+                                {product.category.name} /{" "}
+                                {product.group?.name ?? "Other"}
+                              </small>
+                              <h3>{product.name}</h3>
+                              <p>
+                                {product.description
+                                  .replace(/<[^>]+>/g, " ")
+                                  .slice(0, 180)}
+                              </p>
+                              <dl>
+                                <div>
+                                  <dt>Supplier</dt>
+                                  <dd>{product.price.toFixed(2)} RUB</dd>
+                                </div>
+                                <div>
+                                  <dt>Your retail</dt>
+                                  <dd>{rubles(retailRubCents)}</dd>
+                                </div>
+                                <div>
+                                  <dt>Stock</dt>
+                                  <dd>{product.quantity}</dd>
+                                </div>
+                                <div>
+                                  <dt>Minimum</dt>
+                                  <dd>{product.minimum_order}</dd>
+                                </div>
+                              </dl>
+                              {unsupported ? (
+                                <b>
+                                  {product.is_manual_order_delivery
+                                    ? "Manual supplier delivery is not supported."
+                                    : "Supplier minimum exceeds Ysello's 20-unit limit."}
+                                </b>
+                              ) : null}
+                            </div>
+                          </article>
+                        );
+                      })}
+                    </section>
+                    {darkProductPageCount > 1 ? (
+                      <nav
+                        className="dark-resale-pagination"
+                        aria-label="Supplier product pages"
+                      >
+                        <button
+                          type="button"
+                          disabled={
+                            darkProductPage <= 1 ||
+                            busy === "dark-shopping-search"
+                          }
+                          onClick={() =>
+                            void searchDarkShoppingProducts(
+                              undefined,
+                              darkProductPage - 1,
+                            )
+                          }
+                        >
+                          Previous
+                        </button>
+                        <span>
+                          Page {darkProductPage} of {darkProductPageCount}
+                        </span>
+                        <button
+                          type="button"
+                          disabled={
+                            darkProductPage >= darkProductPageCount ||
+                            busy === "dark-shopping-search"
+                          }
+                          onClick={() =>
+                            void searchDarkShoppingProducts(
+                              undefined,
+                              darkProductPage + 1,
+                            )
+                          }
+                        >
+                          Next
+                        </button>
+                      </nav>
+                    ) : null}
+                  </>
+                ) : (
+                  <EmptyState label="Choose a supplier category or search to load automatic-delivery products." />
+                )}
+              </>
+            )}
+
+            <section className="dark-resale-section">
+              <header>
+                <div>
+                  <h2>Resale listings</h2>
+                  <p>Current supplier cost, retail price, stock, and status.</p>
+                </div>
+                <button
+                  type="button"
+                  disabled={busy === "dark-shopping-sync"}
+                  onClick={() => void syncDarkListings()}
+                >
+                  <RefreshCw size={15} /> Sync all
+                </button>
+              </header>
+              {darkResale?.listings.length ? (
+                <div className="dark-resale-list">
+                  {darkResale.listings.map((listing) => (
+                    <article key={listing.id}>
+                      <div>
+                        <strong>{listing.product.name}</strong>
+                        <small>
+                          Dark #{listing.remoteProductId} →{" "}
+                          {listing.product.category.name}
+                        </small>
+                        {listing.lastError ? <b>{listing.lastError}</b> : null}
+                      </div>
+                      <span>
+                        <small>Supplier</small>
+                        <strong>{rubles(listing.supplierPriceRubCents)}</strong>
+                      </span>
+                      <span>
+                        <small>Retail</small>
+                        <strong>{rubles(listing.product.priceRubCents)}</strong>
+                      </span>
+                      <span>
+                        <small>Margin / stock</small>
+                        <strong>
+                          {listing.marginPercent}% / {listing.remoteQuantity}
+                        </strong>
+                      </span>
+                      <div className="row-actions">
+                        <button
+                          disabled={busy === listing.id}
+                          onClick={() => {
+                            const value = window.prompt(
+                              "Margin percentage",
+                              String(listing.marginPercent),
+                            );
+                            if (value === null) return;
+                            const marginPercent = Number(value);
+                            if (
+                              !Number.isInteger(marginPercent) ||
+                              marginPercent < 0 ||
+                              marginPercent > 500
+                            ) {
+                              setMessage(
+                                "Margin must be from 0 to 500 percent.",
+                              );
+                              return;
+                            }
+                            void updateDarkListing(listing, { marginPercent });
+                          }}
+                        >
+                          Margin
+                        </button>
+                        <button
+                          disabled={busy === listing.id}
+                          onClick={() => void syncDarkListings(listing.id)}
+                        >
+                          Sync
+                        </button>
+                        <button
+                          className={listing.isEnabled ? "danger" : "approve"}
+                          disabled={busy === listing.id}
+                          onClick={() =>
+                            void updateDarkListing(listing, {
+                              isEnabled: !listing.isEnabled,
+                            })
+                          }
+                        >
+                          {listing.isEnabled ? "Pause" : "Enable"}
+                        </button>
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              ) : (
+                <EmptyState label="No Dark Shopping products have been selected for resale." />
+              )}
+            </section>
+
+            <section className="dark-resale-section">
+              <header>
+                <div>
+                  <h2>Supplier fulfillment</h2>
+                  <p>Remote order and protected-delivery status.</p>
+                </div>
+              </header>
+              {darkResale?.fulfillments.length ? (
+                <div className="dark-resale-list fulfillments">
+                  {darkResale.fulfillments.map((fulfillment) => (
+                    <article key={fulfillment.id}>
+                      <div>
+                        <strong>{fulfillment.orderItem.productName}</strong>
+                        <small>
+                          Ysello {fulfillment.orderItem.order.orderNumber} ·
+                          Dark {fulfillment.remoteOrderId ?? "pending"}
+                        </small>
+                        {fulfillment.lastError ? (
+                          <b>{fulfillment.lastError}</b>
+                        ) : null}
+                      </div>
+                      <span>
+                        <small>Status</small>
+                        <Status value={fulfillment.status} />
+                      </span>
+                      <span>
+                        <small>Supplier cost</small>
+                        <strong>
+                          {rubles(
+                            fulfillment.supplierUnitPriceRubCents *
+                              fulfillment.quantity,
+                          )}
+                        </strong>
+                      </span>
+                      <span>
+                        <small>Attempts</small>
+                        <strong>{fulfillment.attempts}</strong>
+                      </span>
+                      <div className="row-actions">
+                        <button
+                          disabled={
+                            busy === fulfillment.id ||
+                            fulfillment.status === "FULFILLED"
+                          }
+                          onClick={() =>
+                            void retryDarkFulfillment(fulfillment.id)
+                          }
+                        >
+                          Retry
+                        </button>
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              ) : (
+                <EmptyState label="No supplier orders have been created yet." />
               )}
             </section>
           </section>

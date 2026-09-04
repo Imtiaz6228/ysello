@@ -70,6 +70,18 @@ const platformIcons: Record<string, IconType> = {
   android: FaAndroid,
 };
 
+export function marketplacePlatformBrandSlug(slug: string) {
+  const normalizedSlug = slug.trim().toLowerCase();
+
+  if (platformIcons[normalizedSlug]) return normalizedSlug;
+
+  return (
+    Object.keys(platformIcons).find((brandSlug) =>
+      normalizedSlug.startsWith(`${brandSlug}-`),
+    ) ?? normalizedSlug
+  );
+}
+
 export function MarketplaceCategoryIcon({
   slug,
   className,
@@ -88,6 +100,6 @@ export function MarketplacePlatformIcon({
   slug: string;
   className?: string;
 }) {
-  const Icon = platformIcons[slug] ?? FaHashtag;
+  const Icon = platformIcons[marketplacePlatformBrandSlug(slug)] ?? FaHashtag;
   return <Icon className={className} aria-hidden="true" />;
 }

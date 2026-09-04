@@ -38,6 +38,7 @@ const checkoutSchema = z.object({
       z.object({
         productId: z.string().uuid(),
         quantity: z.number().int().min(1).max(20),
+        expectedUnitPriceCents: z.number().int().min(1).optional(),
       }),
     )
     .min(1)
