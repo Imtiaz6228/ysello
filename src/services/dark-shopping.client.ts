@@ -1,7 +1,12 @@
+import { redis } from "../lib/redis.js";
 import { ApiError } from "../middleware/error-handler.js";
 
 export const DARK_SHOPPING_DEFAULT_BASE_URL = "https://dark.shopping/api/v1";
 export const DARK_SHOPPING_REQUESTS_PER_SECOND = 2;
+// Dark.shopping enforces a hard 2 req/s ceiling. 500ms is exactly the boundary
+// and can still trip a sliding-window limiter because of clock/network jitter.
+// 700ms keeps Ysello safely below the published ceiling (~1.43 req/s).
+export const DARK_SHOPPING_SAFE_REQUEST_INTERVAL_MS = 700;
 export const DARK_SHOPPING_GLOBAL_MARGIN_PERCENT = 30;
 export const DARK_SHOPPING_USER_AGENT =
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36";
@@ -166,6 +171,7 @@ export type DarkShoppingClientOptions = {
   baseUrl?: string;
   timeoutMs?: number;
   minimumRequestIntervalMs?: number;
+  rateLimitRetryDelaysMs?: number[];
   fetchImplementation?: FetchImplementation;
 };
 
@@ -456,8 +462,11 @@ export class DarkShoppingClient {
   private readonly timeoutMs: number;
   private readonly minimumRequestIntervalMs: number;
   private readonly fetchImplementation: FetchImplementation;
+  private readonly rateLimitRetryDelaysMs: number[];
   private requestQueue: Promise<void> = Promise.resolve();
   private nextRequestAt = 0;
+  private readonly distributedSlotKey = "ysello:dark-shopping:request-slot";
+  private readonly distributedCooldownKey = "ysello:dark-shopping:cooldown";
 
   constructor(options: DarkShoppingClientOptions) {
     const apiKey = options.apiKey.trim();
@@ -482,9 +491,59 @@ export class DarkShoppingClient {
     this.baseUrl = `${baseUrl.origin}${baseUrl.pathname.replace(/\/+$/, "")}`;
     this.timeoutMs = options.timeoutMs ?? 15_000;
     this.minimumRequestIntervalMs =
-      options.minimumRequestIntervalMs ??
-      1_000 / DARK_SHOPPING_REQUESTS_PER_SECOND;
+      options.minimumRequestIntervalMs ?? DARK_SHOPPING_SAFE_REQUEST_INTERVAL_MS;
+    this.rateLimitRetryDelaysMs =
+      options.rateLimitRetryDelaysMs ?? [2_500, 5_000, 10_000];
     this.fetchImplementation = options.fetchImplementation ?? fetch;
+  }
+
+  private async waitForDistributedSlot() {
+    if (!redis || this.minimumRequestIntervalMs <= 0) return;
+
+    // Railway can run more than one Node process/replica. A process-local queue
+    // is not enough in that case, so Redis (when configured) coordinates a
+    // single supplier request slot across the whole deployment.
+    for (;;) {
+      try {
+        const cooldownTtl = await redis.pttl(this.distributedCooldownKey);
+        if (cooldownTtl > 0) {
+          await wait(Math.min(cooldownTtl, 30_000));
+          continue;
+        }
+
+        const claimed = await redis.set(
+          this.distributedSlotKey,
+          `${process.pid}:${Date.now()}`,
+          "PX",
+          Math.max(1, this.minimumRequestIntervalMs),
+          "NX",
+        );
+        if (claimed === "OK") return;
+
+        const ttl = await redis.pttl(this.distributedSlotKey);
+        await wait(Math.max(50, Math.min(ttl > 0 ? ttl : 100, 1_000)));
+      } catch {
+        // Redis is an extra cross-process safety layer. If it is unavailable,
+        // keep the in-process queue active instead of taking the supplier down.
+        return;
+      }
+    }
+  }
+
+  private async imposeRateLimitCooldown(milliseconds: number) {
+    const cooldownMs = Math.max(this.minimumRequestIntervalMs, milliseconds);
+    this.nextRequestAt = Math.max(this.nextRequestAt, Date.now() + cooldownMs);
+    if (!redis || this.minimumRequestIntervalMs <= 0) return;
+    try {
+      await redis.set(
+        this.distributedCooldownKey,
+        String(Date.now() + cooldownMs),
+        "PX",
+        cooldownMs,
+      );
+    } catch {
+      // Local cooldown remains active.
+    }
   }
 
   private async throttled<T>(operation: () => Promise<T>) {
@@ -497,6 +556,7 @@ export class DarkShoppingClient {
     await previousRequest;
     const delay = Math.max(0, this.nextRequestAt - Date.now());
     if (delay) await wait(delay);
+    await this.waitForDistributedSlot();
     this.nextRequestAt = Date.now() + this.minimumRequestIntervalMs;
 
     try {
@@ -504,6 +564,45 @@ export class DarkShoppingClient {
     } finally {
       releaseQueue();
     }
+  }
+
+  private retryAfterMilliseconds(response: Response, attempt: number) {
+    const fallback =
+      this.rateLimitRetryDelaysMs[attempt] ??
+      this.rateLimitRetryDelaysMs.at(-1) ??
+      10_000;
+    const header = response.headers.get("retry-after")?.trim();
+    if (!header) return fallback;
+
+    const seconds = Number(header);
+    if (Number.isFinite(seconds) && seconds >= 0) {
+      return Math.max(fallback, Math.ceil(seconds * 1_000));
+    }
+
+    const at = Date.parse(header);
+    if (Number.isFinite(at)) return Math.max(fallback, at - Date.now());
+    return fallback;
+  }
+
+  private rateLimitError(
+    response: Response,
+    endpoint: string,
+    method: RequestMethod,
+    attempt: number,
+  ) {
+    const retryAfterMs = this.retryAfterMilliseconds(response, attempt);
+    return new ApiError(
+      429,
+      "Dark Shopping is rate-limiting supplier requests. Ysello has paused the supplier queue and will retry automatically.",
+      "DARK_SHOPPING_RATE_LIMITED",
+      {
+        provider: "dark.shopping",
+        endpoint,
+        method,
+        providerStatus: 429,
+        retryAfterMs,
+      },
+    );
   }
 
   private appendParameters(
@@ -642,13 +741,13 @@ export class DarkShoppingClient {
     });
   }
 
-  private async request<T>(
+  private async requestOnce<T>(
     endpoint: string,
     parameters: RequestParameters = {},
     method: RequestMethod = "GET",
     postEncoding: PostEncoding = "json",
+    rateLimitAttempt = 0,
   ) {
-    return this.throttled(async () => {
       const url = new URL(`${this.baseUrl}/${endpoint.replace(/^\/+/, "")}`);
       // Dark Shopping's official PHP client sends this browser-compatible
       // identity. Match it so provider-side bot/WAF rules do not reject
@@ -700,6 +799,10 @@ export class DarkShoppingClient {
         );
       }
 
+      if (response.status === 429) {
+        throw this.rateLimitError(response, endpoint, method, rateLimitAttempt);
+      }
+
       const responseText = await response.text();
       const normalizedResponseText = responseText.replace(/^\uFEFF/, "").trim();
       let envelope: DarkShoppingEnvelope<T> | undefined;
@@ -748,7 +851,58 @@ export class DarkShoppingClient {
       }
 
       return this.redact(envelope.data as T);
-    });
+  }
+
+  private async request<T>(
+    endpoint: string,
+    parameters: RequestParameters = {},
+    method: RequestMethod = "GET",
+    postEncoding: PostEncoding = "json",
+  ) {
+    // Do not auto-retry order/create: Dark.shopping also uses 429 there to mean
+    // another order is already being processed. Read/list/status requests are
+    // safe to retry after a rate-limit cooldown.
+    const allowRateLimitRetry = endpoint !== "order/create";
+    const maxRetries = allowRateLimitRetry
+      ? this.rateLimitRetryDelaysMs.length
+      : 0;
+
+    for (let attempt = 0; ; attempt += 1) {
+      try {
+        return await this.throttled(() =>
+          this.requestOnce<T>(
+            endpoint,
+            parameters,
+            method,
+            postEncoding,
+            attempt,
+          ),
+        );
+      } catch (error) {
+        if (
+          !(error instanceof ApiError) ||
+          error.statusCode !== 429 ||
+          attempt >= maxRetries
+        ) {
+          if (error instanceof ApiError && error.statusCode === 429) {
+            throw new ApiError(
+              429,
+              "Dark Shopping is still rate-limiting this Railway IP. Ysello already slowed and retried the supplier queue; wait a few minutes for Dark Shopping's temporary IP block to clear, then retry.",
+              "DARK_SHOPPING_RATE_LIMITED",
+              error.details,
+            );
+          }
+          throw error;
+        }
+
+        const details = isRecord(error.details) ? error.details : {};
+        const retryAfterMs = Math.max(
+          this.rateLimitRetryDelaysMs[attempt] ?? 2_500,
+          finiteNumber(details.retryAfterMs, 0) ?? 0,
+        );
+        await this.imposeRateLimitCooldown(retryAfterMs);
+      }
+    }
   }
 
   async listCategories(input: DarkShoppingPaginationInput = {}) {
@@ -879,19 +1033,44 @@ export class DarkShoppingClient {
   }
 
   async viewProducts(ids: number[]) {
-    const uniqueIds = [...new Set(ids.filter((id) => Number.isSafeInteger(id) && id > 0))];
+    const uniqueIds = [
+      ...new Set(ids.filter((id) => Number.isSafeInteger(id) && id > 0)),
+    ];
     const items: DarkShoppingProduct[] = [];
     const missing: number[] = [];
+    const seen = new Set<number>();
+    const chunkSize = 8;
 
-    for (const id of uniqueIds) {
-      try {
-        items.push(await this.viewProduct(id));
-      } catch (error) {
-        if (error instanceof ApiError && error.statusCode === 404) {
-          missing.push(id);
-          continue;
+    // Prefer small product/list batches. This keeps supplier traffic far below
+    // the 2 req/s ceiling while avoiding the large-ids 502 documented by
+    // Dark.shopping. listProducts retains product/view as a gateway fallback.
+    for (let offset = 0; offset < uniqueIds.length; offset += chunkSize) {
+      const chunk = uniqueIds.slice(offset, offset + chunkSize);
+      const response = await this.listProducts({
+        ids: chunk,
+        perPage: chunk.length,
+      });
+      for (const product of response.items) {
+        if (!chunk.includes(product.id) || seen.has(product.id)) continue;
+        seen.add(product.id);
+        items.push(product);
+      }
+
+      // If the supplier list silently omits an ID, verify that one ID through
+      // product/view so import results remain deterministic.
+      for (const id of chunk) {
+        if (seen.has(id)) continue;
+        try {
+          const product = await this.viewProduct(id);
+          seen.add(id);
+          items.push(product);
+        } catch (error) {
+          if (error instanceof ApiError && error.statusCode === 404) {
+            missing.push(id);
+            continue;
+          }
+          throw error;
         }
-        throw error;
       }
     }
 

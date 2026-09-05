@@ -440,10 +440,9 @@ export async function importDarkShoppingProducts(input: {
   }
   await ensureOfficialSellerProfile(input.adminId);
   const marginPercent = DARK_SHOPPING_GLOBAL_MARGIN_PERCENT;
-  // Imports deliberately bypass product/list. Dark.shopping documents that
-  // product/list can return 502 when ID filters become large. Fetching each
-  // selected product through product/view removes that gateway failure mode
-  // entirely while the shared client throttle keeps us within <=2 req/s.
+  // The supplier client imports in small product/list batches and falls back to
+  // product/view only when a batch cannot be retrieved. The shared 700ms queue
+  // plus 429 backoff keeps imports below Dark.shopping's published 2 req/s cap.
   const viewed = await darkShoppingClient().viewProducts(input.remoteProductIds);
   const remoteById = new Map(
     viewed.items.map((product) => [product.id, product]),

@@ -1,3 +1,5 @@
+> **SUPERSEDED:** Use `DARK_SHOPPING_RATE_LIMIT_FINAL_FIX.md` and release `2026-09-05.3`.
+
 # Dark.shopping / Railway final hardening — 2026-09-05.2
 
 This release addresses two separate failure modes that looked like the same 502 error.

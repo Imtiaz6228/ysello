@@ -68,7 +68,7 @@ import {
 } from "../commerce/sellerTaxonomy";
 import { catalogAttributePresets } from "../data/enterpriseCatalog";
 
-const DARK_SHOPPING_EXPECTED_INTEGRATION_VERSION = "2026-09-05.2";
+const DARK_SHOPPING_EXPECTED_INTEGRATION_VERSION = "2026-09-05.3";
 
 type Tab =
   | "overview"
@@ -247,6 +247,9 @@ type DarkShoppingResale = {
     configurationIssue?: string | null;
     marginPercent: number;
     requestsPerSecond: number;
+    safeRequestIntervalMs?: number;
+    automatic429Retries?: number;
+    distributedRateLimit?: boolean;
     deployment?: {
       project: string | null;
       service: string | null;
@@ -586,6 +589,16 @@ function normalizedDarkShoppingResale(value: unknown): DarkShoppingResale | null
         payload.configuration.requestsPerSecond,
         2,
       ),
+      safeRequestIntervalMs: supplierNumber(
+        payload.configuration.safeRequestIntervalMs,
+        700,
+      ),
+      automatic429Retries: supplierNumber(
+        payload.configuration.automatic429Retries,
+        3,
+      ),
+      distributedRateLimit:
+        payload.configuration.distributedRateLimit === true,
     },
     storage: payload.storage ?? { ready: true, message: null },
     balance: payload.balance ?? null,
@@ -2139,6 +2152,14 @@ export function OperationsAdminPage() {
                     Integration {darkResale.configuration.integrationVersion}
                   </small>
                 )}
+                <small>
+                  Supplier pacing {darkResale?.configuration.safeRequestIntervalMs ?? 700}ms
+                  {" · "}{darkResale?.configuration.automatic429Retries ?? 3} automatic 429 retries
+                  {" · "}
+                  {darkResale?.configuration.distributedRateLimit
+                    ? "deployment-wide Redis limiter"
+                    : "single-process limiter"}
+                </small>
                 <button
                   type="button"
                   disabled={

@@ -8,6 +8,8 @@ import {
 import { ApiError } from "../middleware/error-handler.js";
 import {
   DARK_SHOPPING_GLOBAL_MARGIN_PERCENT,
+  DARK_SHOPPING_REQUESTS_PER_SECOND,
+  DARK_SHOPPING_SAFE_REQUEST_INTERVAL_MS,
   DarkShoppingClient,
 } from "./dark-shopping.client.js";
 
@@ -66,7 +68,7 @@ export function darkShoppingSupplierAccessError(
     return {
       status: "rate_limited",
       message:
-        "Dark Shopping temporarily rate-limited this account. Wait a few minutes before retrying.",
+        "Dark Shopping is still rate-limiting this Railway IP after Ysello's automatic backoff. Wait a few minutes for the temporary provider block to clear, then retry.",
       providerStatus,
       settingsUrl: DARK_SHOPPING_API_SETTINGS_URL,
     };
@@ -126,7 +128,10 @@ export function darkShoppingConfiguration() {
       ? null
       : "DARK_SHOPPING_API_KEY is missing from this API process.",
     baseUrl: env.DARK_SHOPPING_API_BASE_URL,
-    requestsPerSecond: 2,
+    requestsPerSecond: DARK_SHOPPING_REQUESTS_PER_SECOND,
+    safeRequestIntervalMs: DARK_SHOPPING_SAFE_REQUEST_INTERVAL_MS,
+    automatic429Retries: 3,
+    distributedRateLimit: Boolean(env.REDIS_URL),
     marginPercent: DARK_SHOPPING_GLOBAL_MARGIN_PERCENT,
     documentationUrl: "https://dark.shopping/developer",
     settingsUrl: DARK_SHOPPING_API_SETTINGS_URL,

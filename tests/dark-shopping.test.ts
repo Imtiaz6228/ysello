@@ -343,6 +343,70 @@ test("Dark Shopping invalid payloads fail closed", async () => {
   });
 });
 
+
+
+test("Dark Shopping read requests back off and recover from HTTP 429", async () => {
+  let requests = 0;
+  const client = new DarkShoppingClient({
+    apiKey: fakeKey,
+    minimumRequestIntervalMs: 0,
+    rateLimitRetryDelaysMs: [1, 1, 1],
+    fetchImplementation: async () => {
+      requests += 1;
+      if (requests <= 2) {
+        return new Response("Too Many Requests", {
+          status: 429,
+          headers: { "content-type": "text/plain", "retry-after": "0" },
+        });
+      }
+      return jsonResponse({
+        success: true,
+        data: { balance: "10.50", currency: "RUB" },
+      });
+    },
+  });
+
+  assert.deepEqual(await client.getBalance(), { balance: 10.5, currency: "RUB" });
+  assert.equal(requests, 3);
+});
+
+test("Dark Shopping order/create does not blindly retry provider 429", async () => {
+  let requests = 0;
+  const client = new DarkShoppingClient({
+    apiKey: fakeKey,
+    minimumRequestIntervalMs: 0,
+    rateLimitRetryDelaysMs: [1, 1, 1],
+    fetchImplementation: async () => {
+      requests += 1;
+      return jsonResponse(
+        {
+          success: false,
+          data: {
+            name: "Too Many Requests",
+            message: "Another order is already processing.",
+            status: 429,
+          },
+        },
+        429,
+      );
+    },
+  });
+
+  await assert.rejects(
+    client.createOrder({
+      productId: 1542,
+      quantity: 1,
+      idempotenceId: "ysello-order-item-rate-limit-test",
+    }),
+    (error: unknown) => {
+      assert.ok(error instanceof ApiError);
+      assert.equal(error.statusCode, 429);
+      return true;
+    },
+  );
+  assert.equal(requests, 1);
+});
+
 test("Dark Shopping delivery downloads accept only bounded official storage files", async () => {
   let requestInit: RequestInit | undefined;
   const client = new DarkShoppingClient({
