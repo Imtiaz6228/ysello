@@ -9,6 +9,7 @@ import {
   Headphones,
   Layers3,
   Mail,
+  PackageOpen,
   ShieldCheck,
   ShoppingCart,
   Store,
@@ -283,6 +284,20 @@ function ProductRail({
   );
 }
 
+function supplierMetric(product: CatalogProduct, key: string) {
+  const value = product.attributes?.[key];
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value === "string" && value.trim()) {
+    const parsed = Number(value);
+    if (Number.isFinite(parsed)) return parsed;
+  }
+  return 0;
+}
+
+function isSupplierProduct(product: CatalogProduct) {
+  return product.attributes?.supplierFulfilled === true;
+}
+
 function TopStoreCard({ store }: { store: FeaturedStore }) {
   const isOfficial =
     store.isOfficial || ["Official", "Ysello Official"].includes(store.name);
@@ -381,6 +396,32 @@ export function MarketplaceHomePage() {
   const homepageFeatured = useMemo(
     () => mergeProductPicks(newArrivals, bestSellers, 10),
     [bestSellers, newArrivals],
+  );
+
+  const supplierCategories = useMemo(
+    () =>
+      categories
+        .filter((category) => category.isSupplierCategory)
+        .sort(
+          (a, b) =>
+            (b.productCount ?? 0) - (a.productCount ?? 0) ||
+            a.name.localeCompare(b.name),
+        ),
+    [categories],
+  );
+
+  const supplierProducts = useMemo(
+    () =>
+      [...products]
+        .filter(isSupplierProduct)
+        .sort(
+          (a, b) =>
+            supplierMetric(b, "supplierPurchaseCounter") -
+              supplierMetric(a, "supplierPurchaseCounter") ||
+            (b.stockCount ?? 0) - (a.stockCount ?? 0),
+        )
+        .slice(0, 18),
+    [products],
   );
 
   const topGainers = useMemo(
@@ -591,6 +632,89 @@ export function MarketplaceHomePage() {
           </div>
         </div>
       </section>
+
+      {supplierCategories.length || supplierProducts.length ? (
+        <section className="market-home-section ys-live-marketplace" aria-label="Live account marketplace">
+          <header className="ys-live-marketplace-header">
+            <div>
+              <span><Zap aria-hidden="true" /> LIVE CATALOG</span>
+              <h2>Accounts, access & digital goods</h2>
+              <p>Fresh supplier-backed listings organized into real marketplace categories, with stock and delivery details visible before checkout.</p>
+            </div>
+            <Link to="/catalog?stock=in_stock">Browse everything <ArrowRight aria-hidden="true" /></Link>
+          </header>
+
+          {supplierCategories.length ? (
+            <div className="ys-live-category-strip" aria-label="Imported marketplace categories">
+              {supplierCategories.slice(0, 20).map((category) => (
+                <Link key={category.slug} to={categoryPath(category, categories)}>
+                  <span className="ys-live-category-icon">
+                    {category.imageUrl ? (
+                      <img src={category.imageUrl} alt="" loading="lazy" width="52" height="52" />
+                    ) : (
+                      <PackageOpen aria-hidden="true" />
+                    )}
+                  </span>
+                  <div>
+                    <strong>{category.name}</strong>
+                    <small>{category.productCount ?? 0} live products</small>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          ) : null}
+
+          {supplierProducts.length ? (
+            <div className="ys-live-product-list">
+              <div className="ys-live-product-head" aria-hidden="true">
+                <span>Listing</span><span>Quality</span><span>Stock</span><span>Price</span><span />
+              </div>
+              {supplierProducts.map((product) => {
+                const quality = supplierMetric(product, "supplierQualityPercent");
+                const supplierSales = supplierMetric(product, "supplierPurchaseCounter");
+                return (
+                  <article key={product.id} className="ys-live-product-row">
+                    <Link className="ys-live-product-main" to={productPath(product)}>
+                      <span className="ys-live-product-image">
+                        {product.imageUrl ? (
+                          <img src={product.imageUrl} alt="" loading="lazy" decoding="async" width="76" height="76" />
+                        ) : (
+                          <PackageOpen aria-hidden="true" />
+                        )}
+                      </span>
+                      <div>
+                        <small>{product.category || "Digital marketplace"}</small>
+                        <strong>{product.title}</strong>
+                        <p>{product.description}</p>
+                        <span className="ys-live-product-badges">
+                          <b><BadgeCheck aria-hidden="true" /> Ysello Official</b>
+                          <em>{product.delivery}</em>
+                          {product.warranty ? <em>{product.warranty}</em> : null}
+                        </span>
+                      </div>
+                    </Link>
+                    <div className="ys-live-product-quality">
+                      <strong>{quality ? `${Math.round(quality)}%` : "Verified"}</strong>
+                      <small>{supplierSales ? `${supplierSales.toLocaleString()} sold` : "Supplier checked"}</small>
+                    </div>
+                    <div className="ys-live-product-stock">
+                      <strong>{(product.stockCount ?? 0).toLocaleString()}</strong>
+                      <small>available</small>
+                    </div>
+                    <div className="ys-live-product-price">
+                      <strong>{formatProductMoney(product)}</strong>
+                      <small>instant checkout</small>
+                    </div>
+                    <button type="button" onClick={() => buy(product)}>Buy now</button>
+                  </article>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="ys-live-marketplace-empty">Imported products will appear here as soon as they are published and in stock.</div>
+          )}
+        </section>
+      ) : null}
 
       <section className="market-home-section g2-home-section marketplace-platform-showcase">
         <SectionHeading

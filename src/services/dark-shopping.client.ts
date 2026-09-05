@@ -805,27 +805,77 @@ export class DarkShoppingClient {
 
   async listProducts(input: DarkShoppingProductFilters = {}) {
     const filters = productFilters(input);
-    let data: unknown;
-    try {
-      data = await this.request<unknown>("product/list", filters, "POST", "json");
-    } catch (error) {
-      // Product import is the one place where ids[] arrays are commonly sent.
-      // Dark.shopping documents both JSON and multipart form-data. If its gateway
-      // rejects one encoding, safely retry this read-only catalog request once
-      // using the other documented transport. Never retry auth/rate-limit errors.
-      const retryable =
-        error instanceof ApiError &&
-        (error.code === "DARK_SHOPPING_INVALID_RESPONSE" ||
-          [400, 415, 422, 500, 502, 503, 504].includes(error.statusCode));
-      if (!retryable) throw error;
-      data = await this.request<unknown>(
-        "product/list",
-        filters,
-        "POST",
-        "multipart",
-      );
+    const requestedIds = [...new Set((input.ids ?? []).filter((id) => id > 0))];
+    const hasLargeOrStructuredFilters =
+      requestedIds.length > 0 || Boolean(input.filterAttributes?.length);
+
+    const retryableCatalogError = (error: unknown) =>
+      error instanceof ApiError &&
+      (error.code === "DARK_SHOPPING_INVALID_RESPONSE" ||
+        [400, 415, 422, 500, 502, 503, 504].includes(error.statusCode));
+
+    // Dark.shopping documents GET for ordinary catalog browsing and recommends
+    // POST only when the request contains large/structured search parameters.
+    // Keeping normal admin browsing on GET avoids unnecessary gateway POST
+    // failures, while selected-product imports stay off the query string.
+    if (!hasLargeOrStructuredFilters) {
+      try {
+        const data = await this.request<unknown>("product/list", filters, "GET");
+        return normalizePaginated(data, normalizeProduct);
+      } catch (error) {
+        if (!retryableCatalogError(error)) throw error;
+        const data = await this.request<unknown>(
+          "product/list",
+          filters,
+          "POST",
+          "multipart",
+        );
+        return normalizePaginated(data, normalizeProduct);
+      }
     }
-    return normalizePaginated(data, normalizeProduct);
+
+    let lastError: unknown;
+    for (const encoding of ["multipart", "json"] as const) {
+      try {
+        const data = await this.request<unknown>(
+          "product/list",
+          filters,
+          "POST",
+          encoding,
+        );
+        return normalizePaginated(data, normalizeProduct);
+      } catch (error) {
+        lastError = error;
+        if (!retryableCatalogError(error)) throw error;
+      }
+    }
+
+    // Some Dark.shopping gateway nodes still return 502 for a valid POST body
+    // containing ids[]. Imports must not fail just because the bulk-list edge is
+    // unhealthy. For an explicit set of IDs, safely fall back to product/view,
+    // one product at a time. The client-wide throttle still enforces <=2 req/s.
+    if (requestedIds.length) {
+      const items: DarkShoppingProduct[] = [];
+      for (const id of requestedIds) {
+        try {
+          items.push(await this.viewProduct(id));
+        } catch (error) {
+          if (error instanceof ApiError && error.statusCode === 404) continue;
+          throw error;
+        }
+      }
+      return {
+        items,
+        _meta: {
+          totalCount: items.length,
+          pageCount: 1,
+          currentPage: 1,
+          perPage: Math.max(1, items.length),
+        },
+      } satisfies DarkShoppingPaginated<DarkShoppingProduct>;
+    }
+
+    throw lastError;
   }
 
   async viewProduct(id: number) {

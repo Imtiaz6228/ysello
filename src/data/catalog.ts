@@ -14,6 +14,7 @@ export type CatalogCategory = {
   bannerUrl?: string | null;
   isFeatured?: boolean;
   isTrending?: boolean;
+  isSupplierCategory?: boolean;
   depth?: number;
 };
 

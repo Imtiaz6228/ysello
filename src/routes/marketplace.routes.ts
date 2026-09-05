@@ -67,7 +67,14 @@ marketplaceRouter.get(
         },
       },
     });
-    res.json({ categories });
+    res.json({
+      categories: categories.map((category) => ({
+        ...category,
+        isSupplierCategory: category.metaKeywords.includes(
+          DARK_SHOPPING_CATEGORY_TAG,
+        ),
+      })),
+    });
   }),
 );
 

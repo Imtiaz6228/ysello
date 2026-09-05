@@ -12,7 +12,7 @@ import {
   X,
   Zap,
 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { useCart } from "../commerce/CartContext";
 import { discoverCategoryProducts } from "../commerce/catalogDiscovery";
@@ -64,6 +64,10 @@ export function CategoryPage() {
   const [minimumRating, setMinimumRating] = useState("all");
   const [availableOnly, setAvailableOnly] = useState(false);
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
+
+  useEffect(() => {
+    if (category?.isSupplierCategory) setView("list");
+  }, [category?.isSupplierCategory, category?.slug]);
 
   const children = useMemo(
     () => categories.filter((item) => item.parentSlug === slug),
@@ -233,7 +237,7 @@ export function CategoryPage() {
 
   return (
     <main
-      className="ys-ref-page ys-ref-category"
+      className={`ys-ref-page ys-ref-category ${category.isSupplierCategory ? "ys-supplier-category" : ""}`}
       data-legacy-hooks="commerce-page market-browse-page"
     >
       <Seo
@@ -267,8 +271,18 @@ export function CategoryPage() {
 
         <section className="ys-ref-category-hero">
           <div>
+            {category.isSupplierCategory && category.imageUrl ? (
+              <span className="ys-supplier-category-mark">
+                <img
+                  src={category.imageUrl}
+                  alt=""
+                  width="72"
+                  height="72"
+                />
+              </span>
+            ) : null}
             <span className="ys-ref-eyebrow">
-              <Sparkles aria-hidden="true" /> Curated digital department
+              <Sparkles aria-hidden="true" /> {category.isSupplierCategory ? "Live marketplace category" : "Curated digital department"}
             </span>
             <h1>{category.name}</h1>
             <span className="ys-ref-mobile-count">
@@ -323,6 +337,14 @@ export function CategoryPage() {
                 </Link>
               );
             })}
+          </section>
+        ) : null}
+
+        {category.isSupplierCategory ? (
+          <section className="ys-supplier-category-summary">
+            <span><Zap aria-hidden="true" /> Live supplier stock</span>
+            <strong>{categoryProducts.products.length} products ready to browse</strong>
+            <p>Prices, stock and availability are synchronized from the supplier catalog while checkout and delivery stay inside Ysello.</p>
           </section>
         ) : null}
 

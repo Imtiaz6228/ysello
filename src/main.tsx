@@ -38,6 +38,7 @@ import "./dashboard-professional-v6.css";
 import "./dashboard-premium-v7.css";
 import "./marketplace-professional-v6.css";
 import "./professional-marketplace-v7.css";
+import "./dark-shopping-storefront.css";
 import { LocaleProvider } from "./i18n/LocaleContext";
 import { AppErrorBoundary } from "./components/AppErrorBoundary";
 

@@ -161,14 +161,29 @@ export function CatalogPage() {
     [categories],
   );
 
-  const quickCategories = useMemo(
-    () =>
-      marketplaceTaxonomy.slice(0, 4).map((item) => ({
+  const quickCategories = useMemo(() => {
+    const primary = marketplaceTaxonomy.slice(0, 4).map((item) => ({
+      label: item.name,
+      slug: findRoot(rootCategories, [item.slug, item.name], item.slug),
+      imageUrl: null as string | null,
+      supplier: false,
+    }));
+    const supplier = rootCategories
+      .filter((item) => item.isSupplierCategory)
+      .sort(
+        (a, b) =>
+          (b.productCount ?? 0) - (a.productCount ?? 0) ||
+          a.name.localeCompare(b.name),
+      )
+      .slice(0, 12)
+      .map((item) => ({
         label: item.name,
-        slug: findRoot(rootCategories, [item.slug, item.name], item.slug),
-      })),
-    [rootCategories],
-  );
+        slug: item.slug,
+        imageUrl: item.imageUrl ?? null,
+        supplier: true,
+      }));
+    return [...primary, ...supplier];
+  }, [rootCategories]);
   const platformOptions = useMemo(
     () =>
       [...new Set(products.map((product) => productFact(product, "platform")))]
@@ -373,7 +388,12 @@ export function CatalogPage() {
                 aria-pressed={category === item.slug}
                 onClick={() => setCategory(item.slug)}
               >
-                <CategoryGlyph slug={item.slug} /> {item.label}
+                {item.imageUrl ? (
+                  <img src={item.imageUrl} alt="" width="24" height="24" />
+                ) : (
+                  <CategoryGlyph slug={item.slug} />
+                )}
+                {item.label}
               </button>
             );
           })}

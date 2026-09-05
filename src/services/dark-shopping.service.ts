@@ -9,7 +9,7 @@ const EXPECTED_REPOSITORY = "Imtiaz6228/ysello";
 const EXPECTED_BRANCH = "main";
 const DARK_SHOPPING_API_SETTINGS_URL =
   "https://dark.shopping/customer/settings/api";
-const DARK_SHOPPING_INTEGRATION_VERSION = "2026-09-04.4";
+const DARK_SHOPPING_INTEGRATION_VERSION = "2026-09-05.1";
 
 export type DarkShoppingSupplierAccessStatus =
   | "ready"

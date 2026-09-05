@@ -27,6 +27,7 @@ type ApiCategory = {
   icon?: string | null;
   isFeatured?: boolean;
   isTrending?: boolean;
+  isSupplierCategory?: boolean;
 };
 
 type ApiProduct = {
@@ -208,6 +209,8 @@ function mergeWithLocalCategories(remoteCategories: CatalogCategory[]) {
       icon: remote.icon || local?.icon || "◉",
       isFeatured: remote.isFeatured ?? local?.isFeatured,
       isTrending: remote.isTrending ?? local?.isTrending,
+      isSupplierCategory:
+        remote.isSupplierCategory ?? local?.isSupplierCategory ?? false,
       depth: local?.depth,
     });
   });
@@ -376,6 +379,7 @@ function mapCategories(categories: ApiCategory[]): CatalogCategory[] {
         bannerUrl: normalizePublicMediaUrl(category.bannerUrl),
         isFeatured: category.isFeatured,
         isTrending: category.isTrending,
+        isSupplierCategory: category.isSupplierCategory,
       };
     })
     .sort(
@@ -647,10 +651,48 @@ export function useMarketplaceStore(slug?: string) {
 }
 
 export function useMarketplaceCategory(slug?: string) {
-  const categories = useMarketplaceCategories();
-  const category = useMemo(
-    () => categories.find((item) => item.slug === slug),
-    [categories, slug],
+  const localCategory = useMemo(
+    () => localCategories.find((item) => item.slug === slug),
+    [slug],
   );
-  return { category, loading: false };
+  const [category, setCategory] = useState<CatalogCategory | undefined>(
+    localCategory,
+  );
+  const [loading, setLoading] = useState(Boolean(slug && !localCategory));
+
+  useEffect(() => {
+    if (!slug) {
+      setCategory(undefined);
+      setLoading(false);
+      return;
+    }
+
+    const immediate = localCategories.find((item) => item.slug === slug);
+    if (immediate) {
+      setCategory(immediate);
+      setLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+    setLoading(true);
+    void apiRequest<{ categories: ApiCategory[] }>("/api/marketplace/categories")
+      .then((data) => {
+        if (cancelled) return;
+        const merged = mergeWithLocalCategories(mapCategories(data.categories));
+        setCategory(merged.find((item) => item.slug === slug));
+      })
+      .catch(() => {
+        if (!cancelled) setCategory(undefined);
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [slug]);
+
+  return { category, loading };
 }

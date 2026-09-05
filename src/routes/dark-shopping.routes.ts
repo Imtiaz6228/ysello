@@ -163,7 +163,7 @@ darkShoppingRouter.post(
   asyncHandler(async (req, res) => {
     const input = z
       .object({
-        remoteProductIds: z.array(positiveInteger).min(1).max(100),
+        remoteProductIds: z.array(positiveInteger).min(1).max(30),
         categoryId: z.string().uuid(),
         publish: z.boolean().default(false),
       })

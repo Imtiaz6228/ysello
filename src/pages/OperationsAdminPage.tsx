@@ -1011,8 +1011,8 @@ export function OperationsAdminPage() {
       if (current.includes(productId)) {
         return current.filter((id) => id !== productId);
       }
-      if (current.length >= 100) {
-        setMessage("Select at most 100 supplier products per import.");
+      if (current.length >= 30) {
+        setMessage("Select at most 30 supplier products per import so supplier fallback requests stay within the API rate limit and web request timeout.");
         return current;
       }
       return [...current, productId];
@@ -2355,7 +2355,7 @@ export function OperationsAdminPage() {
                             }
                             return [
                               ...new Set([...current, ...eligible]),
-                            ].slice(0, 100);
+                            ].slice(0, 30);
                           });
                         }}
                       >
