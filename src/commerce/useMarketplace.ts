@@ -389,10 +389,15 @@ function mapCategories(categories: ApiCategory[]): CatalogCategory[] {
     );
 }
 
-export function useMarketplaceProducts() {
+export function useMarketplaceProductFeed() {
   const { locale } = useLocale();
   const [products, setProducts] = useState<CatalogProduct[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
   useEffect(() => {
+    let active = true;
+    setLoading(true);
+    setError(false);
     void apiRequest<{ products: ApiProduct[] }>(
       "/api/marketplace/products?take=500&sort=newest",
     )
@@ -403,11 +408,26 @@ export function useMarketplaceProducts() {
         // A successful API response is authoritative, including an empty
         // catalog. Local examples are visual fallbacks for static previews
         // only and must never be mixed into a live, purchasable catalog.
-        setProducts(remoteProducts);
+        if (active) setProducts(remoteProducts);
       })
-      .catch(() => setProducts([]));
+      .catch(() => {
+        if (active) {
+          setProducts([]);
+          setError(true);
+        }
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+    return () => {
+      active = false;
+    };
   }, [locale]);
-  return products;
+  return { products, loading, error };
+}
+
+export function useMarketplaceProducts() {
+  return useMarketplaceProductFeed().products;
 }
 
 export function useMarketplaceCategories() {
@@ -677,7 +697,9 @@ export function useMarketplaceCategory(slug?: string) {
 
     let cancelled = false;
     setLoading(true);
-    void apiRequest<{ categories: ApiCategory[] }>("/api/marketplace/categories")
+    void apiRequest<{ categories: ApiCategory[] }>(
+      "/api/marketplace/categories",
+    )
       .then((data) => {
         if (cancelled) return;
         const merged = mergeWithLocalCategories(mapCategories(data.categories));

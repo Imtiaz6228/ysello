@@ -1,3 +1,4 @@
+import { collectSupplierPages } from "../commerce/supplierSelection";
 import {
   type FormEvent,
   useCallback,
@@ -68,7 +69,7 @@ import {
 } from "../commerce/sellerTaxonomy";
 import { catalogAttributePresets } from "../data/enterpriseCatalog";
 
-const DARK_SHOPPING_EXPECTED_INTEGRATION_VERSION = "2026-09-05.4";
+const DARK_SHOPPING_EXPECTED_INTEGRATION_VERSION = "2026-09-05.5";
 
 type Tab =
   | "overview"
@@ -567,7 +568,9 @@ function supplierBalanceLabel(balance: DarkShoppingResale["balance"]) {
   return `${amount.toFixed(2)} ${balance.currency || "RUB"}`;
 }
 
-function normalizedDarkShoppingResale(value: unknown): DarkShoppingResale | null {
+function normalizedDarkShoppingResale(
+  value: unknown,
+): DarkShoppingResale | null {
   if (!value || typeof value !== "object" || Array.isArray(value)) return null;
   const payload = value as Partial<DarkShoppingResale>;
   if (
@@ -581,10 +584,7 @@ function normalizedDarkShoppingResale(value: unknown): DarkShoppingResale | null
     ...payload,
     configuration: {
       ...payload.configuration,
-      marginPercent: supplierNumber(
-        payload.configuration.marginPercent,
-        30,
-      ),
+      marginPercent: supplierNumber(payload.configuration.marginPercent, 30),
       requestsPerSecond: supplierNumber(
         payload.configuration.requestsPerSecond,
         2,
@@ -597,8 +597,7 @@ function normalizedDarkShoppingResale(value: unknown): DarkShoppingResale | null
         payload.configuration.automatic429Retries,
         3,
       ),
-      distributedRateLimit:
-        payload.configuration.distributedRateLimit === true,
+      distributedRateLimit: payload.configuration.distributedRateLimit === true,
     },
     storage: payload.storage ?? { ready: true, message: null },
     balance: payload.balance ?? null,
@@ -758,6 +757,7 @@ export function OperationsAdminPage() {
   const [darkTargetCategoryId, setDarkTargetCategoryId] = useState("");
   const [darkMarginPercent, setDarkMarginPercent] = useState(30);
   const [darkPublish, setDarkPublish] = useState(true);
+  const [darkAutoCategory, setDarkAutoCategory] = useState(true);
 
   function selectTab(next: Tab) {
     setTabState(next);
@@ -971,6 +971,59 @@ export function OperationsAdminPage() {
     }
   }
 
+  async function selectAllDarkProducts() {
+    setBusy("dark-shopping-select-all");
+    setMessage("Loading eligible products across all matching pages…");
+    const filters = new URLSearchParams({
+      onlyInStock: "true",
+      deliveryType: "auto",
+      perPage: "100",
+    });
+    if (darkCategoryId) filters.set("categoryId", darkCategoryId);
+    if (darkProductSearch.trim()) filters.set("name", darkProductSearch.trim());
+    try {
+      const selected = await collectSupplierPages<DarkShoppingProduct>(
+        async (page) => {
+          filters.set("page", String(page));
+          const result = await apiRequest<{
+            data: {
+              items: DarkShoppingProduct[];
+              _meta?: { currentPage: number; pageCount: number };
+            };
+          }>(`/api/admin/dark-shopping/products?${filters}`);
+          return result.data;
+        },
+        (items, page, pages) => {
+          const eligible = items.filter(
+            (product) =>
+              !supplierManualDelivery(product.is_manual_order_delivery) &&
+              supplierNumber(product.minimum_order, 1) <= 20,
+          );
+          setDarkSelectedProductIds(eligible.map((product) => product.id));
+          setMessage(
+            `Selected ${eligible.length} eligible products · page ${page} of ${pages}…`,
+          );
+        },
+      );
+      const eligible = selected.filter(
+        (product) =>
+          !supplierManualDelivery(product.is_manual_order_delivery) &&
+          supplierNumber(product.minimum_order, 1) <= 20,
+      );
+      setMessage(
+        `${eligible.length} eligible products selected across all matching pages. Choose the destination and publish setting, then import.`,
+      );
+    } catch (error) {
+      setMessage(
+        error instanceof Error
+          ? error.message
+          : "Selection stopped. Loaded selections are preserved.",
+      );
+    } finally {
+      setBusy("");
+    }
+  }
+
   async function testDarkShoppingConnection() {
     setBusy("dark-shopping-test");
     setMessage("");
@@ -1048,8 +1101,13 @@ export function OperationsAdminPage() {
       );
       return;
     }
-    if (!darkSelectedProductIds.length || !darkTargetCategoryId) {
-      setMessage("Select supplier products and a Ysello category first.");
+    if (
+      !darkSelectedProductIds.length ||
+      (!darkAutoCategory && !darkTargetCategoryId)
+    ) {
+      setMessage(
+        "Select supplier products and choose automatic mapping or a Ysello destination category.",
+      );
       return;
     }
 
@@ -1085,18 +1143,28 @@ export function OperationsAdminPage() {
           method: "POST",
           body: {
             remoteProductIds: batch,
-            categoryId: darkTargetCategoryId,
+            categoryId: darkAutoCategory ? undefined : darkTargetCategoryId,
+            autoCategory: darkAutoCategory,
             publish: darkPublish,
           },
         });
         imported.push(...result.imported);
         skipped.push(...result.skipped);
-        completedIds.push(...batch);
+        completedIds.push(
+          ...result.imported.map((item) => item.remoteProductId),
+        );
       }
 
-      setDarkSelectedProductIds([]);
+      setDarkSelectedProductIds(skipped.map((item) => item.remoteProductId));
       setMessage(
-        `${imported.length} product${imported.length === 1 ? "" : "s"} imported${darkPublish ? " and published" : " as draft"}.${skipped.length ? ` ${skipped.length} skipped: ${skipped.slice(0, 8).map((item) => item.reason).join("; ")}${skipped.length > 8 ? "; …" : ""}` : ""}`,
+        `${imported.length} product${imported.length === 1 ? "" : "s"} imported${darkPublish ? " and published" : " as draft"}.${
+          skipped.length
+            ? ` ${skipped.length} skipped: ${skipped
+                .slice(0, 8)
+                .map((item) => item.reason)
+                .join("; ")}${skipped.length > 8 ? "; …" : ""}`
+            : ""
+        }`,
       );
       await load();
     } catch (error) {
@@ -2168,8 +2236,7 @@ export function OperationsAdminPage() {
                   {supplierBalanceLabel(darkResale?.balance ?? null)}
                 </strong>
                 <span>
-                  Global markup {darkResale?.configuration.marginPercent ?? 30}
-                  %
+                  Global markup {darkResale?.configuration.marginPercent ?? 30}%
                 </span>
                 {darkResale?.configuration.integrationVersion && (
                   <small>
@@ -2177,8 +2244,11 @@ export function OperationsAdminPage() {
                   </small>
                 )}
                 <small>
-                  Supplier pacing {darkResale?.configuration.safeRequestIntervalMs ?? 700}ms
-                  {" · "}{darkResale?.configuration.automatic429Retries ?? 3} automatic 429 retries
+                  Supplier pacing{" "}
+                  {darkResale?.configuration.safeRequestIntervalMs ?? 700}ms
+                  {" · "}
+                  {darkResale?.configuration.automatic429Retries ?? 3} automatic
+                  429 retries
                   {" · "}
                   {darkResale?.configuration.distributedRateLimit
                     ? "deployment-wide Redis limiter"
@@ -2212,11 +2282,13 @@ export function OperationsAdminPage() {
               DARK_SHOPPING_EXPECTED_INTEGRATION_VERSION ? (
               <div className="ops-message error">
                 <strong>Railway API is outdated.</strong> This frontend requires
-                Dark Shopping integration {" "}
+                Dark Shopping integration{" "}
                 <code>{DARK_SHOPPING_EXPECTED_INTEGRATION_VERSION}</code>, but
-                the backend reports {" "}
-                <code>{darkResale.configuration.integrationVersion ?? "no version"}</code>.
-                Redeploy the Railway API from the same repository and branch,
+                the backend reports{" "}
+                <code>
+                  {darkResale.configuration.integrationVersion ?? "no version"}
+                </code>
+                . Redeploy the Railway API from the same repository and branch,
                 then reload this page. Imports stay disabled until both builds
                 match so an old supplier client cannot keep returning the same
                 502 path.
@@ -2312,14 +2384,19 @@ export function OperationsAdminPage() {
                     <span>Dark Shopping category</span>
                     <select
                       value={darkCategoryId}
+                      disabled={Boolean(busy)}
                       onChange={(event) => {
                         const nextCategoryId = event.target.value;
                         setDarkCategoryId(nextCategoryId);
+                        setDarkProducts([]);
+                        setDarkSelectedProductIds([]);
+                        setDarkProductPage(1);
+                        setDarkProductPageCount(1);
                         const mapping = darkResale?.categoryMappings?.find(
                           (item) =>
                             item.remoteCategoryId === Number(nextCategoryId),
                         );
-                        if (mapping) setDarkTargetCategoryId(mapping.categoryId);
+                        setDarkTargetCategoryId(mapping?.categoryId ?? "");
                       }}
                     >
                       <option value="">Every supplier category</option>
@@ -2352,16 +2429,16 @@ export function OperationsAdminPage() {
                     <span>Find supplier products</span>
                     <input
                       value={darkProductSearch}
-                      onChange={(event) =>
-                        setDarkProductSearch(event.target.value)
-                      }
+                      disabled={Boolean(busy)}
+                      onChange={(event) => {
+                        setDarkProductSearch(event.target.value);
+                        setDarkProducts([]);
+                        setDarkSelectedProductIds([]);
+                      }}
                       placeholder="Search product name"
                     />
                   </label>
-                  <button
-                    className="primary-button"
-                    disabled={busy === "dark-shopping-search"}
-                  >
+                  <button className="primary-button" disabled={Boolean(busy)}>
                     <Search size={16} />
                     {busy === "dark-shopping-search"
                       ? "Loading…"
@@ -2377,7 +2454,9 @@ export function OperationsAdminPage() {
                           {darkSelectedProductIds.length} selected
                         </strong>
                         <small>
-                          Retail price = supplier RUB cost + {darkMarginPercent}% · large selections import automatically in safe batches
+                          Retail price = supplier RUB cost + {darkMarginPercent}
+                          % · large selections import automatically in safe
+                          batches
                         </small>
                       </div>
                       <div className="dark-resale-fixed-markup">
@@ -2388,6 +2467,7 @@ export function OperationsAdminPage() {
                         <span>Ysello category</span>
                         <select
                           value={darkTargetCategoryId}
+                          disabled={darkAutoCategory || Boolean(busy)}
                           onChange={(event) =>
                             setDarkTargetCategoryId(event.target.value)
                           }
@@ -2405,7 +2485,22 @@ export function OperationsAdminPage() {
                       <label className="dark-resale-publish">
                         <input
                           type="checkbox"
+                          checked={darkAutoCategory}
+                          disabled={Boolean(busy)}
+                          onChange={(event) =>
+                            setDarkAutoCategory(event.target.checked)
+                          }
+                        />
+                        <span>
+                          Match each product to its supplier category
+                          automatically
+                        </span>
+                      </label>
+                      <label className="dark-resale-publish">
+                        <input
+                          type="checkbox"
                           checked={darkPublish}
+                          disabled={Boolean(busy)}
                           onChange={(event) =>
                             setDarkPublish(event.target.checked)
                           }
@@ -2414,6 +2509,7 @@ export function OperationsAdminPage() {
                       </label>
                       <button
                         type="button"
+                        disabled={Boolean(busy)}
                         onClick={() => {
                           const eligible = darkProducts
                             .filter(
@@ -2430,9 +2526,7 @@ export function OperationsAdminPage() {
                                 (id) => !eligible.includes(id),
                               );
                             }
-                            return [
-                              ...new Set([...current, ...eligible]),
-                            ];
+                            return [...new Set([...current, ...eligible])];
                           });
                         }}
                       >
@@ -2440,13 +2534,31 @@ export function OperationsAdminPage() {
                       </button>
                       <button
                         type="button"
+                        disabled={Boolean(busy)}
+                        onClick={() => void selectAllDarkProducts()}
+                      >
+                        {busy === "dark-shopping-select-all"
+                          ? "Selecting all pages…"
+                          : "Select all matching pages"}
+                      </button>
+                      <button
+                        type="button"
+                        disabled={
+                          Boolean(busy) || !darkSelectedProductIds.length
+                        }
+                        onClick={() => setDarkSelectedProductIds([])}
+                      >
+                        Clear selection
+                      </button>
+                      <button
+                        type="button"
                         className="primary-button"
                         disabled={
-                          busy === "dark-shopping-import" ||
+                          Boolean(busy) ||
                           darkResale?.configuration.integrationVersion !==
                             DARK_SHOPPING_EXPECTED_INTEGRATION_VERSION ||
                           !darkSelectedProductIds.length ||
-                          !darkTargetCategoryId
+                          (!darkAutoCategory && !darkTargetCategoryId)
                         }
                         onClick={() => void importDarkProducts()}
                       >
@@ -2492,7 +2604,7 @@ export function OperationsAdminPage() {
                                 <input
                                   type="checkbox"
                                   checked={selected}
-                                  disabled={unsupported}
+                                  disabled={unsupported || Boolean(busy)}
                                   onChange={() => toggleDarkProduct(product.id)}
                                 />
                                 <span>{selected ? "Selected" : "Select"}</span>
@@ -2507,13 +2619,15 @@ export function OperationsAdminPage() {
                               <p>
                                 {String(product.description ?? "")
                                   .replace(/<[^>]+>/g, " ")
-                                  .slice(0, 180) || "No supplier description provided."}
+                                  .slice(0, 180) ||
+                                  "No supplier description provided."}
                               </p>
                               <dl>
                                 <div>
                                   <dt>Supplier</dt>
                                   <dd>
-                                    {supplierNumber(product.price).toFixed(2)} RUB
+                                    {supplierNumber(product.price).toFixed(2)}{" "}
+                                    RUB
                                   </dd>
                                 </div>
                                 <div>
@@ -2522,7 +2636,14 @@ export function OperationsAdminPage() {
                                 </div>
                                 <div>
                                   <dt>Stock</dt>
-                                  <dd>{Math.max(0, Math.trunc(supplierNumber(product.quantity)))}</dd>
+                                  <dd>
+                                    {Math.max(
+                                      0,
+                                      Math.trunc(
+                                        supplierNumber(product.quantity),
+                                      ),
+                                    )}
+                                  </dd>
                                 </div>
                                 <div>
                                   <dt>Minimum</dt>

@@ -53,6 +53,11 @@ export function CartProvider({ children }: { children: ReactNode }) {
         0,
       ),
       add(product, quantity = product.minimumOrder ?? 1) {
+        if (
+          product.type !== "SERVICE" &&
+          (product.stockCount ?? 0) < Math.max(1, product.minimumOrder ?? 1)
+        )
+          return;
         setItems((current) => {
           const existing = current.find(
             (item) => item.product.id === product.id,

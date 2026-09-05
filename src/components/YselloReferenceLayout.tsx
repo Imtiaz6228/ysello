@@ -286,7 +286,8 @@ export function YselloReferenceProductCard({
   const categoryLabel =
     categoryParts[categoryParts.length - 1] ?? product.category;
   const canPurchase =
-    product.type === "SERVICE" || (product.stockCount ?? 0) > 0;
+    product.type === "SERVICE" ||
+    (product.stockCount ?? 0) >= (product.minimumOrder ?? 1);
   const ProductIcon =
     product.type === "SERVICE" ? BriefcaseBusiness : PackageOpen;
   const platform =
@@ -339,9 +340,15 @@ export function YselloReferenceProductCard({
         >
           {supplierFulfilled ? (
             brandSlug ? (
-              <MarketplaceBrandArtwork brandSlug={brandSlug} className="ys-product-native-brand" />
+              <MarketplaceBrandArtwork
+                brandSlug={brandSlug}
+                className="ys-product-native-brand"
+              />
             ) : (
-              <YselloMarketplaceArtwork label={categoryLabel} className="ys-product-native-brand" />
+              <YselloMarketplaceArtwork
+                label={categoryLabel}
+                className="ys-product-native-brand"
+              />
             )
           ) : product.imageUrl ? (
             <img
@@ -424,7 +431,7 @@ export function YselloReferenceProductCard({
               onClick={() => onBuy(product)}
             >
               <ShoppingBag aria-hidden="true" />
-              {canPurchase ? "Add to cart" : "Sold out"}
+              {canPurchase ? "Buy now" : "Sold out"}
             </button>
           ) : null}
         </div>

@@ -17,6 +17,8 @@ import {
 } from "lucide-react";
 import { FormEvent, useEffect, useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
+import { categoryPath } from "../commerce/marketplaceUrls";
+import { storefrontCategories } from "../commerce/storefrontCategories";
 import { STAFF_ROLES } from "../api/client";
 import { useAuth } from "../auth/AuthContext";
 import { useCart } from "../commerce/CartContext";
@@ -125,9 +127,7 @@ export function MarketHeader() {
   const { count } = useCart();
   const { formatMoney, t } = useLocale();
   const marketplaceCategories = useMarketplaceCategories();
-  const supplierCategories = marketplaceCategories.filter(
-    (category) => category.isSupplierCategory,
-  );
+  const supplierCategories = storefrontCategories(marketplaceCategories);
   const navigate = useNavigate();
   const location = useLocation();
   const [query, setQuery] = useState("");
@@ -202,7 +202,7 @@ export function MarketHeader() {
   }
 
   function toggleMega(slug: string) {
-    setActiveMega(slug);
+    setActiveMega((current) => (current === slug ? null : slug));
   }
 
   return (
@@ -263,7 +263,7 @@ export function MarketHeader() {
                   </option>
                 ))}
                 {supplierCategories.length ? (
-                  <optgroup label="Live account categories">
+                  <optgroup label="Account & digital categories">
                     {supplierCategories.map((category) => (
                       <option key={category.slug} value={category.slug}>
                         {category.name}
@@ -338,7 +338,6 @@ export function MarketHeader() {
               aria-expanded={activeMega === category.slug}
               aria-controls="market-category-menu"
               onClick={() => toggleMega(category.slug)}
-              onFocus={() => setActiveMega(category.slug)}
               onMouseEnter={() => setActiveMega(category.slug)}
             >
               <DepartmentIcon category={category} />
@@ -362,6 +361,79 @@ export function MarketHeader() {
           </div>
         ) : null}
       </div>
+
+      {supplierCategories.length ? (
+        <nav
+          className="ys-account-navigation"
+          aria-label="Account and digital product categories"
+        >
+          <div className="ys-account-navigation-inner">
+            <Link className="ys-account-nav-label" to="/catalog">
+              <Grid2X2 aria-hidden="true" /> Shop categories
+            </Link>
+            <div className="ys-account-nav-shortcuts">
+              {supplierCategories.slice(0, 6).map((category) => {
+                const brand = detectMarketplaceBrandSlug(
+                  category.name,
+                  category.slug,
+                );
+                return (
+                  <Link
+                    key={category.slug}
+                    to={categoryPath(category, marketplaceCategories)}
+                  >
+                    {brand ? (
+                      <MarketplaceBrandArtwork brandSlug={brand} compact />
+                    ) : (
+                      <YselloMarketplaceArtwork label={category.name} compact />
+                    )}
+                    <span>{category.name}</span>
+                  </Link>
+                );
+              })}
+            </div>
+            <button
+              className="ys-account-nav-all"
+              type="button"
+              aria-expanded={activeMega === "account-categories"}
+              aria-controls="ys-all-account-categories"
+              onClick={() => toggleMega("account-categories")}
+            >
+              All categories <ChevronDown aria-hidden="true" />
+            </button>
+          </div>
+          {activeMega === "account-categories" ? (
+            <div
+              id="ys-all-account-categories"
+              className="ys-account-nav-panel"
+            >
+              {supplierCategories.map((category) => {
+                const brand = detectMarketplaceBrandSlug(
+                  category.name,
+                  category.slug,
+                );
+                return (
+                  <Link
+                    key={category.slug}
+                    to={categoryPath(category, marketplaceCategories)}
+                  >
+                    {brand ? (
+                      <MarketplaceBrandArtwork brandSlug={brand} compact />
+                    ) : (
+                      <YselloMarketplaceArtwork label={category.name} compact />
+                    )}
+                    <span>
+                      <strong>{category.name}</strong>
+                      <small>{category.productCount ?? 0} products</small>
+                    </span>
+                    <ArrowRight aria-hidden="true" />
+                  </Link>
+                );
+              })}
+            </div>
+          ) : null}
+        </nav>
+      ) : null}
 
       {menuOpen ? (
         <>
@@ -524,29 +596,42 @@ export function MarketHeader() {
                 aria-label="Live account marketplace categories"
               >
                 <div className="g2-mobile-category-heading">
-                  <strong><span>Ysello account marketplace</span></strong>
+                  <strong>
+                    <span>Ysello account marketplace</span>
+                  </strong>
                   <Link to="/catalog">View all</Link>
                 </div>
                 <div className="g2-mobile-supplier-grid">
                   {supplierCategories.map((category) => (
                     <Link
                       key={category.slug}
-                      to={`/category/${category.slug}`}
+                      to={categoryPath(category, marketplaceCategories)}
                       onClick={() => setMenuOpen(false)}
                     >
                       <span className="g2-mobile-supplier-icon">
                         {(() => {
-                          const brand = detectMarketplaceBrandSlug(category.name, category.slug);
+                          const brand = detectMarketplaceBrandSlug(
+                            category.name,
+                            category.slug,
+                          );
                           return brand ? (
-                            <MarketplaceBrandArtwork brandSlug={brand} compact />
+                            <MarketplaceBrandArtwork
+                              brandSlug={brand}
+                              compact
+                            />
                           ) : (
-                            <YselloMarketplaceArtwork label={category.name} compact />
+                            <YselloMarketplaceArtwork
+                              label={category.name}
+                              compact
+                            />
                           );
                         })()}
                       </span>
                       <div>
                         <strong>{category.name}</strong>
-                        <small>{category.productCount ?? 0} live products</small>
+                        <small>
+                          {category.productCount ?? 0} live products
+                        </small>
                       </div>
                       <ArrowRight aria-hidden="true" />
                     </Link>

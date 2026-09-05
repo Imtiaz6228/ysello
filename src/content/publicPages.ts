@@ -9,18 +9,18 @@ export type PublicPage = {
   priority: number;
 };
 
-export const siteContentLastModified = "2026-07-23";
+export const siteContentLastModified = "2026-09-05";
 
 export const publicPages: PublicPage[] = [
   {
     path: "/",
     title:
-      "Digital Products Marketplace — Software, Assets & Services | Ysello",
+      "Buy Social Media Accounts & Digital Products | Ysello Marketplace",
     description:
-      "Browse trusted digital products, software, creative assets, courses, and expert services from reviewed sellers with clear delivery and protected checkout.",
-    heading: "Buy digital products from trusted sellers",
+      "Shop social media accounts, email accounts, subscriptions and digital products on Ysello. Compare stock, delivery terms and seller storefronts before you buy.",
+    heading: "Buy social media accounts and digital products",
     intro:
-      "Compare software, creative assets, courses, business resources, and expert services with delivery, licensing, seller, and support details in view.",
+      "Find your platform, compare product details and review stock, pricing and delivery terms before checking out.",
     changeFrequency: "daily",
     priority: 1,
   },

@@ -1,5 +1,6 @@
 import type { IconType } from "react-icons";
 import {
+  FaYahoo,
   FaAndroid,
   FaApple,
   FaGamepad,
@@ -15,6 +16,13 @@ import {
   FaXbox,
 } from "react-icons/fa";
 import {
+  SiGmail,
+  SiClaude,
+  SiGooglegemini,
+  SiNetflix,
+  SiSpotify,
+  SiProtonmail,
+  SiVk,
   SiBattledotnet,
   SiDiscord,
   SiEa,
@@ -34,6 +42,8 @@ import {
   SiX,
   SiYoutube,
 } from "react-icons/si";
+
+import { PiOpenAiLogo, PiMicrosoftOutlookLogoFill } from "react-icons/pi";
 
 const categoryIcons: Record<string, IconType> = {
   gaming: FaGamepad,
@@ -60,7 +70,16 @@ const platformIcons: Record<string, IconType> = {
   pinterest: SiPinterest,
   reddit: FaRedditAlien,
   google: FaGoogle,
-  gmail: FaGoogle,
+  gmail: SiGmail,
+  outlook: PiMicrosoftOutlookLogoFill,
+  yahoo: FaYahoo,
+  protonmail: SiProtonmail,
+  chatgpt: PiOpenAiLogo,
+  claude: SiClaude,
+  gemini: SiGooglegemini,
+  netflix: SiNetflix,
+  spotify: SiSpotify,
+  vk: SiVk,
   steam: FaSteam,
   xbox: FaXbox,
   "xbox-live": FaXbox,
@@ -93,6 +112,15 @@ const brandNames: Record<string, string> = {
   reddit: "Reddit",
   google: "Google",
   gmail: "Gmail",
+  outlook: "Outlook",
+  yahoo: "Yahoo",
+  protonmail: "Proton Mail",
+  chatgpt: "ChatGPT",
+  claude: "Claude",
+  gemini: "Gemini",
+  netflix: "Netflix",
+  spotify: "Spotify",
+  vk: "VK",
   steam: "Steam",
   xbox: "Xbox",
   "xbox-live": "Xbox",
@@ -109,6 +137,15 @@ const brandNames: Record<string, string> = {
 };
 
 const brandPatterns: Array<[string, RegExp]> = [
+  ["outlook", /\boutlook\b|\bhotmail\b|\blive\.com\b/i],
+  ["yahoo", /\byahoo\b/i],
+  ["protonmail", /\bproton\s*mail\b|\bproton\b/i],
+  ["chatgpt", /\bchat\s*gpt\b|\bopenai\b/i],
+  ["claude", /\bclaude\b|\banthropic\b/i],
+  ["gemini", /\bgemini\b/i],
+  ["netflix", /\bnetflix\b/i],
+  ["spotify", /\bspotify\b/i],
+  ["vk", /\bvk\b|\bvkontakte\b/i],
   ["instagram", /\binstagram\b/i],
   ["facebook", /\bfacebook\b|\bfb\b/i],
   ["threads", /\bthreads\b/i],
@@ -153,12 +190,17 @@ export function marketplacePlatformBrandSlug(slug: string) {
 
 export function detectMarketplaceBrandSlug(...values: Array<unknown>) {
   const text = values
-    .filter((value): value is string => typeof value === "string" && Boolean(value.trim()))
+    .filter(
+      (value): value is string =>
+        typeof value === "string" && Boolean(value.trim()),
+    )
     .join(" ")
     .trim();
   if (!text) return null;
 
-  const direct = marketplacePlatformBrandSlug(text.toLowerCase().replace(/[^a-z0-9]+/g, "-"));
+  const direct = marketplacePlatformBrandSlug(
+    text.toLowerCase().replace(/[^a-z0-9]+/g, "-"),
+  );
   if (platformIcons[direct]) return direct;
 
   return brandPatterns.find(([, pattern]) => pattern.test(text))?.[0] ?? null;
@@ -208,7 +250,9 @@ export function MarketplaceBrandArtwork({
       aria-label={`${marketplaceBrandName(normalized)} product`}
       role="img"
     >
-      <span className="ys-brand-artwork-icon"><Icon aria-hidden="true" /></span>
+      <span className="ys-brand-artwork-icon">
+        <Icon aria-hidden="true" />
+      </span>
       {!compact ? (
         <span className="ys-brand-artwork-copy">
           <strong>{marketplaceBrandName(normalized)}</strong>

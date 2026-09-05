@@ -115,7 +115,6 @@ async function uniqueProductSlug(name: string, remoteProductId: number) {
   return slug;
 }
 
-
 function yselloPublicText(value: string) {
   return darkShoppingPlainText(value)
     .replace(/https?:\/\/(?:www\.)?dark\.shopping\/?\S*/gi, " ")
@@ -151,7 +150,9 @@ const nativeCategorySlugs: Array<[RegExp, string]> = [
 ];
 
 function nativeCategorySlug(name: string) {
-  const mapped = nativeCategorySlugs.find(([pattern]) => pattern.test(name))?.[1];
+  const mapped = nativeCategorySlugs.find(([pattern]) =>
+    pattern.test(name),
+  )?.[1];
   return mapped ?? `${slugBase(name)}-marketplace`;
 }
 
@@ -170,10 +171,14 @@ async function normalizeDarkShoppingCategory(category: {
 }) {
   const targetSlug = nativeCategorySlug(category.name);
   const description = nativeCategoryDescription(category.name);
-  const target = await prisma.category.findUnique({ where: { slug: targetSlug } });
+  const target = await prisma.category.findUnique({
+    where: { slug: targetSlug },
+  });
 
   if (target && target.id !== category.id) {
-    const metaKeywords = [...new Set([...target.metaKeywords, ...category.metaKeywords])];
+    const metaKeywords = [
+      ...new Set([...target.metaKeywords, ...category.metaKeywords]),
+    ];
     await prisma.$transaction([
       prisma.product.updateMany({
         where: { categoryId: category.id },
@@ -198,7 +203,11 @@ async function normalizeDarkShoppingCategory(category: {
     return prisma.category.findUniqueOrThrow({ where: { id: target.id } });
   }
 
-  if (category.slug !== targetSlug || /dark-shopping/i.test(category.description) || category.imageUrl) {
+  if (
+    category.slug !== targetSlug ||
+    /dark-shopping/i.test(category.description) ||
+    category.imageUrl
+  ) {
     return prisma.category.update({
       where: { id: category.id },
       data: {
@@ -254,7 +263,10 @@ export async function listDarkShoppingCategoryMappings() {
     where: { metaKeywords: { has: DARK_SHOPPING_CATEGORY_TAG } },
     orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
   });
-  const normalizedById = new Map<string, Awaited<ReturnType<typeof normalizeDarkShoppingCategory>>>();
+  const normalizedById = new Map<
+    string,
+    Awaited<ReturnType<typeof normalizeDarkShoppingCategory>>
+  >();
   for (const category of existing) {
     const normalized = await normalizeDarkShoppingCategory(category);
     normalizedById.set(normalized.id, normalized);
@@ -297,7 +309,11 @@ export async function importDarkShoppingCategory(remoteCategoryId: number) {
         data: { isActive: true },
       });
     }
-    return { category: { ...category, isActive: true }, imported: false, reactivated };
+    return {
+      category: { ...category, isActive: true },
+      imported: false,
+      reactivated,
+    };
   }
 
   const remote = (await fetchAllDarkShoppingCategories()).find(
@@ -311,18 +327,29 @@ export async function importDarkShoppingCategory(remoteCategoryId: number) {
     );
   }
 
-  const name = yselloPublicText(remote.name).slice(0, 100) || `Marketplace ${remote.id}`;
+  const name =
+    yselloPublicText(remote.name).slice(0, 100) || `Marketplace ${remote.id}`;
   const targetSlug = nativeCategorySlug(name);
   const description = nativeCategoryDescription(name);
-  const target = await prisma.category.findUnique({ where: { slug: targetSlug } });
+  const target = await prisma.category.findUnique({
+    where: { slug: targetSlug },
+  });
   if (target) {
     const category = await prisma.category.update({
       where: { id: target.id },
       data: {
-        metaKeywords: [...new Set([...target.metaKeywords, DARK_SHOPPING_CATEGORY_TAG, tag, name.toLowerCase()])],
+        metaKeywords: [
+          ...new Set([
+            ...target.metaKeywords,
+            DARK_SHOPPING_CATEGORY_TAG,
+            tag,
+            name.toLowerCase(),
+          ]),
+        ],
         isActive: true,
         description: target.description || description,
-        seoTitle: target.seoTitle || `${name} Marketplace | Ysello`.slice(0, 70),
+        seoTitle:
+          target.seoTitle || `${name} Marketplace | Ysello`.slice(0, 70),
         seoDescription: target.seoDescription || description.slice(0, 170),
       },
     });
@@ -331,7 +358,9 @@ export async function importDarkShoppingCategory(remoteCategoryId: number) {
 
   let slug = targetSlug;
   let suffix = 2;
-  while (await prisma.category.findUnique({ where: { slug }, select: { id: true } })) {
+  while (
+    await prisma.category.findUnique({ where: { slug }, select: { id: true } })
+  ) {
     slug = `${targetSlug.slice(0, 94)}-${suffix++}`;
   }
   const category = await prisma.category.create({
@@ -473,8 +502,11 @@ function remoteProductData(product: DarkShoppingProduct) {
       coverImageUrl: null,
       deliveryNote:
         "Secure digital delivery is prepared automatically after payment confirmation.",
-      platform: yselloPublicText(product.category?.name ?? "").slice(0, 100) || null,
-      productKind: yselloPublicText(product.group?.name ?? "").slice(0, 100) || "Digital product",
+      platform:
+        yselloPublicText(product.category?.name ?? "").slice(0, 100) || null,
+      productKind:
+        yselloPublicText(product.group?.name ?? "").slice(0, 100) ||
+        "Digital product",
       stockType: "Live inventory",
       warranty: product.guarantee_time_seconds
         ? `${guaranteeHours} hour replacement guarantee`
@@ -531,14 +563,17 @@ function remoteProductData(product: DarkShoppingProduct) {
 export async function importDarkShoppingProducts(input: {
   adminId: string;
   remoteProductIds: number[];
-  categoryId: string;
+  categoryId?: string;
+  autoCategory?: boolean;
   publish: boolean;
 }) {
-  const category = await prisma.category.findFirst({
-    where: { id: input.categoryId, isActive: true },
-    select: { id: true },
-  });
-  if (!category) {
+  const category = input.categoryId
+    ? await prisma.category.findFirst({
+        where: { id: input.categoryId, isActive: true },
+        select: { id: true },
+      })
+    : null;
+  if (!input.autoCategory && !category) {
     throw new ApiError(
       404,
       "Choose an active Ysello category.",
@@ -550,7 +585,9 @@ export async function importDarkShoppingProducts(input: {
   // The supplier client imports in small product/list batches and falls back to
   // product/view only when a batch cannot be retrieved. The shared 700ms queue
   // plus 429 backoff keeps imports below Dark.shopping's published 2 req/s cap.
-  const viewed = await darkShoppingClient().viewProducts(input.remoteProductIds);
+  const viewed = await darkShoppingClient().viewProducts(
+    input.remoteProductIds,
+  );
   const remoteById = new Map(
     viewed.items.map((product) => [product.id, product]),
   );
@@ -561,6 +598,7 @@ export async function importDarkShoppingProducts(input: {
   }> = [];
   const skipped: Array<{ remoteProductId: number; reason: string }> = [];
 
+  const mappedCategories = new Map<number, string>();
   for (const remoteProductId of input.remoteProductIds) {
     const remote = remoteById.get(remoteProductId);
     if (!remote) {
@@ -572,6 +610,19 @@ export async function importDarkShoppingProducts(input: {
     }
     try {
       const data = remoteProductData(remote);
+      let categoryId = category?.id;
+      if (input.autoCategory) {
+        categoryId = mappedCategories.get(remote.category.id);
+        if (!categoryId) {
+          const mapped = await importDarkShoppingCategory(remote.category.id);
+          categoryId = mapped.category.id;
+          mappedCategories.set(remote.category.id, categoryId);
+        }
+      }
+      if (!categoryId)
+        throw new Error(
+          "No destination category is available for this product.",
+        );
       const existing = await prisma.darkShoppingListing.findUnique({
         where: { remoteProductId },
         select: {
@@ -587,7 +638,7 @@ export async function importDarkShoppingProducts(input: {
             where: { id: existing.productId },
             data: {
               ...data.product,
-              categoryId: input.categoryId,
+              categoryId,
               status: input.publish
                 ? ProductStatus.APPROVED
                 : existing.product.status,
@@ -620,7 +671,7 @@ export async function importDarkShoppingProducts(input: {
         data: {
           ...data.product,
           sellerId: input.adminId,
-          categoryId: input.categoryId,
+          categoryId,
           slug,
           status: input.publish ? ProductStatus.APPROVED : ProductStatus.DRAFT,
           publishedAt: input.publish ? new Date() : null,

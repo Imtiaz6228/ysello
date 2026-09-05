@@ -56,8 +56,11 @@ export function StorePage() {
         }}
       >
         <div className="store-monogram store-logo">
-          {store.logoUrl ? (
-            <img src={store.logoUrl} alt={`${store.name} logo`} />
+          {store.logoUrl || store.isOfficial ? (
+            <img
+              src={store.logoUrl || "/ysello-mark.svg"}
+              alt={`${store.name} logo`}
+            />
           ) : (
             store.mark
           )}

@@ -104,7 +104,8 @@ darkShoppingRouter.get(
     const configuration = darkShoppingConfiguration();
     const supplierPromise = darkShoppingSupplierStatus();
     let listings: Awaited<ReturnType<typeof listDarkShoppingListings>> = [];
-    let fulfillments: Awaited<ReturnType<typeof listDarkShoppingFulfillments>> = [];
+    let fulfillments: Awaited<ReturnType<typeof listDarkShoppingFulfillments>> =
+      [];
     let categoryMappings: Awaited<
       ReturnType<typeof listDarkShoppingCategoryMappings>
     > = [];
@@ -164,8 +165,12 @@ darkShoppingRouter.post(
     const input = z
       .object({
         remoteProductIds: z.array(positiveInteger).min(1).max(30),
-        categoryId: z.string().uuid(),
+        categoryId: z.string().uuid().optional(),
+        autoCategory: z.boolean().default(false),
         publish: z.boolean().default(false),
+      })
+      .refine((input) => input.autoCategory || Boolean(input.categoryId), {
+        message: "Choose a destination category or automatic category mapping.",
       })
       .parse(req.body);
     const result = await importDarkShoppingProducts({
