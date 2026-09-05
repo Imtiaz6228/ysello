@@ -1,15 +1,18 @@
 import { env } from "../config/env.js";
+import {
+  DARK_SHOPPING_EXPECTED_BRANCH,
+  DARK_SHOPPING_EXPECTED_REPOSITORY,
+  DARK_SHOPPING_INTEGRATION_VERSION,
+  railwayReleaseMetadata,
+} from "../config/release.js";
 import { ApiError } from "../middleware/error-handler.js";
 import {
   DARK_SHOPPING_GLOBAL_MARGIN_PERCENT,
   DarkShoppingClient,
 } from "./dark-shopping.client.js";
 
-const EXPECTED_REPOSITORY = "Imtiaz6228/ysello";
-const EXPECTED_BRANCH = "main";
 const DARK_SHOPPING_API_SETTINGS_URL =
   "https://dark.shopping/customer/settings/api";
-const DARK_SHOPPING_INTEGRATION_VERSION = "2026-09-05.1";
 
 export type DarkShoppingSupplierAccessStatus =
   | "ready"
@@ -25,17 +28,6 @@ export type DarkShoppingSupplierAccess = {
   providerStatus: number | null;
   settingsUrl: string;
 };
-
-function runtimeValue(name: string) {
-  const value = process.env[name]?.trim();
-  return value || null;
-}
-
-function railwayRepository() {
-  const owner = runtimeValue("RAILWAY_GIT_REPO_OWNER");
-  const name = runtimeValue("RAILWAY_GIT_REPO_NAME");
-  return owner && name ? `${owner}/${name}` : name;
-}
 
 const client = env.DARK_SHOPPING_API_KEY
   ? new DarkShoppingClient({
@@ -122,9 +114,10 @@ export async function darkShoppingSupplierStatus(): Promise<{
 }
 
 export function darkShoppingConfiguration() {
-  const repository = railwayRepository();
-  const branch = runtimeValue("RAILWAY_GIT_BRANCH");
-  const commit = runtimeValue("RAILWAY_GIT_COMMIT_SHA");
+  const release = railwayReleaseMetadata();
+  const repository = release.repository;
+  const branch = release.branch;
+  const commit = release.commit;
 
   return {
     configured: Boolean(client),
@@ -138,16 +131,17 @@ export function darkShoppingConfiguration() {
     documentationUrl: "https://dark.shopping/developer",
     settingsUrl: DARK_SHOPPING_API_SETTINGS_URL,
     deployment: {
-      project: runtimeValue("RAILWAY_PROJECT_NAME"),
-      service: runtimeValue("RAILWAY_SERVICE_NAME"),
-      environment: runtimeValue("RAILWAY_ENVIRONMENT_NAME"),
+      releaseId: release.releaseId,
+      project: release.project,
+      service: release.service,
+      environment: release.environment,
       repository,
       branch,
       commit: commit?.slice(0, 12) ?? null,
-      expectedRepository: EXPECTED_REPOSITORY,
-      expectedBranch: EXPECTED_BRANCH,
+      expectedRepository: DARK_SHOPPING_EXPECTED_REPOSITORY,
+      expectedBranch: DARK_SHOPPING_EXPECTED_BRANCH,
       sourceMatchesExpectedRepository: repository
-        ? repository.toLowerCase() === EXPECTED_REPOSITORY.toLowerCase()
+        ? repository.toLowerCase() === DARK_SHOPPING_EXPECTED_REPOSITORY.toLowerCase()
         : null,
     },
   };

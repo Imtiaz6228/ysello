@@ -440,12 +440,13 @@ export async function importDarkShoppingProducts(input: {
   }
   await ensureOfficialSellerProfile(input.adminId);
   const marginPercent = DARK_SHOPPING_GLOBAL_MARGIN_PERCENT;
-  const response = await darkShoppingClient().listProducts({
-    ids: input.remoteProductIds,
-    perPage: Math.min(1_000, input.remoteProductIds.length),
-  });
+  // Imports deliberately bypass product/list. Dark.shopping documents that
+  // product/list can return 502 when ID filters become large. Fetching each
+  // selected product through product/view removes that gateway failure mode
+  // entirely while the shared client throttle keeps us within <=2 req/s.
+  const viewed = await darkShoppingClient().viewProducts(input.remoteProductIds);
   const remoteById = new Map(
-    response.items.map((product) => [product.id, product]),
+    viewed.items.map((product) => [product.id, product]),
   );
   const imported: Array<{
     remoteProductId: number;
@@ -554,11 +555,11 @@ async function syncListingRecords(
   let synced = 0;
   let unavailable = 0;
 
-  for (let offset = 0; offset < listings.length; offset += 500) {
-    const chunk = listings.slice(offset, offset + 500);
+  for (let offset = 0; offset < listings.length; offset += 20) {
+    const chunk = listings.slice(offset, offset + 20);
     const response = await darkShoppingClient().listProducts({
       ids: chunk.map((listing) => listing.remoteProductId),
-      perPage: 500,
+      perPage: 20,
     });
     const remoteById = new Map(
       response.items.map((product) => [product.id, product]),

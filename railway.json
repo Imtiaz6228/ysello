@@ -2,7 +2,7 @@
   "$schema": "https://railway.com/railway.schema.json",
   "build": {
     "builder": "RAILPACK",
-    "buildCommand": "npm run build:railway"
+    "buildCommand": "echo \"[ysello] building release 2026-09-05.2\" && npm run build:railway"
   },
   "deploy": {
     "preDeployCommand": "npm run prisma:migrate:recover && npm run prisma:migrate",

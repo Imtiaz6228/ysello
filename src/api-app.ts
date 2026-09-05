@@ -25,6 +25,7 @@ import { commerceRouter } from "./routes/commerce.routes.js";
 import { walletRouter } from "./routes/wallet.routes.js";
 import { nexusRouter } from "./routes/nexus.routes.js";
 import { darkShoppingRouter } from "./routes/dark-shopping.routes.js";
+import { railwayReleaseMetadata } from "./config/release.js";
 import { prisma } from "./lib/prisma.js";
 import { blogPosts } from "./content/blog.js";
 import { publicPages, siteContentLastModified } from "./content/publicPages.js";
@@ -199,16 +200,17 @@ app.get(
   }),
 );
 
-app.get("/health", (_req, res) => {
+function sendHealth(res: express.Response) {
+  res.setHeader("Cache-Control", "no-store, max-age=0");
   res.json({
     status: "ok",
     environment: env.NODE_ENV,
+    release: railwayReleaseMetadata(),
   });
-});
+}
 
-app.get("/api/health", (_req, res) => {
-  res.json({ status: "ok", environment: env.NODE_ENV });
-});
+app.get("/health", (_req, res) => sendHealth(res));
+app.get("/api/health", (_req, res) => sendHealth(res));
 
 function sendRequestToken(_req: express.Request, res: express.Response) {
   res.json({

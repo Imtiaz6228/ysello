@@ -574,7 +574,7 @@ export class DarkShoppingClient {
       : "Dark Shopping returned a non-JSON API response.";
     return new ApiError(
       status >= 400 && status <= 599 ? status : 502,
-      `${statusMessage} Retry the supplier request; if it continues, check Dark Shopping API access and gateway status.`,
+      `${statusMessage} Endpoint: ${method} ${endpoint}. If this continues after the latest Ysello backend is deployed, the failure is at Dark Shopping or its gateway rather than the importer parser.`,
       "DARK_SHOPPING_INVALID_RESPONSE",
       {
         provider: "dark.shopping",
@@ -876,6 +876,26 @@ export class DarkShoppingClient {
     }
 
     throw lastError;
+  }
+
+  async viewProducts(ids: number[]) {
+    const uniqueIds = [...new Set(ids.filter((id) => Number.isSafeInteger(id) && id > 0))];
+    const items: DarkShoppingProduct[] = [];
+    const missing: number[] = [];
+
+    for (const id of uniqueIds) {
+      try {
+        items.push(await this.viewProduct(id));
+      } catch (error) {
+        if (error instanceof ApiError && error.statusCode === 404) {
+          missing.push(id);
+          continue;
+        }
+        throw error;
+      }
+    }
+
+    return { items, missing };
   }
 
   async viewProduct(id: number) {

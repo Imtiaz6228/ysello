@@ -68,6 +68,8 @@ import {
 } from "../commerce/sellerTaxonomy";
 import { catalogAttributePresets } from "../data/enterpriseCatalog";
 
+const DARK_SHOPPING_EXPECTED_INTEGRATION_VERSION = "2026-09-05.2";
+
 type Tab =
   | "overview"
   | "sellers"
@@ -252,6 +254,7 @@ type DarkShoppingResale = {
       repository: string | null;
       branch: string | null;
       commit: string | null;
+      releaseId?: string | null;
       expectedRepository: string;
       expectedBranch: string;
       sourceMatchesExpectedRepository: boolean | null;
@@ -851,6 +854,14 @@ export function OperationsAdminPage() {
           Array.isArray(categoryData.categories) ? categoryData.categories : [],
         );
         if (
+          resale.configuration.integrationVersion !==
+          DARK_SHOPPING_EXPECTED_INTEGRATION_VERSION
+        ) {
+          setDarkCategories([]);
+          setMessage(
+            `Railway API is outdated. This frontend requires Dark Shopping ${DARK_SHOPPING_EXPECTED_INTEGRATION_VERSION}, but the backend reports ${resale.configuration.integrationVersion ?? "no version"}. Redeploy the Railway API from the same source/branch before importing.`,
+          );
+        } else if (
           resale.storage?.ready !== false &&
           resale.configuration.configured &&
           (!resale.supplierAccess || resale.supplierAccess.status === "ready")
@@ -1020,6 +1031,15 @@ export function OperationsAdminPage() {
   }
 
   async function importDarkProducts() {
+    if (
+      darkResale?.configuration.integrationVersion !==
+      DARK_SHOPPING_EXPECTED_INTEGRATION_VERSION
+    ) {
+      setMessage(
+        `Import blocked because Railway is serving an old Dark Shopping backend. Required ${DARK_SHOPPING_EXPECTED_INTEGRATION_VERSION}; backend reports ${darkResale?.configuration.integrationVersion ?? "unknown"}.`,
+      );
+      return;
+    }
     if (!darkSelectedProductIds.length || !darkTargetCategoryId) {
       setMessage("Select supplier products and a Ysello category first.");
       return;
@@ -2143,6 +2163,19 @@ export function OperationsAdminPage() {
                 service serving api.ysello.com, then reconnect that service to
                 Imtiaz6228/ysello branch main and redeploy the latest commit.
               </div>
+            ) : darkResale.configuration.integrationVersion !==
+              DARK_SHOPPING_EXPECTED_INTEGRATION_VERSION ? (
+              <div className="ops-message error">
+                <strong>Railway API is outdated.</strong> This frontend requires
+                Dark Shopping integration {" "}
+                <code>{DARK_SHOPPING_EXPECTED_INTEGRATION_VERSION}</code>, but
+                the backend reports {" "}
+                <code>{darkResale.configuration.integrationVersion ?? "no version"}</code>.
+                Redeploy the Railway API from the same repository and branch,
+                then reload this page. Imports stay disabled until both builds
+                match so an old supplier client cannot keep returning the same
+                502 path.
+              </div>
             ) : darkResale.storage?.ready === false ? (
               <div className="ops-message error">
                 <strong>Dark Shopping database update required.</strong>{" "}
@@ -2366,6 +2399,8 @@ export function OperationsAdminPage() {
                         className="primary-button"
                         disabled={
                           busy === "dark-shopping-import" ||
+                          darkResale?.configuration.integrationVersion !==
+                            DARK_SHOPPING_EXPECTED_INTEGRATION_VERSION ||
                           !darkSelectedProductIds.length ||
                           !darkTargetCategoryId
                         }
