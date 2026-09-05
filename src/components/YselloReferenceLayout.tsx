@@ -23,6 +23,11 @@ import { useCart } from "../commerce/CartContext";
 import { productPath } from "../commerce/marketplaceUrls";
 import type { CatalogProduct } from "../data/catalog";
 import { useLocale } from "../i18n/LocaleContext";
+import {
+  MarketplaceBrandArtwork,
+  YselloMarketplaceArtwork,
+  detectMarketplaceBrandSlug,
+} from "./MarketplaceBrandIcon";
 
 export function YselloReferenceHeader() {
   const { user } = useAuth();
@@ -310,6 +315,10 @@ export function YselloReferenceProductCard({
     : 0;
   const availableQuantity =
     product.type === "SERVICE" ? null : Math.max(0, product.stockCount ?? 0);
+  const supplierFulfilled = product.attributes?.supplierFulfilled === true;
+  const brandSlug = supplierFulfilled
+    ? detectMarketplaceBrandSlug(platform, product.category, product.title)
+    : null;
 
   return (
     <article
@@ -328,7 +337,13 @@ export function YselloReferenceProductCard({
           to={productPath(product)}
           aria-label={`View ${product.title}`}
         >
-          {product.imageUrl ? (
+          {supplierFulfilled ? (
+            brandSlug ? (
+              <MarketplaceBrandArtwork brandSlug={brandSlug} className="ys-product-native-brand" />
+            ) : (
+              <YselloMarketplaceArtwork label={categoryLabel} className="ys-product-native-brand" />
+            )
+          ) : product.imageUrl ? (
             <img
               src={product.imageUrl}
               alt={product.title}

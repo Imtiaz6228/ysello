@@ -24,6 +24,11 @@ import {
   useMarketplaceProducts,
 } from "../commerce/useMarketplace";
 import { YselloReferenceProductCard } from "../components/YselloReferenceLayout";
+import {
+  MarketplaceBrandArtwork,
+  YselloMarketplaceArtwork,
+  detectMarketplaceBrandSlug,
+} from "../components/MarketplaceBrandIcon";
 import { MarketFooter, MarketHeader } from "../components/MarketHeader";
 import { Seo } from "../components/Seo";
 import type { CatalogProduct } from "../data/catalog";
@@ -159,6 +164,10 @@ export function CategoryPage() {
     navigate("/cart");
   }
 
+  const categoryBrandSlug = category
+    ? detectMarketplaceBrandSlug(category.name, category.slug)
+    : null;
+
   function resetFilters() {
     setQuery("");
     setSubFilter("all");
@@ -271,14 +280,13 @@ export function CategoryPage() {
 
         <section className="ys-ref-category-hero">
           <div>
-            {category.isSupplierCategory && category.imageUrl ? (
+            {category.isSupplierCategory && (categoryBrandSlug || category.imageUrl) ? (
               <span className="ys-supplier-category-mark">
-                <img
-                  src={category.imageUrl}
-                  alt=""
-                  width="72"
-                  height="72"
-                />
+                {categoryBrandSlug ? (
+                  <MarketplaceBrandArtwork brandSlug={categoryBrandSlug} compact />
+                ) : (
+                  <YselloMarketplaceArtwork label={category.name} compact />
+                )}
               </span>
             ) : null}
             <span className="ys-ref-eyebrow">
@@ -342,9 +350,9 @@ export function CategoryPage() {
 
         {category.isSupplierCategory ? (
           <section className="ys-supplier-category-summary">
-            <span><Zap aria-hidden="true" /> Live supplier stock</span>
+            <span><Zap aria-hidden="true" /> Live Ysello stock</span>
             <strong>{categoryProducts.products.length} products ready to browse</strong>
-            <p>Prices, stock and availability are synchronized from the supplier catalog while checkout and delivery stay inside Ysello.</p>
+            <p>Prices and availability are kept current automatically, while checkout, delivery and order support stay inside Ysello.</p>
           </section>
         ) : null}
 

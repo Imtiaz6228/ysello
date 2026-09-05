@@ -22,7 +22,12 @@ import {
   useMarketplaceCategories,
   useMarketplaceProducts,
 } from "../commerce/useMarketplace";
-import { MarketplacePlatformIcon } from "../components/MarketplaceBrandIcon";
+import {
+  MarketplaceBrandArtwork,
+  YselloMarketplaceArtwork,
+  MarketplacePlatformIcon,
+  detectMarketplaceBrandSlug,
+} from "../components/MarketplaceBrandIcon";
 import { YselloReferenceProductCard } from "../components/YselloReferenceLayout";
 import { MarketFooter, MarketHeader } from "../components/MarketHeader";
 import { Seo } from "../components/Seo";
@@ -166,6 +171,7 @@ export function CatalogPage() {
       label: item.name,
       slug: findRoot(rootCategories, [item.slug, item.name], item.slug),
       imageUrl: null as string | null,
+      brandSlug: null as string | null,
       supplier: false,
     }));
     const supplier = rootCategories
@@ -175,11 +181,11 @@ export function CatalogPage() {
           (b.productCount ?? 0) - (a.productCount ?? 0) ||
           a.name.localeCompare(b.name),
       )
-      .slice(0, 12)
       .map((item) => ({
         label: item.name,
         slug: item.slug,
         imageUrl: item.imageUrl ?? null,
+        brandSlug: detectMarketplaceBrandSlug(item.name, item.slug),
         supplier: true,
       }));
     return [...primary, ...supplier];
@@ -388,7 +394,11 @@ export function CatalogPage() {
                 aria-pressed={category === item.slug}
                 onClick={() => setCategory(item.slug)}
               >
-                {item.imageUrl ? (
+                {item.brandSlug ? (
+                  <MarketplaceBrandArtwork brandSlug={item.brandSlug} compact />
+                ) : item.supplier ? (
+                  <YselloMarketplaceArtwork label={item.label} compact />
+                ) : item.imageUrl ? (
                   <img src={item.imageUrl} alt="" width="24" height="24" />
                 ) : (
                   <CategoryGlyph slug={item.slug} />

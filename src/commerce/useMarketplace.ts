@@ -207,6 +207,7 @@ function mergeWithLocalCategories(remoteCategories: CatalogCategory[]) {
       description: local?.description || remote.description,
       parentSlug: local?.parentSlug ?? remote.parentSlug,
       icon: remote.icon || local?.icon || "◉",
+      sortOrder: local?.sortOrder ?? remote.sortOrder,
       isFeatured: remote.isFeatured ?? local?.isFeatured,
       isTrending: remote.isTrending ?? local?.isTrending,
       isSupplierCategory:

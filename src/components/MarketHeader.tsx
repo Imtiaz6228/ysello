@@ -27,7 +27,12 @@ import {
 } from "../data/marketplaceTaxonomy";
 import { useLocale } from "../i18n/LocaleContext";
 import { LocaleSwitcher } from "./LocaleSwitcher";
-import { MarketplaceCategoryIcon } from "./MarketplaceBrandIcon";
+import {
+  MarketplaceBrandArtwork,
+  YselloMarketplaceArtwork,
+  MarketplaceCategoryIcon,
+  detectMarketplaceBrandSlug,
+} from "./MarketplaceBrandIcon";
 
 const departmentLabels: Record<string, string> = {
   gaming: "Gaming",
@@ -519,28 +524,25 @@ export function MarketHeader() {
                 aria-label="Live account marketplace categories"
               >
                 <div className="g2-mobile-category-heading">
-                  <strong><span>Live account marketplace</span></strong>
+                  <strong><span>Ysello account marketplace</span></strong>
                   <Link to="/catalog">View all</Link>
                 </div>
                 <div className="g2-mobile-supplier-grid">
-                  {supplierCategories.slice(0, 18).map((category) => (
+                  {supplierCategories.map((category) => (
                     <Link
                       key={category.slug}
                       to={`/category/${category.slug}`}
                       onClick={() => setMenuOpen(false)}
                     >
                       <span className="g2-mobile-supplier-icon">
-                        {category.imageUrl ? (
-                          <img
-                            src={category.imageUrl}
-                            alt=""
-                            loading="lazy"
-                            width="44"
-                            height="44"
-                          />
-                        ) : (
-                          <Grid2X2 aria-hidden="true" />
-                        )}
+                        {(() => {
+                          const brand = detectMarketplaceBrandSlug(category.name, category.slug);
+                          return brand ? (
+                            <MarketplaceBrandArtwork brandSlug={brand} compact />
+                          ) : (
+                            <YselloMarketplaceArtwork label={category.name} compact />
+                          );
+                        })()}
                       </span>
                       <div>
                         <strong>{category.name}</strong>

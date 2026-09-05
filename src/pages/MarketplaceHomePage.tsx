@@ -28,8 +28,11 @@ import {
 } from "../commerce/useMarketplace";
 import { MarketFooter, MarketHeader } from "../components/MarketHeader";
 import {
+  MarketplaceBrandArtwork,
+  YselloMarketplaceArtwork,
   MarketplaceCategoryIcon,
   MarketplacePlatformIcon,
+  detectMarketplaceBrandSlug,
   marketplacePlatformBrandSlug,
 } from "../components/MarketplaceBrandIcon";
 import { Seo } from "../components/Seo";
@@ -639,21 +642,24 @@ export function MarketplaceHomePage() {
             <div>
               <span><Zap aria-hidden="true" /> LIVE CATALOG</span>
               <h2>Accounts, access & digital goods</h2>
-              <p>Fresh supplier-backed listings organized into real marketplace categories, with stock and delivery details visible before checkout.</p>
+              <p>Fresh Ysello listings organized into clear marketplace categories, with live stock and delivery details visible before checkout.</p>
             </div>
             <Link to="/catalog?stock=in_stock">Browse everything <ArrowRight aria-hidden="true" /></Link>
           </header>
 
           {supplierCategories.length ? (
-            <div className="ys-live-category-strip" aria-label="Imported marketplace categories">
-              {supplierCategories.slice(0, 20).map((category) => (
+            <div className="ys-live-category-strip" aria-label="Marketplace categories">
+              {supplierCategories.map((category) => (
                 <Link key={category.slug} to={categoryPath(category, categories)}>
                   <span className="ys-live-category-icon">
-                    {category.imageUrl ? (
-                      <img src={category.imageUrl} alt="" loading="lazy" width="52" height="52" />
-                    ) : (
-                      <PackageOpen aria-hidden="true" />
-                    )}
+                    {(() => {
+                      const brand = detectMarketplaceBrandSlug(category.name, category.slug);
+                      return brand ? (
+                        <MarketplaceBrandArtwork brandSlug={brand} compact />
+                      ) : (
+                        <YselloMarketplaceArtwork label={category.name} compact />
+                      );
+                    })()}
                   </span>
                   <div>
                     <strong>{category.name}</strong>
@@ -676,11 +682,18 @@ export function MarketplaceHomePage() {
                   <article key={product.id} className="ys-live-product-row">
                     <Link className="ys-live-product-main" to={productPath(product)}>
                       <span className="ys-live-product-image">
-                        {product.imageUrl ? (
-                          <img src={product.imageUrl} alt="" loading="lazy" decoding="async" width="76" height="76" />
-                        ) : (
-                          <PackageOpen aria-hidden="true" />
-                        )}
+                        {(() => {
+                          const brand = detectMarketplaceBrandSlug(
+                            typeof product.facts?.platform === "string" ? product.facts.platform : "",
+                            product.category,
+                            product.title,
+                          );
+                          return brand ? (
+                            <MarketplaceBrandArtwork brandSlug={brand} compact />
+                          ) : (
+                            <YselloMarketplaceArtwork label={product.category || "Digital product"} compact />
+                          );
+                        })()}
                       </span>
                       <div>
                         <small>{product.category || "Digital marketplace"}</small>
@@ -695,7 +708,7 @@ export function MarketplaceHomePage() {
                     </Link>
                     <div className="ys-live-product-quality">
                       <strong>{quality ? `${Math.round(quality)}%` : "Verified"}</strong>
-                      <small>{supplierSales ? `${supplierSales.toLocaleString()} sold` : "Supplier checked"}</small>
+                      <small>{supplierSales ? `${supplierSales.toLocaleString()} sold` : "Ysello checked"}</small>
                     </div>
                     <div className="ys-live-product-stock">
                       <strong>{(product.stockCount ?? 0).toLocaleString()}</strong>

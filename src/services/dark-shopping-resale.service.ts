@@ -99,12 +99,12 @@ function slugBase(value: string) {
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, "-")
       .replace(/^-|-$/g, "")
-      .slice(0, 120) || "supplier-product"
+      .slice(0, 120) || "digital-product"
   );
 }
 
 async function uniqueProductSlug(name: string, remoteProductId: number) {
-  const base = `${slugBase(name)}-ds${remoteProductId}`.slice(0, 150);
+  const base = `${slugBase(name)}-ys${remoteProductId}`.slice(0, 150);
   let slug = base;
   let suffix = 2;
   while (
@@ -113,6 +113,105 @@ async function uniqueProductSlug(name: string, remoteProductId: number) {
     slug = `${base.slice(0, 145)}-${suffix++}`;
   }
   return slug;
+}
+
+
+function yselloPublicText(value: string) {
+  return darkShoppingPlainText(value)
+    .replace(/https?:\/\/(?:www\.)?dark\.shopping\/?\S*/gi, " ")
+    .replace(/\bdark\s*\.?\s*shopping\b/gi, "Ysello")
+    .replace(/\bdarkstore\b/gi, "Ysello")
+    .replace(/\bsupplier(?:'s)?\b/gi, "marketplace")
+    .replace(/[ \t]+/g, " ")
+    .replace(/\n\s*\n+/g, "\n\n")
+    .trim();
+}
+
+const nativeCategorySlugs: Array<[RegExp, string]> = [
+  [/\binstagram\b/i, "instagram-accounts"],
+  [/\bfacebook\b/i, "facebook-accounts"],
+  [/\bthreads\b/i, "threads-accounts"],
+  [/\btwitter\b|\bx\s*\/\s*twitter\b|^x$/i, "x-accounts"],
+  [/\btiktok\b|\btik\s*tok\b/i, "tiktok-accounts"],
+  [/\btelegram\b/i, "telegram-accounts"],
+  [/\bdiscord\b/i, "discord-accounts"],
+  [/\bsnapchat\b/i, "snapchat-accounts"],
+  [/\bwhatsapp\b|\bwhats\s*app\b/i, "whatsapp-accounts"],
+  [/\byoutube\b|\byou\s*tube\b/i, "youtube-accounts"],
+  [/\btwitch\b/i, "streaming-accounts"],
+  [/\blinkedin\b|\blinked\s*in\b/i, "linkedin-accounts"],
+  [/\bpinterest\b/i, "pinterest-accounts"],
+  [/\bgmail\b/i, "gmail-accounts"],
+  [/\boutlook\b|\bhotmail\b/i, "outlook-accounts"],
+  [/\byahoo\b/i, "yahoo-accounts"],
+  [/\bproton(?:mail)?\b/i, "protonmail-accounts"],
+  [/\breddit\b/i, "reddit-accounts"],
+  [/\bsteam\b/i, "steam-accounts"],
+  [/\bgoogle\b/i, "google-accounts"],
+];
+
+function nativeCategorySlug(name: string) {
+  const mapped = nativeCategorySlugs.find(([pattern]) => pattern.test(name))?.[1];
+  return mapped ?? `${slugBase(name)}-marketplace`;
+}
+
+function nativeCategoryDescription(name: string) {
+  return `Browse ${name} products selected and maintained by Ysello, with live availability, clear pricing and protected marketplace checkout.`;
+}
+
+async function normalizeDarkShoppingCategory(category: {
+  id: string;
+  name: string;
+  slug: string;
+  description: string;
+  imageUrl: string | null;
+  metaKeywords: string[];
+  isActive: boolean;
+}) {
+  const targetSlug = nativeCategorySlug(category.name);
+  const description = nativeCategoryDescription(category.name);
+  const target = await prisma.category.findUnique({ where: { slug: targetSlug } });
+
+  if (target && target.id !== category.id) {
+    const metaKeywords = [...new Set([...target.metaKeywords, ...category.metaKeywords])];
+    await prisma.$transaction([
+      prisma.product.updateMany({
+        where: { categoryId: category.id },
+        data: { categoryId: target.id },
+      }),
+      prisma.category.updateMany({
+        where: { parentId: category.id },
+        data: { parentId: target.id },
+      }),
+      prisma.category.update({
+        where: { id: target.id },
+        data: {
+          metaKeywords,
+          isActive: true,
+          description: target.description || description,
+          seoTitle: target.seoTitle || `${category.name} Marketplace | Ysello`,
+          seoDescription: target.seoDescription || description.slice(0, 170),
+        },
+      }),
+      prisma.category.delete({ where: { id: category.id } }),
+    ]);
+    return prisma.category.findUniqueOrThrow({ where: { id: target.id } });
+  }
+
+  if (category.slug !== targetSlug || /dark-shopping/i.test(category.description) || category.imageUrl) {
+    return prisma.category.update({
+      where: { id: category.id },
+      data: {
+        slug: targetSlug,
+        description,
+        seoTitle: `${category.name} Marketplace | Ysello`.slice(0, 70),
+        seoDescription: description.slice(0, 170),
+        imageUrl: null,
+        isActive: true,
+      },
+    });
+  }
+  return category;
 }
 
 const DARK_SHOPPING_CATEGORY_TAG = "supplier:dark-shopping";
@@ -151,38 +250,37 @@ async function fetchAllDarkShoppingCategories() {
 }
 
 export async function listDarkShoppingCategoryMappings() {
-  const categories = await prisma.category.findMany({
+  const existing = await prisma.category.findMany({
     where: { metaKeywords: { has: DARK_SHOPPING_CATEGORY_TAG } },
     orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
-    select: {
-      id: true,
-      name: true,
-      slug: true,
-      isActive: true,
-      metaKeywords: true,
-    },
   });
-  return categories.flatMap((category) => {
-    const tag = category.metaKeywords.find((keyword) =>
-      keyword.startsWith(DARK_SHOPPING_CATEGORY_ID_PREFIX),
-    );
-    if (!tag) return [];
-    const remoteCategoryId = Number(
-      tag.slice(DARK_SHOPPING_CATEGORY_ID_PREFIX.length),
-    );
-    if (!Number.isSafeInteger(remoteCategoryId) || remoteCategoryId <= 0) {
-      return [];
-    }
-    return [
-      {
-        remoteCategoryId,
-        categoryId: category.id,
-        name: category.name,
-        slug: category.slug,
-        isActive: category.isActive,
-      },
-    ];
-  });
+  const normalizedById = new Map<string, Awaited<ReturnType<typeof normalizeDarkShoppingCategory>>>();
+  for (const category of existing) {
+    const normalized = await normalizeDarkShoppingCategory(category);
+    normalizedById.set(normalized.id, normalized);
+  }
+
+  return [...normalizedById.values()].flatMap((category) =>
+    category.metaKeywords
+      .filter((keyword) => keyword.startsWith(DARK_SHOPPING_CATEGORY_ID_PREFIX))
+      .flatMap((tag) => {
+        const remoteCategoryId = Number(
+          tag.slice(DARK_SHOPPING_CATEGORY_ID_PREFIX.length),
+        );
+        if (!Number.isSafeInteger(remoteCategoryId) || remoteCategoryId <= 0) {
+          return [];
+        }
+        return [
+          {
+            remoteCategoryId,
+            categoryId: category.id,
+            name: category.name,
+            slug: category.slug,
+            isActive: category.isActive,
+          },
+        ];
+      }),
+  );
 }
 
 export async function importDarkShoppingCategory(remoteCategoryId: number) {
@@ -191,14 +289,15 @@ export async function importDarkShoppingCategory(remoteCategoryId: number) {
     where: { metaKeywords: { has: tag } },
   });
   if (existing) {
-    if (!existing.isActive) {
-      const category = await prisma.category.update({
-        where: { id: existing.id },
+    const category = await normalizeDarkShoppingCategory(existing);
+    const reactivated = !category.isActive;
+    if (!category.isActive) {
+      await prisma.category.update({
+        where: { id: category.id },
         data: { isActive: true },
       });
-      return { category, imported: false, reactivated: true };
     }
-    return { category: existing, imported: false, reactivated: false };
+    return { category: { ...category, isActive: true }, imported: false, reactivated };
   }
 
   const remote = (await fetchAllDarkShoppingCategories()).find(
@@ -212,29 +311,37 @@ export async function importDarkShoppingCategory(remoteCategoryId: number) {
     );
   }
 
-  const name =
-    darkShoppingPlainText(remote.name).slice(0, 100) ||
-    `Dark Shopping ${remote.id}`;
-  const base = `dark-shopping-${remote.id}-${slugBase(name)}`.slice(0, 100);
-  let slug = base;
-  let suffix = 2;
-  while (
-    await prisma.category.findUnique({
-      where: { slug },
-      select: { id: true },
-    })
-  ) {
-    slug = `${base.slice(0, 95)}-${suffix++}`;
+  const name = yselloPublicText(remote.name).slice(0, 100) || `Marketplace ${remote.id}`;
+  const targetSlug = nativeCategorySlug(name);
+  const description = nativeCategoryDescription(name);
+  const target = await prisma.category.findUnique({ where: { slug: targetSlug } });
+  if (target) {
+    const category = await prisma.category.update({
+      where: { id: target.id },
+      data: {
+        metaKeywords: [...new Set([...target.metaKeywords, DARK_SHOPPING_CATEGORY_TAG, tag, name.toLowerCase()])],
+        isActive: true,
+        description: target.description || description,
+        seoTitle: target.seoTitle || `${name} Marketplace | Ysello`.slice(0, 70),
+        seoDescription: target.seoDescription || description.slice(0, 170),
+      },
+    });
+    return { category, imported: false, reactivated: !target.isActive };
   }
-  const description = `Products selected by Ysello administrators from the Dark.shopping ${name} supplier category.`;
+
+  let slug = targetSlug;
+  let suffix = 2;
+  while (await prisma.category.findUnique({ where: { slug }, select: { id: true } })) {
+    slug = `${targetSlug.slice(0, 94)}-${suffix++}`;
+  }
   const category = await prisma.category.create({
     data: {
       name,
       slug,
       description,
-      seoTitle: name.slice(0, 70),
+      seoTitle: `${name} Marketplace | Ysello`.slice(0, 70),
       seoDescription: description.slice(0, 170),
-      imageUrl: trustedDarkShoppingAsset(remote.icon),
+      imageUrl: null,
       metaKeywords: [DARK_SHOPPING_CATEGORY_TAG, tag, name.toLowerCase()],
       isActive: true,
     },
@@ -325,10 +432,10 @@ function remoteProductData(product: DarkShoppingProduct) {
   }
 
   const prices = darkShoppingResalePrices(product.price);
-  const name = darkShoppingPlainText(product.name).slice(0, 160);
-  const remoteDescription = darkShoppingPlainText(product.description);
-  const manual = darkShoppingPlainText(product.manual || "");
-  const replacementTerms = darkShoppingPlainText(
+  const name = yselloPublicText(product.name).slice(0, 160);
+  const remoteDescription = yselloPublicText(product.description);
+  const manual = yselloPublicText(product.manual || "");
+  const replacementTerms = yselloPublicText(
     product.replacement_terms_public || "",
   );
   const description = [
@@ -363,14 +470,14 @@ function remoteProductData(product: DarkShoppingProduct) {
       priceCnyCents: prices.retailPriceCnyCents,
       priceRubCents: prices.retailPriceRubCents,
       currency: "USD",
-      coverImageUrl: trustedDarkShoppingAsset(product.miniature),
+      coverImageUrl: null,
       deliveryNote:
-        "Protected digital delivery is obtained from the supplier after payment confirmation.",
-      platform: product.category?.name?.slice(0, 100) || null,
-      productKind: product.group?.name?.slice(0, 100) || "Digital product",
-      stockType: "Supplier inventory",
+        "Secure digital delivery is prepared automatically after payment confirmation.",
+      platform: yselloPublicText(product.category?.name ?? "").slice(0, 100) || null,
+      productKind: yselloPublicText(product.group?.name ?? "").slice(0, 100) || "Digital product",
+      stockType: "Live inventory",
       warranty: product.guarantee_time_seconds
-        ? `${guaranteeHours} hour supplier guarantee`
+        ? `${guaranteeHours} hour replacement guarantee`
         : null,
       refundPolicy: replacementTerms || null,
       stockQuantity: availableQuantity,
@@ -379,8 +486,8 @@ function remoteProductData(product: DarkShoppingProduct) {
         minimumOrder,
         Math.min(20, availableQuantity || minimumOrder),
       ),
-      sku: `DS-${product.id}`,
-      tags: ["supplier-fulfilled", product.category?.name, product.group?.name]
+      sku: `YS-${product.id}`,
+      tags: ["ysello-live", product.category?.name, product.group?.name]
         .filter((value): value is string => Boolean(value))
         .map((value) => value.slice(0, 100))
         .slice(0, 20),
@@ -793,7 +900,7 @@ async function deliverFulfillment(
       data: {
         deliveredAt,
         deliveryMessage:
-          "Delivered automatically from verified supplier inventory.",
+          "Delivered automatically through Ysello verified inventory.",
       },
     });
     await tx.darkShoppingFulfillment.update({

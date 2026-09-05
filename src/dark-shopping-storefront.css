@@ -794,3 +794,314 @@
     width: 100%;
   }
 }
+
+/* Ysello-native brand presentation — 2026-09-05.4 */
+.ys-brand-artwork {
+  --ys-brand: #5b5ce2;
+  display: flex;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  overflow: hidden;
+  border-radius: inherit;
+  background:
+    radial-gradient(circle at 75% 18%, rgba(255,255,255,.24), transparent 30%),
+    var(--ys-brand) !important;
+  color: #fff !important;
+  text-align: center;
+}
+
+.ys-brand-artwork-icon {
+  display: grid;
+  width: clamp(48px, 34%, 82px);
+  aspect-ratio: 1;
+  place-items: center;
+  border-radius: 24%;
+  background: rgba(255,255,255,.13);
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.18), 0 12px 28px rgba(15,23,42,.15);
+  backdrop-filter: blur(8px);
+}
+
+.ys-brand-artwork-icon svg {
+  width: 58%;
+  height: 58%;
+  color: currentColor;
+}
+
+.ys-brand-artwork-copy {
+  display: grid;
+  gap: 2px;
+}
+
+.ys-brand-artwork-copy strong {
+  color: inherit !important;
+  font-size: clamp(16px, 2vw, 22px);
+  font-weight: 900;
+  letter-spacing: -.03em;
+}
+
+.ys-brand-artwork-copy small {
+  color: rgba(255,255,255,.76) !important;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.ys-brand-artwork.compact {
+  gap: 0;
+  border-radius: inherit;
+}
+
+.ys-brand-artwork.compact .ys-brand-artwork-icon {
+  width: 72%;
+  max-width: 42px;
+  border-radius: 22%;
+  box-shadow: none;
+}
+
+.ys-brand-artwork.brand-facebook { --ys-brand: #1877f2; }
+.ys-brand-artwork.brand-instagram {
+  --ys-brand: #c13584;
+  background:
+    radial-gradient(circle at 28% 108%, #fdf497 0 10%, #fd5949 34%, transparent 35%),
+    linear-gradient(135deg, #833ab4 5%, #c13584 42%, #e1306c 64%, #f77737 100%) !important;
+}
+.ys-brand-artwork.brand-threads,
+.ys-brand-artwork.brand-x { --ys-brand: #050505; }
+.ys-brand-artwork.brand-tiktok { --ys-brand: #010101; }
+.ys-brand-artwork.brand-tiktok svg {
+  filter: drop-shadow(-2px 0 #25f4ee) drop-shadow(2px 0 #fe2c55);
+}
+.ys-brand-artwork.brand-telegram { --ys-brand: #26a5e4; }
+.ys-brand-artwork.brand-discord { --ys-brand: #5865f2; }
+.ys-brand-artwork.brand-snapchat { --ys-brand: #fffc00; color: #111 !important; }
+.ys-brand-artwork.brand-snapchat .ys-brand-artwork-copy small { color: rgba(17,17,17,.62) !important; }
+.ys-brand-artwork.brand-whatsapp { --ys-brand: #25d366; }
+.ys-brand-artwork.brand-youtube { --ys-brand: #ff0000; }
+.ys-brand-artwork.brand-streaming { --ys-brand: #9146ff; }
+.ys-brand-artwork.brand-linkedin { --ys-brand: #0a66c2; }
+.ys-brand-artwork.brand-pinterest { --ys-brand: #e60023; }
+.ys-brand-artwork.brand-reddit { --ys-brand: #ff4500; }
+.ys-brand-artwork.brand-google,
+.ys-brand-artwork.brand-gmail { --ys-brand: #4285f4; }
+.ys-brand-artwork.brand-steam { --ys-brand: #171a21; }
+.ys-brand-artwork.brand-xbox,
+.ys-brand-artwork.brand-xbox-live { --ys-brand: #107c10; }
+.ys-brand-artwork.brand-playstation { --ys-brand: #003791; }
+.ys-brand-artwork.brand-epic-games { --ys-brand: #2a2a2a; }
+.ys-brand-artwork.brand-ea { --ys-brand: #ff4747; }
+.ys-brand-artwork.brand-gog { --ys-brand: #86328a; }
+.ys-brand-artwork.brand-ubisoft { --ys-brand: #0070ff; }
+.ys-brand-artwork.brand-battle-net { --ys-brand: #148eff; }
+.ys-brand-artwork.brand-windows,
+.ys-brand-artwork.brand-microsoft { --ys-brand: #0078d4; }
+.ys-brand-artwork.brand-apple { --ys-brand: #111; }
+.ys-brand-artwork.brand-android { --ys-brand: #3ddc84; color: #102218 !important; }
+
+.g2-product-image-link > .ys-product-native-brand,
+.ys-product-glyph > .ys-product-native-brand {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+}
+
+.ys-live-product-image .ys-brand-artwork-icon,
+.ys-live-category-icon .ys-brand-artwork-icon,
+.g2-mobile-supplier-icon .ys-brand-artwork-icon,
+.ys-supplier-category-mark .ys-brand-artwork-icon,
+.ys-ref-catalog-tabs .ys-brand-artwork-icon {
+  width: 72%;
+  max-width: 38px;
+}
+
+.ys-ref-catalog-tabs .ys-brand-artwork {
+  width: 26px;
+  height: 26px;
+  flex: 0 0 26px;
+  border-radius: 7px;
+}
+
+@media (max-width: 760px) {
+  /* No sideways category hunting on mobile: show the full set in a wrapped grid. */
+  .g2-home-page .ys-live-category-strip {
+    display: grid !important;
+    width: 100% !important;
+    margin: 0 0 14px !important;
+    padding: 0 !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 8px !important;
+    overflow: visible !important;
+    white-space: normal !important;
+  }
+
+  .ys-live-category-strip > a {
+    display: flex !important;
+    width: auto !important;
+    min-width: 0 !important;
+    min-height: 64px;
+    margin: 0 !important;
+    padding: 8px !important;
+    white-space: normal !important;
+  }
+
+  .ys-live-category-strip strong {
+    white-space: normal;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+  }
+
+  .ys-live-category-strip small {
+    white-space: normal;
+  }
+
+  .ys-ref-catalog-tabs {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 7px !important;
+    overflow: visible !important;
+    padding-inline: 0 !important;
+    scroll-snap-type: none !important;
+  }
+
+  .ys-ref-catalog-tabs > button {
+    width: 100% !important;
+    min-width: 0 !important;
+    justify-content: flex-start !important;
+    white-space: normal !important;
+    text-align: left;
+  }
+
+  .ys-ref-social-platforms {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 7px !important;
+    overflow: visible !important;
+    padding: 0 !important;
+    scroll-snap-type: none !important;
+  }
+
+  .ys-ref-social-platforms button {
+    width: 100% !important;
+    min-width: 0 !important;
+    justify-content: flex-start !important;
+    margin: 0 !important;
+    white-space: normal !important;
+  }
+
+  .g2-mobile-supplier-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .g2-mobile-supplier-grid > a {
+    min-height: 78px;
+    grid-template-columns: 38px minmax(0, 1fr);
+    align-content: center;
+  }
+
+  .g2-mobile-supplier-grid > a > svg {
+    display: none;
+  }
+
+  .g2-mobile-supplier-icon {
+    width: 38px;
+    height: 38px;
+  }
+}
+
+@media (max-width: 360px) {
+  .g2-home-page .ys-live-category-strip,
+  .ys-ref-catalog-tabs,
+  .ys-ref-social-platforms,
+  .g2-mobile-supplier-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+.ys-brand-artwork-generic {
+  --ys-brand: #5d48e8;
+  background:
+    radial-gradient(circle at 72% 12%, rgba(64, 221, 255, .42), transparent 30%),
+    linear-gradient(145deg, #24165f 0%, #5d48e8 58%, #3578ff 100%) !important;
+}
+
+.ys-brand-artwork-generic-mark {
+  display: grid;
+  width: clamp(48px, 34%, 82px);
+  aspect-ratio: 1;
+  place-items: center;
+  border-radius: 24%;
+  background: rgba(255,255,255,.15);
+  color: #fff;
+  font-size: clamp(22px, 4vw, 38px);
+  font-weight: 950;
+  line-height: 1;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.2), 0 12px 28px rgba(15,23,42,.16);
+}
+
+.ys-brand-artwork-generic.compact .ys-brand-artwork-generic-mark {
+  width: 72%;
+  max-width: 42px;
+  font-size: 18px;
+  box-shadow: none;
+}
+
+.ys-native-product-detail-cover {
+  position: relative;
+  min-height: 420px;
+  display: grid;
+  overflow: hidden;
+  background: #f4f5fa;
+}
+
+.ys-native-product-detail-cover > .ys-product-detail-brand {
+  position: absolute;
+  inset: 0;
+  border-radius: 0 !important;
+}
+
+.ys-native-product-detail-cover > div:last-child {
+  position: absolute;
+  right: 18px;
+  bottom: 18px;
+  left: 18px;
+  z-index: 2;
+  padding: 16px 18px;
+  border: 1px solid rgba(255,255,255,.24);
+  border-radius: 16px;
+  background: rgba(16, 20, 38, .58);
+  color: #fff;
+  box-shadow: 0 18px 42px rgba(15,23,42,.18);
+  backdrop-filter: blur(16px);
+}
+
+.ys-native-product-detail-cover > div:last-child small,
+.ys-native-product-detail-cover > div:last-child strong,
+.ys-native-product-detail-cover > div:last-child span {
+  color: #fff !important;
+}
+
+@media (max-width: 760px) {
+  .ys-native-product-detail-cover {
+    min-height: 320px;
+  }
+}
+
+.ys-product-glyph {
+  position: relative;
+  overflow: hidden;
+}
+
+.g2-product-image-link {
+  position: relative !important;
+  overflow: hidden;
+}

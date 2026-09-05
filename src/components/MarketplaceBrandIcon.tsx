@@ -4,8 +4,10 @@ import {
   FaApple,
   FaGamepad,
   FaGift,
+  FaGoogle,
   FaHashtag,
   FaLinkedin,
+  FaRedditAlien,
   FaSteam,
   FaSyncAlt,
   FaTags,
@@ -56,6 +58,9 @@ const platformIcons: Record<string, IconType> = {
   streaming: SiTwitch,
   linkedin: FaLinkedin,
   pinterest: SiPinterest,
+  reddit: FaRedditAlien,
+  google: FaGoogle,
+  gmail: FaGoogle,
   steam: FaSteam,
   xbox: FaXbox,
   "xbox-live": FaXbox,
@@ -66,9 +71,73 @@ const platformIcons: Record<string, IconType> = {
   ubisoft: SiUbisoft,
   "battle-net": SiBattledotnet,
   windows: FaWindows,
+  microsoft: FaWindows,
   apple: FaApple,
   android: FaAndroid,
 };
+
+const brandNames: Record<string, string> = {
+  facebook: "Facebook",
+  instagram: "Instagram",
+  threads: "Threads",
+  x: "X",
+  tiktok: "TikTok",
+  telegram: "Telegram",
+  discord: "Discord",
+  snapchat: "Snapchat",
+  whatsapp: "WhatsApp",
+  youtube: "YouTube",
+  streaming: "Twitch",
+  linkedin: "LinkedIn",
+  pinterest: "Pinterest",
+  reddit: "Reddit",
+  google: "Google",
+  gmail: "Gmail",
+  steam: "Steam",
+  xbox: "Xbox",
+  "xbox-live": "Xbox",
+  playstation: "PlayStation",
+  "epic-games": "Epic Games",
+  ea: "EA",
+  gog: "GOG",
+  ubisoft: "Ubisoft",
+  "battle-net": "Battle.net",
+  windows: "Windows",
+  microsoft: "Microsoft",
+  apple: "Apple",
+  android: "Android",
+};
+
+const brandPatterns: Array<[string, RegExp]> = [
+  ["instagram", /\binstagram\b/i],
+  ["facebook", /\bfacebook\b|\bfb\b/i],
+  ["threads", /\bthreads\b/i],
+  ["tiktok", /\btik\s*tok\b|\btiktok\b/i],
+  ["telegram", /\btelegram\b/i],
+  ["discord", /\bdiscord\b/i],
+  ["snapchat", /\bsnapchat\b/i],
+  ["whatsapp", /\bwhats\s*app\b|\bwhatsapp\b/i],
+  ["youtube", /\byou\s*tube\b|\byoutube\b/i],
+  ["streaming", /\btwitch\b/i],
+  ["linkedin", /\blinked\s*in\b|\blinkedin\b/i],
+  ["pinterest", /\bpinterest\b/i],
+  ["reddit", /\breddit\b/i],
+  ["gmail", /\bgmail\b/i],
+  ["google", /\bgoogle\b/i],
+  ["steam", /\bsteam\b/i],
+  ["xbox", /\bxbox\b/i],
+  ["playstation", /\bplaystation\b|\bpsn\b|\bps[345]\b/i],
+  ["epic-games", /\bepic\s*games?\b/i],
+  ["battle-net", /\bbattle\.?net\b|\bblizzard\b/i],
+  ["ubisoft", /\bubisoft\b/i],
+  ["gog", /\bgog\b/i],
+  ["ea", /\bea\s*app\b|\belectronic arts\b/i],
+  ["windows", /\bwindows\b/i],
+  ["microsoft", /\bmicrosoft\b/i],
+  ["apple", /\bapple\b|\bicloud\b|\bios\b/i],
+  ["android", /\bandroid\b/i],
+  ["x", /\btwitter\b|\bx\.com\b/i],
+];
 
 export function marketplacePlatformBrandSlug(slug: string) {
   const normalizedSlug = slug.trim().toLowerCase();
@@ -80,6 +149,23 @@ export function marketplacePlatformBrandSlug(slug: string) {
       normalizedSlug.startsWith(`${brandSlug}-`),
     ) ?? normalizedSlug
   );
+}
+
+export function detectMarketplaceBrandSlug(...values: Array<unknown>) {
+  const text = values
+    .filter((value): value is string => typeof value === "string" && Boolean(value.trim()))
+    .join(" ")
+    .trim();
+  if (!text) return null;
+
+  const direct = marketplacePlatformBrandSlug(text.toLowerCase().replace(/[^a-z0-9]+/g, "-"));
+  if (platformIcons[direct]) return direct;
+
+  return brandPatterns.find(([, pattern]) => pattern.test(text))?.[0] ?? null;
+}
+
+export function marketplaceBrandName(slug: string) {
+  return brandNames[marketplacePlatformBrandSlug(slug)] ?? slug;
 }
 
 export function MarketplaceCategoryIcon({
@@ -102,4 +188,59 @@ export function MarketplacePlatformIcon({
 }) {
   const Icon = platformIcons[marketplacePlatformBrandSlug(slug)] ?? FaHashtag;
   return <Icon className={className} aria-hidden="true" />;
+}
+
+export function MarketplaceBrandArtwork({
+  brandSlug,
+  className = "",
+  compact = false,
+}: {
+  brandSlug: string;
+  className?: string;
+  compact?: boolean;
+}) {
+  const normalized = marketplacePlatformBrandSlug(brandSlug);
+  const Icon = platformIcons[normalized];
+  if (!Icon) return null;
+  return (
+    <span
+      className={`ys-brand-artwork brand-${normalized} ${compact ? "compact" : ""} ${className}`.trim()}
+      aria-label={`${marketplaceBrandName(normalized)} product`}
+      role="img"
+    >
+      <span className="ys-brand-artwork-icon"><Icon aria-hidden="true" /></span>
+      {!compact ? (
+        <span className="ys-brand-artwork-copy">
+          <strong>{marketplaceBrandName(normalized)}</strong>
+          <small>Ysello marketplace</small>
+        </span>
+      ) : null}
+    </span>
+  );
+}
+
+export function YselloMarketplaceArtwork({
+  label = "Digital product",
+  className = "",
+  compact = false,
+}: {
+  label?: string;
+  className?: string;
+  compact?: boolean;
+}) {
+  return (
+    <span
+      className={`ys-brand-artwork ys-brand-artwork-generic ${compact ? "compact" : ""} ${className}`.trim()}
+      aria-label={`${label} on Ysello`}
+      role="img"
+    >
+      <span className="ys-brand-artwork-generic-mark">Y</span>
+      {!compact ? (
+        <span className="ys-brand-artwork-copy">
+          <strong>ysello</strong>
+          <small>{label}</small>
+        </span>
+      ) : null}
+    </span>
+  );
 }

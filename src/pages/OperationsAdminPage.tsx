@@ -68,7 +68,7 @@ import {
 } from "../commerce/sellerTaxonomy";
 import { catalogAttributePresets } from "../data/enterpriseCatalog";
 
-const DARK_SHOPPING_EXPECTED_INTEGRATION_VERSION = "2026-09-05.3";
+const DARK_SHOPPING_EXPECTED_INTEGRATION_VERSION = "2026-09-05.4";
 
 type Tab =
   | "overview"
@@ -1031,16 +1031,11 @@ export function OperationsAdminPage() {
   }
 
   function toggleDarkProduct(productId: number) {
-    setDarkSelectedProductIds((current) => {
-      if (current.includes(productId)) {
-        return current.filter((id) => id !== productId);
-      }
-      if (current.length >= 30) {
-        setMessage("Select at most 30 supplier products per import so supplier fallback requests stay within the API rate limit and web request timeout.");
-        return current;
-      }
-      return [...current, productId];
-    });
+    setDarkSelectedProductIds((current) =>
+      current.includes(productId)
+        ? current.filter((id) => id !== productId)
+        : [...current, productId],
+    );
   }
 
   async function importDarkProducts() {
@@ -1057,30 +1052,59 @@ export function OperationsAdminPage() {
       setMessage("Select supplier products and a Ysello category first.");
       return;
     }
+
+    const batchSize = 25;
+    const ids = [...new Set(darkSelectedProductIds)];
+    const batches = Array.from(
+      { length: Math.ceil(ids.length / batchSize) },
+      (_, index) => ids.slice(index * batchSize, (index + 1) * batchSize),
+    );
+    const imported: Array<{ remoteProductId: number }> = [];
+    const skipped: Array<{ remoteProductId: number; reason: string }> = [];
+    const completedIds: number[] = [];
+
     setBusy("dark-shopping-import");
-    setMessage("");
+    setMessage(
+      batches.length > 1
+        ? `Importing ${ids.length} products in ${batches.length} safe batches…`
+        : "Importing selected products…",
+    );
     try {
-      const result = await apiRequest<{
-        imported: Array<{ remoteProductId: number }>;
-        skipped: Array<{ remoteProductId: number; reason: string }>;
-      }>("/api/admin/dark-shopping/resale/import", {
-        method: "POST",
-        body: {
-          remoteProductIds: darkSelectedProductIds,
-          categoryId: darkTargetCategoryId,
-          publish: darkPublish,
-        },
-      });
+      for (let index = 0; index < batches.length; index += 1) {
+        const batch = batches[index];
+        setMessage(
+          `Importing batch ${index + 1} of ${batches.length} (${Math.min(
+            (index + 1) * batchSize,
+            ids.length,
+          )}/${ids.length} selected)…`,
+        );
+        const result = await apiRequest<{
+          imported: Array<{ remoteProductId: number }>;
+          skipped: Array<{ remoteProductId: number; reason: string }>;
+        }>("/api/admin/dark-shopping/resale/import", {
+          method: "POST",
+          body: {
+            remoteProductIds: batch,
+            categoryId: darkTargetCategoryId,
+            publish: darkPublish,
+          },
+        });
+        imported.push(...result.imported);
+        skipped.push(...result.skipped);
+        completedIds.push(...batch);
+      }
+
       setDarkSelectedProductIds([]);
       setMessage(
-        `${result.imported.length} supplier product${result.imported.length === 1 ? "" : "s"} imported${darkPublish ? " and published" : " as draft"}.${result.skipped.length ? ` ${result.skipped.length} skipped: ${result.skipped.map((item) => item.reason).join("; ")}` : ""}`,
+        `${imported.length} product${imported.length === 1 ? "" : "s"} imported${darkPublish ? " and published" : " as draft"}.${skipped.length ? ` ${skipped.length} skipped: ${skipped.slice(0, 8).map((item) => item.reason).join("; ")}${skipped.length > 8 ? "; …" : ""}` : ""}`,
       );
       await load();
     } catch (error) {
+      setDarkSelectedProductIds((current) =>
+        current.filter((id) => !completedIds.includes(id)),
+      );
       setMessage(
-        error instanceof ApiError
-          ? error.message
-          : "Supplier products could not be imported.",
+        `${imported.length ? `${imported.length} products were imported before the next batch stopped. ` : ""}${error instanceof ApiError ? error.message : "Supplier products could not be imported."}`,
       );
     } finally {
       setBusy("");
@@ -2353,8 +2377,7 @@ export function OperationsAdminPage() {
                           {darkSelectedProductIds.length} selected
                         </strong>
                         <small>
-                          Retail price = supplier RUB cost + {darkMarginPercent}
-                          %
+                          Retail price = supplier RUB cost + {darkMarginPercent}% · large selections import automatically in safe batches
                         </small>
                       </div>
                       <div className="dark-resale-fixed-markup">
@@ -2409,7 +2432,7 @@ export function OperationsAdminPage() {
                             }
                             return [
                               ...new Set([...current, ...eligible]),
-                            ].slice(0, 30);
+                            ];
                           });
                         }}
                       >
@@ -2430,7 +2453,7 @@ export function OperationsAdminPage() {
                         <PackagePlus size={16} />
                         {busy === "dark-shopping-import"
                           ? "Importing…"
-                          : "Import selected"}
+                          : `Import ${darkSelectedProductIds.length || "selected"}`}
                       </button>
                     </section>
                     <section className="dark-resale-product-grid">

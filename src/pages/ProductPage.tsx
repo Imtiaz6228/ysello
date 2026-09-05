@@ -30,6 +30,11 @@ import {
 } from "../commerce/useMarketplace";
 import { useLocale } from "../i18n/LocaleContext";
 import { MarketplaceProductCard } from "../components/MarketplaceProductCard";
+import {
+  MarketplaceBrandArtwork,
+  YselloMarketplaceArtwork,
+  detectMarketplaceBrandSlug,
+} from "../components/MarketplaceBrandIcon";
 import type { CatalogProduct } from "../data/catalog";
 import { NotFoundPage } from "./NotFoundPage";
 
@@ -153,6 +158,14 @@ export function ProductPage() {
     Math.max(minimumQuantity, quantity),
   );
   const available = product.type === "SERVICE" || (product.stockCount ?? 0) > 0;
+  const supplierFulfilled = product.attributes?.supplierFulfilled === true;
+  const brandSlug = supplierFulfilled
+    ? detectMarketplaceBrandSlug(
+        typeof product.facts?.platform === "string" ? product.facts.platform : "",
+        product.category,
+        product.title,
+      )
+    : null;
   const requirementFacts = Object.entries(product.facts ?? {}).slice(0, 4);
 
   return (
@@ -208,7 +221,20 @@ export function ProductPage() {
         <div className="product-gallery">
           <div className={`product-detail-art product-art-${artMode}`}>
             {artMode === "cover" ? (
-              product.imageUrl ? (
+              supplierFulfilled ? (
+                <div className="product-detail-cover ys-native-product-detail-cover">
+                  {brandSlug ? (
+                    <MarketplaceBrandArtwork brandSlug={brandSlug} className="ys-product-detail-brand" />
+                  ) : (
+                    <YselloMarketplaceArtwork label={product.category} className="ys-product-detail-brand" />
+                  )}
+                  <div>
+                    <small>{product.category}</small>
+                    <strong>{product.title}</strong>
+                    <span>Protected digital delivery through Ysello</span>
+                  </div>
+                </div>
+              ) : product.imageUrl ? (
                 <div className="product-detail-cover">
                   <img
                     src={product.imageUrl}
