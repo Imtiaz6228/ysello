@@ -35,7 +35,9 @@ export function shop2TopupConfiguration() {
     marginPercent: env.SHOP2TOPUP_MARGIN_PERCENT,
     settingsUrl: SHOP2TOPUP_SETTINGS_URL,
     documentationUrl: SHOP2TOPUP_DOCUMENTATION_URL,
-    webhookUrl: `${env.API_URL.replace(/\/$/, "")}/api/webhooks/shop2topup`,
+    webhookUrl:
+      env.SHOP2TOPUP_WEBHOOK_PUBLIC_URL ??
+      `${env.API_URL.replace(/\/$/, "")}/api/webhooks/shop2topup`,
     secretStorage: "server_environment",
   };
 }
@@ -73,13 +75,19 @@ export async function shop2TopupStatus() {
       configuration,
       access: {
         status:
-          statusCode === 401
-            ? ("invalid_key" as const)
-            : statusCode === 403
-              ? ("access_denied" as const)
-              : statusCode === 429
-                ? ("rate_limited" as const)
-                : ("unavailable" as const),
+          code === "ACCOUNT_DISABLED"
+            ? ("disabled" as const)
+            : code === "ACCOUNT_FROZEN"
+              ? ("frozen" as const)
+              : code === "IP_NOT_ALLOWED"
+                ? ("ip_not_allowed" as const)
+                : statusCode === 401
+                  ? ("invalid_key" as const)
+                  : statusCode === 403
+                    ? ("access_denied" as const)
+                    : statusCode === 429
+                      ? ("rate_limited" as const)
+                      : ("unavailable" as const),
         message: error instanceof Error ? error.message : "SHOP2TOPUP is unavailable.",
         providerStatus: statusCode,
         code,

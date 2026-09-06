@@ -33,7 +33,7 @@ import { walletRouter } from "./routes/wallet.routes.js";
 import { nexusRouter } from "./routes/nexus.routes.js";
 import { darkShoppingRouter } from "./routes/dark-shopping.routes.js";
 import { shop2TopupRouter } from "./routes/shop2topup.routes.js";
-import { shop2TopupWebhookHandler } from "./routes/shop2topup-webhook.js";
+import { shop2TopupWebhookHandler, shop2TopupWebhookHealth } from "./routes/shop2topup-webhook.js";
 import { railwayReleaseMetadata } from "./config/release.js";
 import { prisma } from "./lib/prisma.js";
 import { blogPosts } from "./content/blog.js";
@@ -163,11 +163,23 @@ app.use(
 
 // External supplier callback: keep the exact raw body for HMAC verification and
 // mount it before express.json() and CSRF middleware.
-app.post(
+const shop2TopupWebhookPaths = [
   "/api/webhooks/shop2topup",
-  express.raw({ type: "application/json", limit: "1mb" }),
-  shop2TopupWebhookHandler,
-);
+  "/api/shop2topup/webhook",
+] as const;
+
+for (const webhookPath of shop2TopupWebhookPaths) {
+  app.get(webhookPath, shop2TopupWebhookHealth);
+  app.head(webhookPath, (_req, res) => res.status(200).end());
+  app.post(
+    webhookPath,
+    // Use raw bytes for every content type because URL-validation probes are not
+    // guaranteed to use application/json, while signed deliveries must be HMAC'd
+    // against the exact request bytes received from SHOP2TOPUP.
+    express.raw({ type: "*/*", limit: "1mb" }),
+    shop2TopupWebhookHandler,
+  );
+}
 
 app.use(express.json({ limit: "1mb" }));
 app.use(express.urlencoded({ extended: false, limit: "1mb" }));

@@ -257,6 +257,14 @@ const envSchema = z.object({
     trimmedStringToUndefined,
     z.string().min(16).max(512).optional(),
   ),
+  SHOP2TOPUP_WEBHOOK_PUBLIC_URL: z.preprocess(
+    trimmedStringToUndefined,
+    z
+      .string()
+      .url()
+      .refine((value) => new URL(value).protocol === "https:", "must use HTTPS")
+      .optional(),
+  ),
   DARK_SHOPPING_API_KEY: z.preprocess(
     trimmedStringToUndefined,
     z.string().min(1).max(255).optional(),

@@ -951,8 +951,20 @@ export function OperationsAdminPage() {
           const catalog = await apiRequest<{ bigCategories: Shop2TopupBigCategory[] }>(
             "/api/admin/shop2topup/catalog/big-categories",
           );
-          setShop2TopupBigCategories(catalog.bigCategories ?? []);
+          const groups = catalog.bigCategories ?? [];
+          setShop2TopupBigCategories(groups);
           setShop2TopupCatalogError("");
+          if (!groups.length) {
+            const categoryCatalog = await apiRequest<{ categories: Shop2TopupCategory[] }>(
+              "/api/admin/shop2topup/catalog/categories",
+            );
+            setShop2TopupCategories(categoryCatalog.categories ?? []);
+            if ((categoryCatalog.categories ?? []).length) {
+              setShop2TopupCatalogError(
+                "SHOP2TOPUP returned no top-level groups, so Ysello loaded all games/categories directly.",
+              );
+            }
+          }
         } catch (error) {
           setShop2TopupBigCategories([]);
           setShop2TopupCatalogError(
@@ -1092,14 +1104,51 @@ export function OperationsAdminPage() {
       const catalog = await apiRequest<{ bigCategories: Shop2TopupBigCategory[] }>(
         "/api/admin/shop2topup/catalog/big-categories",
       );
-      setShop2TopupBigCategories(catalog.bigCategories ?? []);
-      if (!(catalog.bigCategories ?? []).length) {
-        setShop2TopupCatalogError("SHOP2TOPUP returned an empty catalog group list.");
+      const groups = catalog.bigCategories ?? [];
+      setShop2TopupBigCategories(groups);
+      if (!groups.length) {
+        const categoryCatalog = await apiRequest<{ categories: Shop2TopupCategory[] }>(
+          "/api/admin/shop2topup/catalog/categories",
+        );
+        const categories = categoryCatalog.categories ?? [];
+        setShop2TopupCategories(categories);
+        setShop2TopupCatalogError(
+          categories.length
+            ? "SHOP2TOPUP returned no top-level groups. All games/categories were loaded directly instead."
+            : "SHOP2TOPUP returned an empty catalog. Check the supplier account status, API key and IP allowlist.",
+        );
       }
     } catch (error) {
       const text = error instanceof Error ? error.message : "SHOP2TOPUP catalog could not be loaded.";
       setShop2TopupCatalogError(text);
       setMessage(text);
+    } finally {
+      setBusy("");
+    }
+  }
+
+  async function loadAllShop2TopupCategories() {
+    setBusy("shop2topup-all-categories");
+    setMessage("");
+    try {
+      const result = await apiRequest<{ categories: Shop2TopupCategory[] }>(
+        "/api/admin/shop2topup/catalog/categories",
+      );
+      const categories = result.categories ?? [];
+      setShop2TopupBigCategoryId("");
+      setShop2TopupCategoryId("");
+      setShop2TopupCategories(categories);
+      setShop2TopupProducts([]);
+      setShop2TopupSelectedItemIds([]);
+      if (!categories.length) {
+        setMessage("SHOP2TOPUP returned no categories. Check supplier account activation and the API-key IP allowlist.");
+      }
+    } catch (error) {
+      setMessage(
+        error instanceof Error
+          ? error.message
+          : "SHOP2TOPUP categories could not be loaded.",
+      );
     } finally {
       setBusy("");
     }
@@ -2572,6 +2621,13 @@ export function OperationsAdminPage() {
                 ) : (
                   <p>Supplier status is not available from this API deployment.</p>
                 )}
+                {shop2Topup && shop2Topup.access.status !== "ready" ? (
+                  <div className="ops-message warning">
+                    <strong>Supplier access: {shop2Topup.access.status.replaceAll("_", " ")}</strong>
+                    <span>{shop2Topup.access.message}</span>
+                    {shop2Topup.access.code ? <code>{shop2Topup.access.code}</code> : null}
+                  </div>
+                ) : null}
                 {shop2TopupBigCategories.length ? (
                   <div className="shop2topup-group-preview" aria-label="SHOP2TOPUP catalog groups">
                     {shop2TopupBigCategories.slice(0, 10).map((group) => (
@@ -2639,12 +2695,26 @@ export function OperationsAdminPage() {
                       <RefreshCw size={16} />
                       {busy === "shop2topup-refresh" ? "Refreshing catalog…" : "Refresh supplier catalog"}
                     </button>
+                    <button
+                      type="button"
+                      className="shop2topup-secondary-action"
+                      disabled={Boolean(busy) || !shop2Topup?.configuration.configured}
+                      onClick={() => void loadAllShop2TopupCategories()}
+                    >
+                      <FolderPlus size={16} />
+                      {busy === "shop2topup-all-categories" ? "Loading all games…" : "Load all games/categories"}
+                    </button>
                     {shop2TopupCatalogError ? (
                       <p className="shop2topup-catalog-error">
                         <strong>Catalog unavailable:</strong> {shop2TopupCatalogError}
                         {shop2Topup?.access.status === "disabled" ? (
-                          <> SHOP2TOPUP has authenticated the key but disabled the reseller account. Enable the account in the supplier portal before catalog groups can be fetched.</>
+                          <> SHOP2TOPUP has disabled this reseller account. Catalog import cannot work until SHOP2TOPUP re-enables it.</>
+                        ) : shop2Topup?.access.status === "frozen" ? (
+                          <> SHOP2TOPUP has frozen this reseller account. Contact SHOP2TOPUP support before retrying.</>
+                        ) : shop2Topup?.access.status === "ip_not_allowed" ? (
+                          <> Railway's outbound IP is not in the SHOP2TOPUP API-key allowlist. Add the Railway egress IP or clear the supplier allowlist.</>
                         ) : null}
+                        {shop2Topup?.access.code ? <> Provider code: <code>{shop2Topup.access.code}</code>.</> : null}
                       </p>
                     ) : null}
                   </div>
@@ -2660,12 +2730,16 @@ export function OperationsAdminPage() {
                     >
                       <option value="">
                         {shop2Topup?.access.status === "disabled"
-                          ? "Supplier account disabled — enable API access"
-                          : busy === "shop2topup-refresh"
-                            ? "Loading supplier groups…"
-                            : shop2TopupBigCategories.length
-                              ? "Choose a group"
-                              : "No supplier groups loaded"}
+                          ? "Supplier account disabled by SHOP2TOPUP"
+                          : shop2Topup?.access.status === "frozen"
+                            ? "Supplier account frozen by SHOP2TOPUP"
+                            : shop2Topup?.access.status === "ip_not_allowed"
+                              ? "Railway IP is blocked by supplier allowlist"
+                              : busy === "shop2topup-refresh"
+                                ? "Loading supplier groups…"
+                                : shop2TopupBigCategories.length
+                                  ? "Choose a group"
+                                  : "No groups — use Load all games/categories"}
                       </option>
                       {shop2TopupBigCategories.map((group) => (
                         <option value={group.id} key={group.id}>
@@ -2685,9 +2759,11 @@ export function OperationsAdminPage() {
                       }
                     >
                       <option value="">
-                        {busy === "shop2topup-categories"
+                        {busy === "shop2topup-categories" || busy === "shop2topup-all-categories"
                           ? "Loading categories…"
-                          : "Choose a category"}
+                          : shop2TopupCategories.length
+                            ? "Choose a game/category"
+                            : "Choose a group or load all games"}
                       </option>
                       {shop2TopupCategories.map((category) => (
                         <option value={category.id} key={category.id}>
