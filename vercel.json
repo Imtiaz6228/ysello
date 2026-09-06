@@ -28,22 +28,40 @@
     {
       "source": "/:page(cart|sign-in|sign-out|register|forgot-password|reset-password|verify-email|verify-required|dashboard|support|admin|seller|checkout)",
       "headers": [
-        { "key": "X-Robots-Tag", "value": "noindex, nofollow, noarchive" },
-        { "key": "Cache-Control", "value": "private, no-store" }
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, nofollow, noarchive"
+        },
+        {
+          "key": "Cache-Control",
+          "value": "private, no-store"
+        }
       ]
     },
     {
       "source": "/:area(admin|seller|checkout|orders)/:path*",
       "headers": [
-        { "key": "X-Robots-Tag", "value": "noindex, nofollow, noarchive" },
-        { "key": "Cache-Control", "value": "private, no-store" }
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, nofollow, noarchive"
+        },
+        {
+          "key": "Cache-Control",
+          "value": "private, no-store"
+        }
       ]
     },
     {
       "source": "/google-callback.php",
       "headers": [
-        { "key": "X-Robots-Tag", "value": "noindex, nofollow, noarchive" },
-        { "key": "Cache-Control", "value": "private, no-store" }
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, nofollow, noarchive"
+        },
+        {
+          "key": "Cache-Control",
+          "value": "private, no-store"
+        }
       ]
     },
     {
@@ -61,11 +79,26 @@
           "key": "Permissions-Policy",
           "value": "camera=(), microphone=(), geolocation=(), payment=(self)"
         },
-        { "key": "Cross-Origin-Opener-Policy", "value": "same-origin" },
-        { "key": "Cross-Origin-Resource-Policy", "value": "same-site" },
-        { "key": "X-DNS-Prefetch-Control", "value": "on" },
-        { "key": "X-Content-Type-Options", "value": "nosniff" },
-        { "key": "X-Frame-Options", "value": "DENY" },
+        {
+          "key": "Cross-Origin-Opener-Policy",
+          "value": "same-origin"
+        },
+        {
+          "key": "Cross-Origin-Resource-Policy",
+          "value": "same-site"
+        },
+        {
+          "key": "X-DNS-Prefetch-Control",
+          "value": "on"
+        },
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        },
+        {
+          "key": "X-Frame-Options",
+          "value": "DENY"
+        },
         {
           "key": "Strict-Transport-Security",
           "value": "max-age=63072000; includeSubDomains; preload"
@@ -92,6 +125,30 @@
   ],
   "rewrites": [
     {
+      "source": "/assets/:path*",
+      "destination": "https://api.ysello.com/assets/:path*"
+    },
+    {
+      "source": "/catalog",
+      "destination": "https://api.ysello.com/catalog"
+    },
+    {
+      "source": "/category/:path*",
+      "destination": "https://api.ysello.com/category/:path*"
+    },
+    {
+      "source": "/product/:path*",
+      "destination": "https://api.ysello.com/product/:path*"
+    },
+    {
+      "source": "/robots.txt",
+      "destination": "https://api.ysello.com/robots.txt"
+    },
+    {
+      "source": "/sitemap.xml",
+      "destination": "https://api.ysello.com/sitemap.xml"
+    },
+    {
       "source": "/api/:path*",
       "destination": "https://api.ysello.com/api/:path*"
     },
@@ -107,22 +164,77 @@
       "source": "/stores/:slug",
       "destination": "https://api.ysello.com/stores/:slug"
     },
-    { "source": "/cart", "destination": "/" },
-    { "source": "/sign-in", "destination": "/" },
-    { "source": "/sign-out", "destination": "/" },
-    { "source": "/register", "destination": "/" },
-    { "source": "/forgot-password", "destination": "/" },
-    { "source": "/reset-password", "destination": "/" },
-    { "source": "/verify-email", "destination": "/" },
-    { "source": "/verify-required", "destination": "/" },
-    { "source": "/dashboard", "destination": "/" },
-    { "source": "/support", "destination": "/" },
-    { "source": "/checkout", "destination": "/" },
-    { "source": "/checkout/:path*", "destination": "/" },
-    { "source": "/orders/:path*", "destination": "/" },
-    { "source": "/seller", "destination": "/" },
-    { "source": "/seller/:path*", "destination": "/" },
-    { "source": "/admin", "destination": "/" },
-    { "source": "/admin/:path*", "destination": "/" }
+    {
+      "source": "/cart",
+      "destination": "https://api.ysello.com/"
+    },
+    {
+      "source": "/sign-in",
+      "destination": "https://api.ysello.com/"
+    },
+    {
+      "source": "/sign-out",
+      "destination": "https://api.ysello.com/"
+    },
+    {
+      "source": "/register",
+      "destination": "https://api.ysello.com/"
+    },
+    {
+      "source": "/forgot-password",
+      "destination": "https://api.ysello.com/"
+    },
+    {
+      "source": "/reset-password",
+      "destination": "https://api.ysello.com/"
+    },
+    {
+      "source": "/verify-email",
+      "destination": "https://api.ysello.com/"
+    },
+    {
+      "source": "/verify-required",
+      "destination": "https://api.ysello.com/"
+    },
+    {
+      "source": "/dashboard",
+      "destination": "https://api.ysello.com/"
+    },
+    {
+      "source": "/support",
+      "destination": "https://api.ysello.com/"
+    },
+    {
+      "source": "/checkout",
+      "destination": "https://api.ysello.com/"
+    },
+    {
+      "source": "/checkout/:path*",
+      "destination": "https://api.ysello.com/"
+    },
+    {
+      "source": "/orders/:path*",
+      "destination": "https://api.ysello.com/"
+    },
+    {
+      "source": "/seller",
+      "destination": "https://api.ysello.com/"
+    },
+    {
+      "source": "/seller/:path*",
+      "destination": "https://api.ysello.com/"
+    },
+    {
+      "source": "/admin",
+      "destination": "https://api.ysello.com/"
+    },
+    {
+      "source": "/admin/:path*",
+      "destination": "https://api.ysello.com/"
+    },
+    {
+      "source": "/",
+      "destination": "https://api.ysello.com/"
+    }
   ]
 }

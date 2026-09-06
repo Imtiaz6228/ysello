@@ -1,3 +1,5 @@
+import { UiText } from "../i18n/UiText";
+import { ProductArtwork } from "../components/ProductArtwork";
 import { useMemo, useState } from "react";
 import {
   BadgeCheck,
@@ -161,7 +163,9 @@ export function ProductPage() {
   const supplierFulfilled = product.attributes?.supplierFulfilled === true;
   const brandSlug = supplierFulfilled
     ? detectMarketplaceBrandSlug(
-        typeof product.facts?.platform === "string" ? product.facts.platform : "",
+        typeof product.facts?.platform === "string"
+          ? product.facts.platform
+          : "",
         product.category,
         product.title,
       )
@@ -222,17 +226,8 @@ export function ProductPage() {
           <div className={`product-detail-art product-art-${artMode}`}>
             {artMode === "cover" ? (
               supplierFulfilled ? (
-                <div className="product-detail-cover ys-native-product-detail-cover">
-                  {brandSlug ? (
-                    <MarketplaceBrandArtwork brandSlug={brandSlug} className="ys-product-detail-brand" />
-                  ) : (
-                    <YselloMarketplaceArtwork label={product.category} className="ys-product-detail-brand" />
-                  )}
-                  <div>
-                    <small>{product.category}</small>
-                    <strong>{product.title}</strong>
-                    <span>Protected digital delivery through Ysello</span>
-                  </div>
+                <div className="ys-detail-platform-art">
+                  <ProductArtwork product={product} />
                 </div>
               ) : product.imageUrl ? (
                 <div className="product-detail-cover">
@@ -324,7 +319,9 @@ export function ProductPage() {
         </div>
         <div className="product-detail-copy">
           <span className="section-index">{product.category}</span>
-          <h1>{product.title}</h1>
+          <h1>
+            <UiText value={product.title} />
+          </h1>
           <div className="detail-rating">
             <Star fill="currentColor" /> <strong>{product.rating}</strong>
             <span>{product.reviews} verified reviews</span>
@@ -361,7 +358,7 @@ export function ProductPage() {
               <RefreshCw /> Order-linked delivery record
             </span>
             <span>
-              <ShieldCheck /> Buyer protection
+              <ShieldCheck /> <UiText value="Buyer protection" />
             </span>
             <span>
               <RefreshCw /> {product.afterSalesServiceHours ?? 12}h after-sales
@@ -463,7 +460,9 @@ export function ProductPage() {
       <section className="product-market-brief">
         <header>
           <span className="section-index">PURCHASE BRIEF</span>
-          <h2>Know the handoff before checkout.</h2>
+          <h2>
+            <UiText value="Know the handoff before checkout." />
+          </h2>
           <p>
             Everything important is summarized here so the order starts with
             shared expectations.
@@ -542,7 +541,9 @@ export function ProductPage() {
       <section className="product-information-grid">
         <article className="product-included-card">
           <span className="section-index">PACKAGE CONTENTS</span>
-          <h2>Everything included in your order.</h2>
+          <h2>
+            <UiText value="Everything included in your order." />
+          </h2>
           <div>
             {included.map((item) => (
               <p key={item}>
@@ -624,7 +625,9 @@ export function ProductPage() {
           <div>
             <RefreshCw />
             <span>
-              <strong>Refund policy</strong>
+              <strong>
+                <UiText value="Refund policy" />
+              </strong>
               <small>
                 {product.refundPolicy ?? "Marketplace refund policy applies."}
               </small>
@@ -666,7 +669,9 @@ export function ProductPage() {
       <section className="detail-section review-showcase">
         <div>
           <span className="section-index">VERIFIED REVIEWS</span>
-          <h2>Buyers know what arrived.</h2>
+          <h2>
+            <UiText value="Buyers know what arrived." />
+          </h2>
           <p>
             Only customers with a paid order can publish a review. Sellers can
             respond, and abusive content enters moderation.
@@ -705,7 +710,9 @@ export function ProductPage() {
       <section className="product-faq-section">
         <div>
           <span className="section-index">BEFORE YOU BUY</span>
-          <h2>Common questions</h2>
+          <h2>
+            <UiText value="Common questions" />
+          </h2>
           <p>
             Important delivery and usage details, kept close to the purchase
             decision.
@@ -743,7 +750,9 @@ export function ProductPage() {
           <div className="catalog-section-heading">
             <div>
               <span className="section-index">CONTINUE EXPLORING</span>
-              <h2>Related products</h2>
+              <h2>
+                <UiText value="Related products" />
+              </h2>
               <p>More products with a similar category or delivery format.</p>
             </div>
             <Link to={productCategoryPath(product)}>

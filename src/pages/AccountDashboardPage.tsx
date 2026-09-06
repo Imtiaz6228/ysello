@@ -1,3 +1,4 @@
+import { UiText } from "../i18n/UiText";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ArrowRight,
@@ -302,65 +303,20 @@ const buyerMenuGroups: Array<{
   }>;
 }> = [
   {
-    label: "Overview",
-    items: [{ tab: "overview", label: "Overview", icon: Home }],
+    label: "Shopping",
+    items: [
+      { tab: "overview", label: "Overview", icon: Home },
+      { tab: "orders", label: "Orders & delivery", icon: ShoppingBag },
+      { tab: "wallet", label: "Wallet & top up", icon: Wallet },
+    ],
   },
   {
-    label: "Orders & support",
+    label: "Help",
     items: [
-      { tab: "orders", label: "All orders", icon: ShoppingBag },
-      { tab: "active-orders", label: "Active orders", icon: Activity },
-      {
-        tab: "completed-orders",
-        label: "Completed orders",
-        icon: CheckCircle2,
-      },
-      { tab: "pending-orders", label: "Pending orders", icon: Clock3 },
-      { tab: "cancelled-orders", label: "Cancelled orders", icon: X },
+      { tab: "chats", label: "Seller messages", icon: MessageCircle },
       { tab: "refunds", label: "Refunds", icon: RefreshCw },
       { tab: "disputes", label: "Disputes", icon: Gavel },
-    ],
-  },
-  {
-    label: "Library & delivery",
-    items: [
-      { tab: "purchased-products", label: "My library", icon: PackageOpen },
-      { tab: "downloads", label: "Downloads", icon: Download },
-      { tab: "license-keys", label: "License keys", icon: KeyRound },
-      {
-        tab: "activation-codes",
-        label: "Activation codes",
-        icon: ListChecks,
-      },
-      { tab: "delivery-history", label: "Delivery history", icon: History },
-    ],
-  },
-  {
-    label: "Shopping & rewards",
-    items: [
-      { tab: "wishlist", label: "Wishlist", icon: Heart },
-      { tab: "favorites", label: "Favorites", icon: Bookmark },
-      { tab: "cart", label: "Shopping cart", icon: ShoppingBag },
-      { tab: "coupons", label: "Coupons", icon: Tag },
-      { tab: "gift-cards", label: "Gift cards", icon: Gift },
-      { tab: "rewards", label: "Rewards", icon: Award },
-      { tab: "cashback", label: "Cashback", icon: Percent },
-    ],
-  },
-  {
-    label: "Messages & help",
-    items: [
-      { tab: "messages", label: "Order messages", icon: MessageSquare },
-      { tab: "chats", label: "Seller chat", icon: MessageCircle },
-      { tab: "tickets", label: "Support", icon: TicketCheck },
-      { tab: "notifications", label: "Notifications", icon: Bell },
-    ],
-  },
-  {
-    label: "Wallet",
-    items: [
-      { tab: "wallet", label: "Balance & top up", icon: Wallet },
-      { tab: "transactions", label: "Transactions", icon: ReceiptText },
+      { tab: "tickets", label: "Support", icon: Headphones },
     ],
   },
   {
@@ -368,20 +324,6 @@ const buyerMenuGroups: Array<{
     items: [
       { tab: "profile", label: "Profile", icon: UserRound },
       { tab: "security", label: "Security", icon: ShieldCheck },
-      { tab: "addresses", label: "Addresses", icon: MapPin },
-      {
-        tab: "payment-methods",
-        label: "Payment methods",
-        icon: CreditCard,
-      },
-      { tab: "preferences", label: "Preferences", icon: SlidersHorizontal },
-      { tab: "reviews", label: "My reviews", icon: Star },
-      {
-        tab: "seller",
-        label: "Seller hub",
-        icon: Store,
-        roles: ["SELLER"],
-      },
     ],
   },
 ];
@@ -878,7 +820,7 @@ export function AccountDashboardPage() {
     ).length ?? 0;
 
   return (
-    <main className="account-dashboard-page buyer-premium-dashboard">
+    <main className="account-dashboard-page buyer-premium-dashboard ys-workspace ys-workspace-buyer">
       <Seo
         title="Account dashboard"
         description="Manage Ysello orders, downloads, invoices, support, and seller activity."
@@ -933,33 +875,20 @@ export function AccountDashboardPage() {
         <div className="panel-mobile-sidebar-tools">
           <LocaleSwitcher compact />
           <Link to="/sign-out">
-            <LogOut size={16} /> Sign out
+            <LogOut size={16} /> <UiText value="Sign out" />
           </Link>
         </div>
         <div className="sidebar-nav buyer-grouped-nav">
           {buyerMenuGroups.map((group) => (
             <section key={group.label}>
-              <button
-                type="button"
-                className="buyer-nav-group"
-                aria-expanded={Boolean(expandedGroups[group.label])}
-                onClick={() =>
-                  setExpandedGroups(
-                    expandedGroups[group.label] ? {} : { [group.label]: true },
-                  )
-                }
-              >
-                <span>{group.label}</span>
-                <ChevronDown
-                  className={expandedGroups[group.label] ? "rotated" : ""}
-                />
-              </button>
-              {expandedGroups[group.label] ? (
+              <p className="ys-workspace-nav-label">
+                <UiText value={group.label} />
+              </p>
+              {true ? (
                 <div>
                   {group.items
                     .filter(
-                      (item) =>
-                        !item.roles || item.roles.includes(user.role),
+                      (item) => !item.roles || item.roles.includes(user.role),
                     )
                     .map(({ tab: itemTab, label, icon: Icon }) => (
                       <button
@@ -968,7 +897,9 @@ export function AccountDashboardPage() {
                         onClick={() => selectTab(itemTab)}
                       >
                         <Icon size={17} />
-                        <span>{label}</span>
+                        <span>
+                          <UiText value={label} />
+                        </span>
                         {itemTab === "active-orders" && activeOrders ? (
                           <b>{activeOrders}</b>
                         ) : null}
@@ -998,6 +929,42 @@ export function AccountDashboardPage() {
             </section>
           ))}
         </div>
+        <label className="ys-panel-tools">
+          <span>More account tools</span>
+          <select
+            aria-label="More account tools"
+            value=""
+            onChange={(event) => selectTab(event.target.value as Tab)}
+          >
+            <option value="" disabled>
+              Choose a tool…
+            </option>
+            {tabs
+              .filter(
+                (item) =>
+                  !buyerMenuGroups.some((group) =>
+                    group.items.some((entry) => entry.tab === item.id),
+                  ) &&
+                  ![
+                    "rewards",
+                    "cashback",
+                    "gift-cards",
+                    "favorites",
+                    "addresses",
+                    "active-orders",
+                    "completed-orders",
+                    "pending-orders",
+                    "cancelled-orders",
+                  ].includes(item.id) &&
+                  (!item.roles || item.roles.includes(user.role)),
+              )
+              .map((item) => (
+                <option key={item.id} value={item.id}>
+                  <UiText value={item.label} />
+                </option>
+              ))}
+          </select>
+        </label>
         <div className="sidebar-footer">
           <Link to="/" className="secondary-button">
             <Home size={16} /> Home
@@ -1131,7 +1098,10 @@ export function AccountDashboardPage() {
                 <span className="buyer-live-badge">
                   <i /> BUYER WORKSPACE
                 </span>
-                <h1>Welcome back, {user.firstName}.</h1>
+                <h1>
+                  <UiText value="Welcome back," />
+                  <UiText value={user.firstName} />.
+                </h1>
                 <p>
                   Start with what needs attention, then move into orders, your
                   library, messages, or account security.
@@ -1259,9 +1229,12 @@ export function AccountDashboardPage() {
             {orders.length > 0 && (
               <div className="recent-section">
                 <div className="section-heading-row">
-                  <h2>Recent orders</h2>
+                  <h2>
+                    <UiText value="Recent orders" />
+                  </h2>
                   <Link to="#orders" onClick={() => selectTab("orders")}>
-                    View all <ArrowRight size={16} />
+                    <UiText value="View all" />
+                    <ArrowRight size={16} />
                   </Link>
                 </div>
                 <div className="compact-orders">
@@ -1296,7 +1269,9 @@ export function AccountDashboardPage() {
             {user.role === "SELLER" && (
               <div className="recent-section">
                 <div className="section-heading-row">
-                  <h2>Seller snapshot</h2>
+                  <h2>
+                    <UiText value="Seller snapshot" />
+                  </h2>
                   <Link to="#seller" onClick={() => selectTab("seller")}>
                     Open seller hub <ArrowRight size={16} />
                   </Link>
@@ -1315,7 +1290,9 @@ export function AccountDashboardPage() {
                     <ShoppingBag size={18} />
                     <span>
                       <strong>{sellerProducts?.length ?? 0}</strong>
-                      <small>Products</small>
+                      <small>
+                        <UiText value="Products" />
+                      </small>
                     </span>
                   </div>
                   <div>
@@ -1344,7 +1321,9 @@ export function AccountDashboardPage() {
               <Link to="/catalog" className="action-card">
                 <PackageCheck size={20} />
                 <span>
-                  <strong>Browse marketplace</strong>
+                  <strong>
+                    <UiText value="Browse marketplace" />
+                  </strong>
                   <small>Discover new products</small>
                 </span>
                 <ArrowRight size={16} />
@@ -1388,7 +1367,9 @@ export function AccountDashboardPage() {
               >
                 <Gavel size={20} />
                 <span>
-                  <strong>Disputes</strong>
+                  <strong>
+                    <UiText value="Disputes" />
+                  </strong>
                   <small>{disputes.length} cases</small>
                 </span>
                 <ArrowRight size={16} />
@@ -1398,7 +1379,9 @@ export function AccountDashboardPage() {
               <header>
                 <div>
                   <span>DISCOVER MORE</span>
-                  <h2>Continue shopping</h2>
+                  <h2>
+                    <UiText value="Continue shopping" />
+                  </h2>
                 </div>
                 <Link to="/catalog">
                   Explore all products <ArrowRight />
@@ -1663,7 +1646,9 @@ export function AccountDashboardPage() {
             ) : (
               <div className="empty-state-large">
                 <PackageCheck size={48} />
-                <h2>No orders yet</h2>
+                <h2>
+                  <UiText value="No orders yet" />
+                </h2>
                 <p>
                   When you buy something, its invoice, delivery, and support
                   history will live here.
@@ -1760,7 +1745,9 @@ export function AccountDashboardPage() {
               ) : (
                 <div className="empty-state-large">
                   <PackageOpen size={48} />
-                  <h2>No purchased products yet</h2>
+                  <h2>
+                    <UiText value="No purchased products yet" />
+                  </h2>
                   <p>
                     Your paid products will appear here with their order and
                     delivery actions.
@@ -1910,7 +1897,9 @@ export function AccountDashboardPage() {
               ) : (
                 <div className="empty-state-large">
                   <Download size={48} />
-                  <h2>No files yet</h2>
+                  <h2>
+                    <UiText value="No files yet" />
+                  </h2>
                   <p>
                     Purchased downloads and their latest updates will appear
                     here.
@@ -1929,7 +1918,9 @@ export function AccountDashboardPage() {
                   <div>
                     <KeyRound />
                     <span>
-                      <h2>Protected delivery vault</h2>
+                      <h2>
+                        <UiText value="Protected delivery vault" />
+                      </h2>
                       <p>
                         Activation codes and delivered inventory are tied to
                         their original order.
@@ -1980,7 +1971,9 @@ export function AccountDashboardPage() {
                 ) : (
                   <div className="empty-state-large">
                     <KeyRound />
-                    <h2>No activation codes</h2>
+                    <h2>
+                      <UiText value="No activation codes" />
+                    </h2>
                     <p>
                       License keys and delivered inventory will appear here
                       after purchase.
@@ -1997,7 +1990,11 @@ export function AccountDashboardPage() {
             <header className="tab-header">
               <span className="section-index">ORDER CHATS</span>
               <h1>
-                {tab === "messages" ? "Messages" : "Seller conversations"}
+                <UiText
+                  value={
+                    tab === "messages" ? "Messages" : "Seller conversations"
+                  }
+                />
               </h1>
               <p>
                 Every post-order chat appears here. Open the workspace to send
@@ -2046,7 +2043,9 @@ export function AccountDashboardPage() {
             ) : (
               <div className="empty-state-large">
                 <MessageSquare size={48} />
-                <h2>No chats yet</h2>
+                <h2>
+                  <UiText value="No chats yet" />
+                </h2>
                 <p>
                   Open an order and message the seller to start a conversation.
                 </p>
@@ -2059,7 +2058,9 @@ export function AccountDashboardPage() {
           <div className="tab-content refunds-tab">
             <header className="tab-header">
               <span className="section-index">REFUND CENTER</span>
-              <h1>Refund requests</h1>
+              <h1>
+                <UiText value="Refund requests" />
+              </h1>
               <p>
                 Track refund progress, status, amount and the related order
                 history.
@@ -2077,9 +2078,11 @@ export function AccountDashboardPage() {
                       <div>
                         <small>{order.orderNumber}</small>
                         <h3>
-                          {order.items
-                            .map((item) => item.productName)
-                            .join(", ")}
+                          <UiText
+                            value={order.items
+                              .map((item) => item.productName)
+                              .join(", ")}
+                          />
                         </h3>
                         <p>
                           Requested amount · {formatMoney(order.totalCents)}
@@ -2107,7 +2110,9 @@ export function AccountDashboardPage() {
             ) : (
               <div className="empty-state-large">
                 <RefreshCw size={48} />
-                <h2>No refund requests</h2>
+                <h2>
+                  <UiText value="No refund requests" />
+                </h2>
                 <p>
                   Request a refund from an eligible order and its progress will
                   appear here.
@@ -2127,7 +2132,9 @@ export function AccountDashboardPage() {
           <div className="tab-content disputes-tab">
             <header className="tab-header">
               <span className="section-index">DISPUTES</span>
-              <h1>Open disputes and refund demands</h1>
+              <h1>
+                <UiText value="Open disputes and refund demands" />
+              </h1>
               <p>
                 If one party does not reply within 24 hours, the dispute is
                 automatically closed against that party.
@@ -2195,7 +2202,9 @@ export function AccountDashboardPage() {
             ) : (
               <div className="empty-state-large">
                 <Gavel size={48} />
-                <h2>No disputes</h2>
+                <h2>
+                  <UiText value="No disputes" />
+                </h2>
                 <p>
                   Open a dispute from any paid order during its after-sales
                   window.
@@ -2209,7 +2218,9 @@ export function AccountDashboardPage() {
           <div className="tab-content tickets-tab">
             <header className="tab-header">
               <span className="section-index">SUPPORT CENTER</span>
-              <h1>Help & tickets</h1>
+              <h1>
+                <UiText value="Help & tickets" />
+              </h1>
               <p>Create tickets, track responses, and get human support.</p>
             </header>
             <button
@@ -2236,7 +2247,9 @@ export function AccountDashboardPage() {
                         </small>
                       </div>
                     </header>
-                    <h3>{ticket.subject}</h3>
+                    <h3>
+                      <UiText value={ticket.subject} />
+                    </h3>
                     {ticket.messages.length > 0 && (
                       <div className="ticket-messages">
                         {ticket.messages.slice(-2).map((msg) => (
@@ -2265,7 +2278,9 @@ export function AccountDashboardPage() {
             ) : (
               <div className="empty-state-large">
                 <Headphones size={48} />
-                <h2>No tickets yet</h2>
+                <h2>
+                  <UiText value="No tickets yet" />
+                </h2>
                 <p>
                   Support requests, refund inquiries, and technical help will
                   appear here.
@@ -2279,7 +2294,9 @@ export function AccountDashboardPage() {
           <div className="tab-content buyer-notification-center">
             <header className="tab-header">
               <span className="section-index">ACTION CENTER</span>
-              <h1>What needs your attention</h1>
+              <h1>
+                <UiText value="What needs your attention" />
+              </h1>
               <p>
                 Current order, conversation, dispute, and support signals
                 calculated from your account records.
@@ -2295,7 +2312,9 @@ export function AccountDashboardPage() {
               </button>
             </div>
             <section>
-              <h2>Current activity</h2>
+              <h2>
+                <UiText value="Current activity" />
+              </h2>
               {activeOrders ? (
                 <article>
                   <span className="blue">
@@ -2350,7 +2369,9 @@ export function AccountDashboardPage() {
                   <div>
                     <strong>Open dispute activity</strong>
                     <p>Review case status and any response deadline.</p>
-                    <small>Buyer protection</small>
+                    <small>
+                      <UiText value="Buyer protection" />
+                    </small>
                   </div>
                   <button type="button" onClick={() => selectTab("disputes")}>
                     View
@@ -2367,7 +2388,9 @@ export function AccountDashboardPage() {
                   <div>
                     <strong>Open support request</strong>
                     <p>Review the latest ticket conversation and status.</p>
-                    <small>Support</small>
+                    <small>
+                      <UiText value="Support" />
+                    </small>
                   </div>
                   <button type="button" onClick={() => selectTab("tickets")}>
                     View
@@ -2411,7 +2434,9 @@ export function AccountDashboardPage() {
                 </span>
                 <div>
                   <small>SECURE CHECKOUT</small>
-                  <h2>Continue to your shopping cart</h2>
+                  <h2>
+                    <UiText value="Continue to your shopping cart" />
+                  </h2>
                   <p>
                     Review products, quantities, pricing and the final order
                     total in the existing protected checkout flow.
@@ -2425,7 +2450,9 @@ export function AccountDashboardPage() {
               <div className="empty-state-large">
                 <Heart size={48} />
                 <h2>
-                  Your {tab === "wishlist" ? "wishlist" : "favorites"} is empty
+                  <UiText value="Your" />
+                  {tab === "wishlist" ? "wishlist" : "favorites"}{" "}
+                  <UiText value="is empty" />
                 </h2>
                 <p>
                   Save products while browsing and they will be organized here.
@@ -2439,7 +2466,9 @@ export function AccountDashboardPage() {
               <header>
                 <div>
                   <span>MARKETPLACE</span>
-                  <h2>Products worth exploring</h2>
+                  <h2>
+                    <UiText value="Products worth exploring" />
+                  </h2>
                 </div>
                 <Link to="/catalog">
                   View catalog <ArrowRight />
@@ -2488,7 +2517,9 @@ export function AccountDashboardPage() {
               </span>
               <div>
                 <small>MEMBER BENEFITS</small>
-                <h2>Your rewards wallet</h2>
+                <h2>
+                  <UiText value="Your rewards wallet" />
+                </h2>
                 <p>No reward balance is currently issued to this account.</p>
               </div>
               <strong>0 points</strong>
@@ -2534,7 +2565,8 @@ export function AccountDashboardPage() {
                 expiry and redemption terms.
               </p>
               <Link to="/catalog" className="primary-button">
-                Continue shopping <ArrowRight />
+                <UiText value="Continue shopping" />
+                <ArrowRight />
               </Link>
             </div>
           </div>
@@ -2544,7 +2576,9 @@ export function AccountDashboardPage() {
           <div className="tab-content reviews-tab">
             <header className="tab-header">
               <span className="section-index">YOUR REVIEWS</span>
-              <h1>Product reviews</h1>
+              <h1>
+                <UiText value="Product reviews" />
+              </h1>
               <p>Reviews you've written for purchased products.</p>
             </header>
             {reviews.length ? (
@@ -2581,7 +2615,9 @@ export function AccountDashboardPage() {
             ) : (
               <div className="empty-state-large">
                 <Star size={48} />
-                <h2>No reviews yet</h2>
+                <h2>
+                  <UiText value="No reviews yet" />
+                </h2>
                 <p>
                   After purchasing and using a product, leave a review to help
                   other buyers.
@@ -2595,7 +2631,9 @@ export function AccountDashboardPage() {
           <div className="tab-content seller-tab">
             <header className="tab-header">
               <span className="section-index">SELLER HUB</span>
-              <h1>{sellerProfile?.storeName ?? "Your store"}</h1>
+              <h1>
+                <UiText value={sellerProfile?.storeName ?? "Your store"} />
+              </h1>
               <p>
                 {sellerProfile?.isVerified
                   ? "Verified store · Active"
@@ -2605,7 +2643,9 @@ export function AccountDashboardPage() {
             <div className="seller-center-hero">
               <div>
                 <span className="section-index">REAL TIME DATA</span>
-                <h2>Seller Center</h2>
+                <h2>
+                  <UiText value="Seller Center" />
+                </h2>
                 <p>
                   Quickly view your balance, frozen revenue, products, disputes,
                   orders, and sales.
@@ -2711,7 +2751,9 @@ export function AccountDashboardPage() {
               <div className="metric-card">
                 <Gavel size={22} />
                 <span>
-                  <small>Disputes</small>
+                  <small>
+                    <UiText value="Disputes" />
+                  </small>
                   <strong>
                     {
                       sellerDisputes.filter(
@@ -2742,7 +2784,9 @@ export function AccountDashboardPage() {
                 <header>
                   <div>
                     <span className="section-index">SALES STATISTICS</span>
-                    <h2>Revenue performance</h2>
+                    <h2>
+                      <UiText value="Revenue performance" />
+                    </h2>
                   </div>
                   <select aria-label="Analytics period">
                     <option>Last 15 days</option>
@@ -2790,7 +2834,9 @@ export function AccountDashboardPage() {
               </section>
               <aside className="seller-todo-panel">
                 <span className="section-index">TO-DO & WARNINGS</span>
-                <h2>Store health</h2>
+                <h2>
+                  <UiText value="Store health" />
+                </h2>
                 <div>
                   <span className="todo-dot danger" />
                   <p>
@@ -2837,7 +2883,8 @@ export function AccountDashboardPage() {
             {sellerOrders?.length > 0 && (
               <div className="section-block">
                 <h2>
-                  Recent orders <small>({sellerOrders.length} total)</small>
+                  <UiText value="Recent orders" />
+                  <small>({sellerOrders.length} total)</small>
                 </h2>
                 <div className="compact-orders">
                   {sellerOrders.slice(0, 6).map((item: any) => (
@@ -2905,7 +2952,8 @@ export function AccountDashboardPage() {
             {sellerDisputes?.length > 0 && (
               <div className="section-block seller-dispute-section">
                 <h2>
-                  Disputes <small>({sellerDisputes.length} total)</small>
+                  <UiText value="Disputes" />
+                  <small>({sellerDisputes.length} total)</small>
                 </h2>
                 <div className="orders-list dispute-list">
                   {sellerDisputes.slice(0, 6).map((dispute: any) => (
@@ -2966,7 +3014,8 @@ export function AccountDashboardPage() {
             {sellerProducts?.length > 0 && (
               <div className="section-block">
                 <h2>
-                  Your products <small>({sellerProducts.length} total)</small>
+                  <UiText value="Your products" />
+                  <small>({sellerProducts.length} total)</small>
                 </h2>
                 <div className="seller-product-grid">
                   {sellerProducts.map((product) => (
@@ -3002,7 +3051,8 @@ export function AccountDashboardPage() {
             {sellerReviews?.length > 0 && (
               <div className="section-block">
                 <h2>
-                  Recent reviews <small>({sellerReviews.length} total)</small>
+                  <UiText value="Recent reviews" />
+                  <small>({sellerReviews.length} total)</small>
                 </h2>
                 <div className="compact-orders">
                   {sellerReviews.slice(0, 3).map((review: any) => (
@@ -3043,7 +3093,8 @@ export function AccountDashboardPage() {
             {sellerTickets?.length > 0 && (
               <div className="section-block">
                 <h2>
-                  Support tickets <small>({sellerTickets.length} open)</small>
+                  <UiText value="Support tickets" />
+                  <small>({sellerTickets.length} open)</small>
                 </h2>
                 <div className="compact-orders">
                   {sellerTickets.slice(0, 3).map((ticket: any) => (
@@ -3073,7 +3124,9 @@ export function AccountDashboardPage() {
             {!sellerOrders?.length && !sellerProducts?.length ? (
               <div className="empty-state-large">
                 <Store size={48} />
-                <h2>Start selling</h2>
+                <h2>
+                  <UiText value="Start selling" />
+                </h2>
                 <p>
                   Head to your Seller Studio to create product drafts and submit
                   them for review.
@@ -3166,7 +3219,9 @@ export function AccountDashboardPage() {
                   </span>
                   <div>
                     <small>IDENTITY</small>
-                    <h3>Email verification</h3>
+                    <h3>
+                      <UiText value="Email verification" />
+                    </h3>
                     <p>
                       {user.emailVerified
                         ? "Your email address is verified."
@@ -3185,14 +3240,17 @@ export function AccountDashboardPage() {
                   </span>
                   <div>
                     <small>PASSWORD</small>
-                    <h3>Password protection</h3>
+                    <h3>
+                      <UiText value="Password protection" />
+                    </h3>
                     <p>
                       Your password and reset flow remain protected by the
                       existing authentication system.
                     </p>
                   </div>
                   <Link to="/forgot-password">
-                    Manage <ArrowRight />
+                    <UiText value="Manage" />
+                    <ArrowRight />
                   </Link>
                 </article>
                 <article>
@@ -3201,7 +3259,9 @@ export function AccountDashboardPage() {
                   </span>
                   <div>
                     <small>SESSIONS</small>
-                    <h3>Trusted session</h3>
+                    <h3>
+                      <UiText value="Trusted session" />
+                    </h3>
                     <p>
                       This device uses secure, refreshable account sessions.
                     </p>
@@ -3214,7 +3274,9 @@ export function AccountDashboardPage() {
                   </span>
                   <div>
                     <small>PRIVACY</small>
-                    <h3>Buyer protection</h3>
+                    <h3>
+                      <UiText value="Buyer protection" />
+                    </h3>
                     <p>
                       Orders, delivery records and disputes are retained for
                       account protection.
@@ -3229,7 +3291,9 @@ export function AccountDashboardPage() {
             {tab === "addresses" ? (
               <div className="buyer-account-empty">
                 <MapPin />
-                <h2>Saved addresses</h2>
+                <h2>
+                  <UiText value="Saved addresses" />
+                </h2>
                 <p>
                   Digital orders do not require a shipping address. Your country
                   and city remain available in Profile.
@@ -3247,7 +3311,9 @@ export function AccountDashboardPage() {
                   </span>
                   <div>
                     <small>PRIMARY PAYMENT</small>
-                    <h3>Marketplace wallet</h3>
+                    <h3>
+                      <UiText value="Marketplace wallet" />
+                    </h3>
                     <p>Available balance: {formatMoney(walletBalance)}</p>
                   </div>
                   <button onClick={() => selectTab("wallet")}>
@@ -3260,7 +3326,9 @@ export function AccountDashboardPage() {
                   </span>
                   <div>
                     <small>VERIFIED TOP-UP</small>
-                    <h3>Configured crypto networks</h3>
+                    <h3>
+                      <UiText value="Configured crypto networks" />
+                    </h3>
                     <p>
                       Only payment networks and destination addresses configured
                       by marketplace administration are shown.
@@ -3288,7 +3356,9 @@ export function AccountDashboardPage() {
                   <div>
                     <MessageSquare />
                     <span>
-                      <strong>Seller messages</strong>
+                      <strong>
+                        <UiText value="Seller messages" />
+                      </strong>
                       <small>
                         Show alerts for protected order conversations.
                       </small>
@@ -3348,7 +3418,9 @@ export function AccountDashboardPage() {
           onClick={() => selectTab("orders")}
         >
           <ShoppingBag />
-          <span>Orders</span>
+          <span>
+            <UiText value="Orders" />
+          </span>
         </button>
         <button
           className="buyer-mobile-fab"
@@ -3379,7 +3451,9 @@ export function AccountDashboardPage() {
           onClick={() => selectTab("messages")}
         >
           <MessageSquare />
-          <span>Messages</span>
+          <span>
+            <UiText value="Messages" />
+          </span>
         </button>
       </nav>
     </main>
@@ -3699,7 +3773,11 @@ function WalletTabContent({
       <header className="tab-header">
         <span className="section-index">{t("buyerWallet").toUpperCase()}</span>
         <h1>
-          {mode === "transactions" ? t("transactionsTitle") : t("topupTitle")}
+          <UiText
+            value={
+              mode === "transactions" ? t("transactionsTitle") : t("topupTitle")
+            }
+          />
         </h1>
         <p>
           {mode === "transactions"
@@ -3815,7 +3893,9 @@ function WalletTabContent({
               void submitDeposit();
             }}
           >
-            <h2>{t("cryptoTopup")}</h2>
+            <h2>
+              <UiText value={t("cryptoTopup")} />
+            </h2>
             <p>{t("cryptoTopupHelp")}</p>
             {methods.length ? (
               <div className="deposit-method-tabs">
@@ -3836,7 +3916,9 @@ function WalletTabContent({
             ) : (
               <div className="dashboard-empty compact" role="status">
                 <ShieldAlert />
-                <h3>Top-up is temporarily unavailable</h3>
+                <h3>
+                  <UiText value="Top-up is temporarily unavailable" />
+                </h3>
                 <p>
                   No verified payment destination is configured. Please return
                   later or contact support—do not send funds to an address from
@@ -3877,11 +3959,7 @@ function WalletTabContent({
                   onChange={(e) => setDepositAmount(e.target.value)}
                 />
               </div>
-              <button
-                type="submit"
-                className="primary-button"
-                disabled={busy}
-              >
+              <button type="submit" className="primary-button" disabled={busy}>
                 <PlusCircle size={16} />{" "}
                 {busy ? t("creatingPayment") : t("createPayment")}
               </button>
@@ -3889,7 +3967,9 @@ function WalletTabContent({
             {selectedMethod && quotedAmountCents > 0 ? (
               <dl className="topup-fee-breakdown" aria-label="Top-up quote">
                 <div>
-                  <dt>Wallet credit</dt>
+                  <dt>
+                    <UiText value="Wallet credit" />
+                  </dt>
                   <dd>{formatMoney(quotedAmountCents)}</dd>
                 </div>
                 <div>
@@ -3905,16 +3985,18 @@ function WalletTabContent({
             <div className="wallet-safety-note">
               <ShieldAlert size={16} />
               <span>
-                Transfer the exact wallet-credit amount. Your wallet or
-                exchange charges the network fee in addition; live fees may
-                vary from this estimate.
+                Transfer the exact wallet-credit amount. Your wallet or exchange
+                charges the network fee in addition; live fees may vary from
+                this estimate.
               </span>
             </div>
           </form>
 
           {user.role === "SELLER" ? (
             <div className="wallet-deposit-form withdrawal-form">
-              <h2>{t("withdrawFunds")}</h2>
+              <h2>
+                <UiText value={t("withdrawFunds")} />
+              </h2>
               <p>{t("withdrawHelp")}</p>
               <div className="withdraw-grid">
                 <div className="field">
@@ -3971,7 +4053,8 @@ function WalletTabContent({
                 {t("paymentRequest").toUpperCase()}
               </span>
               <h2>
-                Wallet credit {formatMoney(activeTopup.amountCents)}
+                <UiText value="Wallet credit" />
+                <UiText value={formatMoney(activeTopup.amountCents)} />
               </h2>
               <p>
                 {activeTopup.method.replaceAll("_", " ")} · request{" "}
@@ -3984,7 +4067,9 @@ function WalletTabContent({
           </header>
           <dl className="topup-fee-breakdown" aria-label="Saved top-up quote">
             <div>
-              <dt>Wallet credit</dt>
+              <dt>
+                <UiText value="Wallet credit" />
+              </dt>
               <dd>{formatMoney(activeTopup.amountCents)}</dd>
             </div>
             <div>
@@ -4093,7 +4178,9 @@ function WalletTabContent({
               <span className="section-index">
                 {t("auditableLedger").toUpperCase()}
               </span>
-              <h2>{t("balanceActivity")}</h2>
+              <h2>
+                <UiText value={t("balanceActivity")} />
+              </h2>
             </div>
             <small>{t("separateBalances")}</small>
           </header>
@@ -4131,7 +4218,9 @@ function WalletTabContent({
           ) : (
             <div className="empty-state-large">
               <ReceiptText size={42} />
-              <h2>No balance activity yet</h2>
+              <h2>
+                <UiText value="No balance activity yet" />
+              </h2>
               <p>
                 Approved top-ups, purchases, releases, and withdrawals appear
                 here.
@@ -4144,7 +4233,8 @@ function WalletTabContent({
       {user.role === "SELLER" && withdrawals.length > 0 && (
         <div className="section-block">
           <h2>
-            Withdrawal history <small>({withdrawals.length} total)</small>
+            <UiText value="Withdrawal history" />
+            <small>({withdrawals.length} total)</small>
           </h2>
           <div className="compact-orders">
             {withdrawals.map((withdrawal) => (
@@ -4180,7 +4270,8 @@ function WalletTabContent({
       {deposits.length > 0 && (
         <div className="section-block">
           <h2>
-            Deposit history <small>({deposits.length} total)</small>
+            <UiText value="Deposit history" />
+            <small>({deposits.length} total)</small>
           </h2>
           <div className="compact-orders">
             {deposits.map((deposit) => (
@@ -4231,7 +4322,9 @@ function WalletTabContent({
       {!deposits.length && (user.role !== "SELLER" || !withdrawals.length) && (
         <div className="empty-state-large">
           <Bitcoin size={48} />
-          <h2>No wallet history yet</h2>
+          <h2>
+            <UiText value="No wallet history yet" />
+          </h2>
           <p>
             Your top-ups will appear here after submission, with a clear
             pending, completed, or rejected status.

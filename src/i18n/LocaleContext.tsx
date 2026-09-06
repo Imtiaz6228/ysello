@@ -1,3 +1,4 @@
+import { useLocation, useNavigate } from "react-router-dom";
 import {
   createContext,
   useContext,
@@ -16,7 +17,7 @@ export const languages: Array<{
   native: string;
   flag: string;
 }> = [
-  { code: "en", label: "English", native: "English", flag: "🇬🇧" },
+  { code: "en", label: "English", native: "English", flag: "🇺🇸" },
   {
     code: "zh-CN",
     label: "Simplified Chinese",
@@ -513,6 +514,25 @@ function storedCurrency(): CurrencyCode {
 
 export function LocaleProvider({ children }: { children: ReactNode }) {
   const [locale, setLocaleState] = useState<LocaleCode>(storedLocale);
+  const location = useLocation();
+  const navigate = useNavigate();
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const requested = params.get("lang") as LocaleCode | null;
+    if (requested && validLocales.has(requested)) {
+      setLocaleState(requested);
+    } else if (locale !== "en") {
+      params.set("lang", locale);
+      navigate(
+        {
+          pathname: location.pathname,
+          search: params.toString(),
+          hash: location.hash,
+        },
+        { replace: true },
+      );
+    }
+  }, [location.pathname, location.search, location.hash, navigate]);
   const [currency, setCurrencyState] = useState<CurrencyCode>(storedCurrency);
 
   useEffect(() => {
@@ -542,11 +562,8 @@ export function LocaleProvider({ children }: { children: ReactNode }) {
         const url = new URL(window.location.href);
         if (nextLocale === "en") url.searchParams.delete("lang");
         else url.searchParams.set("lang", nextLocale);
-        window.history.replaceState(
-          window.history.state,
-          "",
-          `${url.pathname}${url.search}${url.hash}`,
-        );
+        url.searchParams.set("lang", nextLocale);
+        navigate(`${url.pathname}${url.search}${url.hash}`, { replace: true });
       },
       setCurrency: setCurrencyState,
       t(key) {
@@ -583,7 +600,7 @@ export function LocaleProvider({ children }: { children: ReactNode }) {
         }).format(converted);
       },
     }),
-    [currency, locale],
+    [currency, locale, navigate],
   );
 
   return (

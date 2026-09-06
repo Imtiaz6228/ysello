@@ -1,3 +1,5 @@
+Release 2026-09-05.6: see [deployment and verification notes](UPDATE-2026-09-05.6.md) before deploying.
+
 # Ysello digital marketplace
 
 Ysello is a full-stack marketplace for reviewed digital downloads and service-based products. It includes secure authentication, seller approval, product moderation, cart and checkout, Stripe and PayPal hosted payment flows, manual payment approval, expiring downloads, invoices, support tickets, reviews, disputes, refunds, seller storefronts, legal pages, SEO metadata, sitemaps, reports, and an operations console.

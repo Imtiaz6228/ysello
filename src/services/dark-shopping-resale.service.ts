@@ -1,3 +1,9 @@
+import {
+  identifyProductPlatform,
+  platformCategorySlug,
+  platformImage,
+  type ProductPlatform,
+} from "../data/platformIdentity.js";
 import { OrderStatus, ProductStatus, ProductType } from "@prisma/client";
 import { env } from "../config/env.js";
 import { prisma } from "../lib/prisma.js";
@@ -149,7 +155,85 @@ const nativeCategorySlugs: Array<[RegExp, string]> = [
   [/\bgoogle\b/i, "google-accounts"],
 ];
 
+async function ensurePlatformCategory(platform: ProductPlatform) {
+  const slug = platformCategorySlug(platform);
+  const existing = await prisma.category.findUnique({ where: { slug } });
+  const data = {
+    name: platform.name,
+    parentId: null,
+    isActive: true,
+    imageUrl: platformImage(platform),
+    description: `Browse ${platform.name} accounts and digital products. Compare availability, pricing and delivery terms before checkout.`,
+    metaKeywords: [
+      ...new Set([
+        ...(existing?.metaKeywords ?? []),
+        "supplier:dark-shopping",
+        `platform:${platform.slug}`,
+      ]),
+    ],
+  };
+  return prisma.category.upsert({
+    where: { slug },
+    create: { ...data, slug },
+    update: data,
+  });
+}
+
+/** Repairs local imported listings without calling the supplier or touching order/inventory records. */
+export async function repairDarkShoppingCatalog() {
+  const categories = new Map<string, string>();
+  let cursor: string | undefined;
+  let repaired = 0;
+  let unclassified = 0;
+  for (;;) {
+    const products = await prisma.product.findMany({
+      where: { darkShoppingListing: { isNot: null } },
+      orderBy: { id: "asc" },
+      take: 250,
+      ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
+      select: {
+        id: true,
+        name: true,
+        platform: true,
+        productKind: true,
+        categoryId: true,
+        coverImageUrl: true,
+        category: { select: { name: true } },
+      },
+    });
+    if (!products.length) break;
+    const updates = new Map<string, { platform: ProductPlatform; categoryId: string; ids: string[] }>();
+    for (const product of products) {
+      const platform = identifyProductPlatform(product.name, product.productKind, product.platform, product.category.name);
+      if (!platform) { unclassified += 1; continue; }
+      let categoryId = categories.get(platform.slug);
+      if (!categoryId) { categoryId = (await ensurePlatformCategory(platform)).id; categories.set(platform.slug, categoryId); }
+      if (product.categoryId !== categoryId || product.platform !== platform.name || product.coverImageUrl !== platformImage(platform)) {
+        const group = updates.get(platform.slug) ?? { platform, categoryId, ids: [] };
+        group.ids.push(product.id);
+        updates.set(platform.slug, group);
+      }
+    }
+    for (const {platform, categoryId, ids} of updates.values()) {
+      const result = await prisma.product.updateMany({where: {id: {in: ids}}, data: {categoryId, platform: platform.name, coverImageUrl: platformImage(platform)}});
+      repaired += result.count;
+    }
+    cursor = products[products.length - 1].id;
+  }
+  await prisma.sellerProfile.updateMany({
+    where: { storeName: "Ysello Official", logoUrl: null },
+    data: { logoUrl: "/ysello-mark.svg" },
+  });
+  await prisma.sellerProfile.updateMany({
+    where: { storeName: "Ysello Official", bannerUrl: null },
+    data: { bannerUrl: "/ysello-official-banner.svg" },
+  });
+  return { repaired, unclassified };
+}
+
 function nativeCategorySlug(name: string) {
+  const platform = identifyProductPlatform(name);
+  if (platform) return platformCategorySlug(platform);
   const mapped = nativeCategorySlugs.find(([pattern]) =>
     pattern.test(name),
   )?.[1];
@@ -169,6 +253,7 @@ async function normalizeDarkShoppingCategory(category: {
   metaKeywords: string[];
   isActive: boolean;
 }) {
+  if (category.metaKeywords.some((tag) => tag.startsWith("platform:"))) return category;
   const targetSlug = nativeCategorySlug(category.name);
   const description = nativeCategoryDescription(category.name);
   const target = await prisma.category.findUnique({
@@ -423,6 +508,8 @@ async function ensureOfficialSellerProfile(userId: string) {
     data: {
       userId,
       storeName: "Ysello Official",
+      logoUrl: "/ysello-mark.svg",
+      bannerUrl: "/ysello-official-banner.svg",
       slug,
       about:
         "Official marketplace catalog managed by the Ysello administration team.",
@@ -460,6 +547,11 @@ function remoteProductData(product: DarkShoppingProduct) {
     );
   }
 
+  const identity = identifyProductPlatform(
+    product.name,
+    product.group?.name,
+    product.category?.name,
+  );
   const prices = darkShoppingResalePrices(product.price);
   const name = yselloPublicText(product.name).slice(0, 160);
   const remoteDescription = yselloPublicText(product.description);
@@ -499,11 +591,13 @@ function remoteProductData(product: DarkShoppingProduct) {
       priceCnyCents: prices.retailPriceCnyCents,
       priceRubCents: prices.retailPriceRubCents,
       currency: "USD",
-      coverImageUrl: null,
+      coverImageUrl: identity ? platformImage(identity) : null,
       deliveryNote:
         "Secure digital delivery is prepared automatically after payment confirmation.",
       platform:
-        yselloPublicText(product.category?.name ?? "").slice(0, 100) || null,
+        identity?.name ||
+        yselloPublicText(product.category?.name ?? "").slice(0, 100) ||
+        null,
       productKind:
         yselloPublicText(product.group?.name ?? "").slice(0, 100) ||
         "Digital product",
@@ -541,7 +635,6 @@ function remoteProductData(product: DarkShoppingProduct) {
         supplierGuaranteeSeconds: product.guarantee_time_seconds ?? null,
         supplierRemoteProductId: product.id,
       },
-      translations: {},
     },
     listing: {
       remoteProductId: product.id,
@@ -612,11 +705,20 @@ export async function importDarkShoppingProducts(input: {
       const data = remoteProductData(remote);
       let categoryId = category?.id;
       if (input.autoCategory) {
-        categoryId = mappedCategories.get(remote.category.id);
-        if (!categoryId) {
-          const mapped = await importDarkShoppingCategory(remote.category.id);
-          categoryId = mapped.category.id;
-          mappedCategories.set(remote.category.id, categoryId);
+        const identity = identifyProductPlatform(
+          remote.name,
+          remote.group?.name,
+          remote.category?.name,
+        );
+        if (identity) {
+          categoryId = (await ensurePlatformCategory(identity)).id;
+        } else {
+          categoryId = mappedCategories.get(remote.category.id);
+          if (!categoryId) {
+            categoryId = (await importDarkShoppingCategory(remote.category.id))
+              .category.id;
+            mappedCategories.set(remote.category.id, categoryId);
+          }
         }
       }
       if (!categoryId)

@@ -1,3 +1,5 @@
+import { CatalogTranslationStatus } from "../components/CatalogTranslationStatus";
+import { UiText } from "../i18n/UiText";
 import { collectSupplierPages } from "../commerce/supplierSelection";
 import {
   type FormEvent,
@@ -69,7 +71,7 @@ import {
 } from "../commerce/sellerTaxonomy";
 import { catalogAttributePresets } from "../data/enterpriseCatalog";
 
-const DARK_SHOPPING_EXPECTED_INTEGRATION_VERSION = "2026-09-05.5";
+const DARK_SHOPPING_EXPECTED_INTEGRATION_VERSION = "2026-09-05.6";
 
 type Tab =
   | "overview"
@@ -473,11 +475,11 @@ type NavItem = { id: Tab; label: string; icon: LucideIcon };
 const nav: NavItem[] = [
   { id: "overview", label: "Overview", icon: BarChart3 },
   { id: "sellers", label: "Seller applications", icon: Store },
-  { id: "products", label: "Product approvals", icon: Boxes },
-  { id: "suppliers", label: "Dark Shopping resale", icon: Database },
+  { id: "products", label: "Products & approvals", icon: Boxes },
+  { id: "suppliers", label: "Supplier imports", icon: Database },
   { id: "users", label: "Users & sellers", icon: Users },
   { id: "orders", label: "All orders", icon: PackageCheck },
-  { id: "payments", label: "Order approvals", icon: CircleDollarSign },
+  { id: "payments", label: "Payment review", icon: CircleDollarSign },
   { id: "deposits", label: "Deposit approvals", icon: WalletCards },
   { id: "withdrawals", label: "Withdrawals", icon: Landmark },
   { id: "refunds", label: "Refunds", icon: RefreshCw },
@@ -491,24 +493,10 @@ const nav: NavItem[] = [
 ];
 
 const navGroups: Array<{ label: string; icon: LucideIcon; items: Tab[] }> = [
-  { label: "Command center", icon: Command, items: ["overview"] },
   {
-    label: "Marketplace",
+    label: "Manage",
     icon: Store,
-    items: [
-      "products",
-      "suppliers",
-      "categories",
-      "sellers",
-      "homepage",
-      "coupons",
-    ],
-  },
-  { label: "Users & access", icon: Users, items: ["users"] },
-  {
-    label: "Orders & resolution",
-    icon: PackageCheck,
-    items: ["orders", "refunds", "disputes"],
+    items: ["overview", "products", "suppliers", "orders", "users", "sellers"],
   },
   {
     label: "Finance",
@@ -516,9 +504,9 @@ const navGroups: Array<{ label: string; icon: LucideIcon; items: Tab[] }> = [
     items: ["payments", "deposits", "withdrawals"],
   },
   {
-    label: "Support & safety",
+    label: "Support",
     icon: ShieldCheck,
-    items: ["tickets", "chats", "reports"],
+    items: ["refunds", "disputes", "chats", "tickets"],
   },
 ];
 
@@ -1606,7 +1594,7 @@ export function OperationsAdminPage() {
 
   return (
     <main
-      className={`ops-admin admin-enterprise ${sidebarCollapsed ? "sidebar-collapsed" : ""} ${darkMode ? "admin-theme-dark" : ""}`}
+      className={`ops-admin admin-enterprise ys-workspace ys-workspace-admin ${sidebarCollapsed ? "sidebar-collapsed" : ""} ${darkMode ? "admin-theme-dark" : ""}`}
     >
       <Seo
         title="Admin dashboard"
@@ -1660,7 +1648,7 @@ export function OperationsAdminPage() {
         <div className="panel-mobile-sidebar-tools">
           <LocaleSwitcher compact />
           <Link to="/sign-out">
-            <LogOut size={16} /> Sign out
+            <LogOut size={16} /> <UiText value="Sign out" />
           </Link>
         </div>
         <label className="admin-menu-search">
@@ -1691,17 +1679,10 @@ export function OperationsAdminPage() {
               sidebarCollapsed;
             return (
               <section key={group.label}>
-                <button
-                  type="button"
-                  className="admin-nav-group"
-                  onClick={() => toggleGroup(group.label)}
-                  aria-expanded={open}
-                >
-                  <GroupIcon />
-                  <span>{group.label}</span>
-                  <ChevronDown className={open ? "rotated" : ""} />
-                </button>
-                {open ? (
+                <p className="ys-workspace-nav-label">
+                  <UiText value={group.label} />
+                </p>
+                {true ? (
                   <div>
                     {items.map(({ id, label, icon: Icon }) => (
                       <span className="admin-nav-item" key={id}>
@@ -1711,7 +1692,9 @@ export function OperationsAdminPage() {
                           title={label}
                         >
                           <Icon />
-                          <span>{label}</span>
+                          <span>
+                            <UiText value={label} />
+                          </span>
                           {id !== "overview" && (
                             <b>
                               {id === "sellers"
@@ -1736,6 +1719,28 @@ export function OperationsAdminPage() {
             );
           })}
         </nav>
+        <label className="ys-panel-tools">
+          <span>Marketplace settings</span>
+          <select
+            aria-label="Marketplace settings"
+            value=""
+            onChange={(event) => selectTab(event.target.value as Tab)}
+          >
+            <option value="" disabled>
+              Choose a setting…
+            </option>
+            {nav
+              .filter(
+                (item) =>
+                  !navGroups.some((group) => group.items.includes(item.id)),
+              )
+              .map((item) => (
+                <option key={item.id} value={item.id}>
+                  <UiText value={item.label} />
+                </option>
+              ))}
+          </select>
+        </label>
         <div className="admin-sidebar-footer">
           <div>
             <span>
@@ -1753,7 +1758,7 @@ export function OperationsAdminPage() {
             <Home size={14} /> Home
           </Link>
           <Link className="secondary-button" to="/sign-out">
-            <LogOut size={14} /> Sign out
+            <LogOut size={14} /> <UiText value="Sign out" />
           </Link>
         </div>
       </aside>
@@ -1817,14 +1822,6 @@ export function OperationsAdminPage() {
             </span>
             <button
               type="button"
-              className="admin-icon-button"
-              onClick={() => setDarkMode((value) => !value)}
-              aria-label="Toggle theme"
-            >
-              {darkMode ? <Sun /> : <Moon />}
-            </button>
-            <button
-              type="button"
               className="admin-icon-button notification"
               onClick={() => setNotificationOpen((value) => !value)}
               aria-label="Notifications"
@@ -1840,7 +1837,7 @@ export function OperationsAdminPage() {
               to="/sign-out"
               aria-label="Sign out"
             >
-              <LogOut size={16} /> Sign out
+              <LogOut size={16} /> <UiText value="Sign out" />
             </Link>
             <button
               type="button"
@@ -1910,9 +1907,13 @@ export function OperationsAdminPage() {
           <div>
             <span className="section-index">ENTERPRISE ADMINISTRATION</span>
             <h1>
-              {tab === "overview"
-                ? `Welcome back, ${user?.firstName ?? "Admin"}`
-                : nav.find((item) => item.id === tab)?.label}
+              <UiText
+                value={
+                  tab === "overview"
+                    ? `Welcome back, ${user?.firstName ?? "Admin"}`
+                    : nav.find((item) => item.id === tab)?.label
+                }
+              />
             </h1>
             <p>
               {tab === "overview"
@@ -1961,7 +1962,9 @@ export function OperationsAdminPage() {
                         {app.storeName.slice(0, 2).toUpperCase()}
                       </span>
                       <div>
-                        <h2>{app.storeName}</h2>
+                        <h2>
+                          <UiText value={app.storeName} />
+                        </h2>
                         <p>
                           {app.fullLegalName} · {app.email}
                         </p>
@@ -1978,7 +1981,9 @@ export function OperationsAdminPage() {
                       </dd>
                     </div>
                     <div>
-                      <dt>Categories</dt>
+                      <dt>
+                        <UiText value="Categories" />
+                      </dt>
                       <dd>{app.productCategories.join(", ")}</dd>
                     </div>
                     <div>
@@ -2059,7 +2064,9 @@ export function OperationsAdminPage() {
             <header className="admin-workspace-toolbar">
               <div>
                 <span className="section-index">CATALOG CONTROL</span>
-                <h2>Products and approvals</h2>
+                <h2>
+                  <UiText value="Products and approvals" />
+                </h2>
                 <p>
                   Review seller products or publish an official catalog listing
                   with a full category path.
@@ -2112,7 +2119,7 @@ export function OperationsAdminPage() {
                   {categories.map((category) => (
                     <option value={category.id} key={category.id}>
                       {"—".repeat(categoryLevel(category, categories))}{" "}
-                      {category.name}
+                      <UiText value={category.name} />
                     </option>
                   ))}
                 </select>
@@ -2136,7 +2143,9 @@ export function OperationsAdminPage() {
                         ) : null}
                         <small>{product.type ?? "DIGITAL"}</small>
                       </div>
-                      <h3>{product.name}</h3>
+                      <h3>
+                        <UiText value={product.name} />
+                      </h3>
                       <p>
                         {[
                           product.category.parent?.parent?.name,
@@ -2223,7 +2232,9 @@ export function OperationsAdminPage() {
             <header className="admin-workspace-toolbar dark-resale-heading">
               <div>
                 <span className="section-index">DARK SHOPPING SUPPLIER</span>
-                <h2>Add Dark Shopping categories and products</h2>
+                <h2>
+                  <UiText value="Add Dark Shopping categories and products" />
+                </h2>
                 <p>
                   Import only the supplier categories and automatic-delivery
                   products you choose. Price and stock are rechecked before
@@ -2376,6 +2387,49 @@ export function OperationsAdminPage() {
               </div>
             ) : (
               <>
+                <div className="ys-catalog-repair">
+                  <div>
+                    <strong>
+                      Already imported products in the wrong category?
+                    </strong>
+                    <p>
+                      Sort existing imports into their platform categories and
+                      restore local product artwork.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    className="primary-button"
+                    disabled={Boolean(busy)}
+                    onClick={async () => {
+                      setBusy("repair-catalog");
+                      try {
+                        const result = await apiRequest<{
+                          repaired: number;
+                          unclassified: number;
+                        }>("/api/admin/dark-shopping/resale/repair-catalog", {
+                          method: "POST",
+                          body: {},
+                        });
+                        await load();
+                        setMessage(
+                          `${result.repaired} products repaired. ${result.unclassified} products need manual category review.`,
+                        );
+                      } catch (error) {
+                        setMessage(
+                          error instanceof Error
+                            ? error.message
+                            : "Repair failed.",
+                        );
+                      } finally {
+                        setBusy("");
+                      }
+                    }}
+                  >
+                    <UiText value="Repair categories & images" />
+                  </button>
+                </div>
+                <CatalogTranslationStatus />
                 <form
                   className="dark-resale-controls"
                   onSubmit={searchDarkShoppingProducts}
@@ -2402,7 +2456,7 @@ export function OperationsAdminPage() {
                       <option value="">Every supplier category</option>
                       {darkCategories.map((category) => (
                         <option key={category.id} value={category.id}>
-                          {category.name}
+                          <UiText value={category.name} />
                         </option>
                       ))}
                     </select>
@@ -2615,7 +2669,9 @@ export function OperationsAdminPage() {
                                 {product.category?.name ?? "Uncategorized"} /{" "}
                                 {product.group?.name ?? "Other"}
                               </small>
-                              <h3>{product.name}</h3>
+                              <h3>
+                                <UiText value={product.name} />
+                              </h3>
                               <p>
                                 {String(product.description ?? "")
                                   .replace(/<[^>]+>/g, " ")
@@ -2712,7 +2768,9 @@ export function OperationsAdminPage() {
             <section className="dark-resale-section">
               <header>
                 <div>
-                  <h2>Resale listings</h2>
+                  <h2>
+                    <UiText value="Resale listings" />
+                  </h2>
                   <p>Current supplier cost, retail price, stock, and status.</p>
                 </div>
                 <button
@@ -2783,7 +2841,9 @@ export function OperationsAdminPage() {
             <section className="dark-resale-section">
               <header>
                 <div>
-                  <h2>Supplier fulfillment</h2>
+                  <h2>
+                    <UiText value="Supplier fulfillment" />
+                  </h2>
                   <p>Remote order and protected-delivery status.</p>
                 </div>
               </header>
@@ -3232,7 +3292,7 @@ export function OperationsAdminPage() {
                       )
                     }
                   >
-                    Close
+                    <UiText value="Close" />
                   </button>
                 </>
               ),
@@ -3368,7 +3428,9 @@ export function OperationsAdminPage() {
                     <FolderPlus />
                   </span>
                   <div>
-                    <h2>Create category or subcategory</h2>
+                    <h2>
+                      <UiText value="Create category or subcategory" />
+                    </h2>
                     <p>
                       New entries instantly flow into homepage browsing and the
                       seller product form.
@@ -3472,7 +3534,9 @@ export function OperationsAdminPage() {
             ) : (
               <div className="admin-category-creator admin-readonly-card">
                 <FolderPlus />
-                <h2>Category catalog</h2>
+                <h2>
+                  <UiText value="Category catalog" />
+                </h2>
                 <p>
                   You can review the structure. An administrator account is
                   required to create or change categories.
@@ -3636,7 +3700,7 @@ export function OperationsAdminPage() {
             </button>
             <span className="section-index">OFFICIAL CATALOG</span>
             <h2 id="admin-product-dialog-title">
-              Add an Official marketplace product
+              <UiText value="Add an Official marketplace product" />
             </h2>
             <p className="modal-helper">
               Use the same complete listing flow as a seller. Official products
@@ -3649,7 +3713,8 @@ export function OperationsAdminPage() {
                   adminProductForm.categoryPathIds[0] ? "done" : "active"
                 }
               >
-                <b>1</b>Category
+                <b>1</b>
+                <UiText value="Category" />
               </span>
               <span
                 className={adminProductForm.categoryPathIds[0] ? "active" : ""}
@@ -3738,7 +3803,7 @@ export function OperationsAdminPage() {
                       </option>
                       {choices.map((category) => (
                         <option value={category.id} key={category.id}>
-                          {category.name}
+                          <UiText value={category.name} />
                         </option>
                       ))}
                     </select>
@@ -3765,7 +3830,9 @@ export function OperationsAdminPage() {
                   <span>Platform</span>
                   <b>{adminSocialPlatform}</b>
                   <span>Product</span>
-                  <b>Account</b>
+                  <b>
+                    <UiText value="Account" />
+                  </b>
                   <span>Account type</span>
                   <b>{adminSocialAccountType}</b>
                 </p>
@@ -4267,7 +4334,9 @@ export function OperationsAdminPage() {
                 />
               </label>
               <label>
-                <span>Refund policy</span>
+                <span>
+                  <UiText value="Refund policy" />
+                </span>
                 <textarea
                   rows={3}
                   value={adminProductForm.refundPolicy}
@@ -4469,7 +4538,9 @@ function OverviewPanel({
           <span>
             <Activity /> OPERATIONAL OVERVIEW
           </span>
-          <h2>Start with the queues that need a decision.</h2>
+          <h2>
+            <UiText value="Start with the queues that need a decision." />
+          </h2>
           <p>
             This view summarizes current marketplace records. Infrastructure
             health remains unknown until a monitoring provider is connected.
@@ -4506,7 +4577,9 @@ function OverviewPanel({
               </span>
               <small>RECORDED</small>
             </header>
-            <p>{label}</p>
+            <p>
+              <UiText value={label} />
+            </p>
             <strong>{value}</strong>
             <footer>
               <TrendingUp /> {detail}
@@ -4520,7 +4593,9 @@ function OverviewPanel({
           <header>
             <div>
               <span>ANALYTICS</span>
-              <h2>Revenue performance</h2>
+              <h2>
+                <UiText value="Revenue performance" />
+              </h2>
               <p>Paid marketplace volume over the last seven days.</p>
             </div>
             <div>
@@ -4555,7 +4630,9 @@ function OverviewPanel({
         <article className="admin-health-panel">
           <header>
             <span>MONITORING READINESS</span>
-            <h2>Infrastructure signals</h2>
+            <h2>
+              <UiText value="Infrastructure signals" />
+            </h2>
           </header>
           <div>
             <span>
@@ -4613,7 +4690,9 @@ function OverviewPanel({
                 <Icon />
               </span>
               <div>
-                <small>{label}</small>
+                <small>
+                  <UiText value={label} />
+                </small>
                 <strong>{value}</strong>
                 <p>{detail}</p>
               </div>
@@ -4628,7 +4707,9 @@ function OverviewPanel({
           <header>
             <div>
               <span>CURRENT QUEUES</span>
-              <h2>Priority workflow</h2>
+              <h2>
+                <UiText value="Priority workflow" />
+              </h2>
             </div>
             <button type="button" onClick={() => onOpen("orders")}>
               View operations <ArrowLeft />
@@ -4689,7 +4770,9 @@ function OverviewPanel({
         </article>
         <aside>
           <span>QUICK ACTIONS</span>
-          <h2>Move work forward</h2>
+          <h2>
+            <UiText value="Move work forward" />
+          </h2>
           <button type="button" onClick={() => onOpen("payments")}>
             <BadgeCheck /> Approve order payment <ChevronRight />
           </button>
@@ -4839,7 +4922,9 @@ function EmptyState({ label }: { label: string }) {
   return (
     <div className="ops-empty">
       <Boxes size={34} />
-      <strong>{label}</strong>
+      <strong>
+        <UiText value={label} />
+      </strong>
     </div>
   );
 }

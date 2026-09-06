@@ -1,3 +1,4 @@
+import { UiText } from "../i18n/UiText";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import {
   ArrowLeft,
@@ -219,7 +220,7 @@ export function CheckoutPage() {
                     <Icon />
                   </span>
                   <div>
-                    <strong>{item.label}</strong>
+                    <strong><UiText value={item.label} /></strong>
                     <small>
                       {item.kind === "hosted"
                         ? "Secure hosted payment"

@@ -1,3 +1,7 @@
+import {
+  catalogTranslationStatus,
+  startCatalogTranslations,
+} from "../services/catalog-translation.service.js";
 import { Router } from "express";
 import { Prisma, Role } from "@prisma/client";
 import { z } from "zod";
@@ -10,6 +14,7 @@ import {
 } from "../services/dark-shopping.service.js";
 import {
   importDarkShoppingCategory,
+  repairDarkShoppingCatalog,
   importDarkShoppingProducts,
   listDarkShoppingCategoryMappings,
   listDarkShoppingFulfillments,
@@ -305,4 +310,18 @@ darkShoppingRouter.get(
     const data = await darkShoppingClient().downloadOrder(id);
     res.json({ data });
   }),
+);
+
+darkShoppingRouter.post(
+  "/resale/repair-catalog",
+  asyncHandler(async (_req, res) => {
+    res.json(await repairDarkShoppingCatalog());
+  }),
+);
+
+darkShoppingRouter.get("/resale/translations", (_req, res) =>
+  res.json(catalogTranslationStatus),
+);
+darkShoppingRouter.post("/resale/translations/retry", (_req, res) =>
+  res.json(startCatalogTranslations(true)),
 );

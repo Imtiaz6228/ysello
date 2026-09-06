@@ -1,3 +1,4 @@
+import { paginationWindow } from "../commerce/pagination.js";
 import { Router } from "express";
 import { ProductStatus } from "@prisma/client";
 import { z } from "zod";
@@ -26,7 +27,7 @@ function publicListingPolicyWhere() {
   return { category: publicCategoryPolicyWhere() };
 }
 
-async function categoryAndDescendantIds(slug: string) {
+export async function categoryAndDescendantIds(slug: string) {
   const categories = await prisma.category.findMany({
     where: { isActive: true },
     select: { id: true, parentId: true, slug: true },
@@ -63,7 +64,17 @@ marketplaceRouter.get(
       include: {
         parent: { select: { id: true, slug: true, name: true } },
         _count: {
-          select: { products: { where: { status: ProductStatus.APPROVED } } },
+          select: {
+            products: {
+              where: {
+                status: ProductStatus.APPROVED,
+                seller: {
+                  isSuspended: false,
+                  sellerProfile: { isSuspended: false },
+                },
+              },
+            },
+          },
         },
       },
     });
@@ -86,7 +97,8 @@ marketplaceRouter.get(
         q: z.string().trim().max(100).optional(),
         category: z.string().trim().max(100).optional(),
         seller: z.string().trim().max(100).optional(),
-        take: z.coerce.number().int().min(1).max(500).default(100),
+        take: z.coerce.number().int().min(1).max(500).default(50),
+        page: z.coerce.number().int().min(1).max(1000000).default(1),
         sort: z
           .enum(["popular", "price_asc", "price_desc", "newest"])
           .default("popular"),
@@ -104,6 +116,9 @@ marketplaceRouter.get(
       filters.push({
         OR: [
           { name: { contains: query.q, mode: "insensitive" } },
+          ...["en", "zh-CN", "ru"].map((locale) => ({
+            translations: { path: [locale, "title"], string_contains: query.q },
+          })),
           { shortDescription: { contains: query.q, mode: "insensitive" } },
           { category: { name: { contains: query.q, mode: "insensitive" } } },
         ],
@@ -138,26 +153,34 @@ marketplaceRouter.get(
                 { publishedAt: "desc" as const },
               ];
 
-    const products = await prisma.product.findMany({
-      where: {
-        status: ProductStatus.APPROVED,
-        ...publicListingPolicyWhere(),
-        seller: query.seller
-          ? {
+    const where = {
+      status: ProductStatus.APPROVED,
+      ...publicListingPolicyWhere(),
+      seller: query.seller
+        ? {
+            isSuspended: false,
+            sellerProfile: {
+              slug: query.seller,
               isSuspended: false,
-              sellerProfile: {
-                slug: query.seller,
-                isSuspended: false,
-              },
-            }
-          : {
-              isSuspended: false,
-              sellerProfile: { isSuspended: false },
             },
-        ...(filters.length ? { AND: filters } : {}),
-      },
+          }
+        : {
+            isSuspended: false,
+            sellerProfile: { isSuspended: false },
+          },
+      ...(filters.length ? { AND: filters } : {}),
+    };
+    const total = await prisma.product.count({ where });
+    const { page, totalPages, skip } = paginationWindow(
+      total,
+      query.page,
+      query.take,
+    );
+    const products = await prisma.product.findMany({
+      where,
+      skip,
       take: query.take,
-      orderBy,
+      orderBy: [...orderBy, { id: "asc" }],
       include: {
         category: { include: { parent: { include: { parent: true } } } },
         seller: { select: { sellerProfile: true } },
@@ -169,7 +192,10 @@ marketplaceRouter.get(
         },
       },
     });
-    res.json({ products });
+    res.json({
+      products,
+      pagination: { page, pageSize: query.take, total, totalPages },
+    });
   }),
 );
 

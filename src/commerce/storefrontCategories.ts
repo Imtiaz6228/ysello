@@ -1,15 +1,16 @@
 import type { CatalogCategory } from "../data/catalog";
-
-/** Keep every imported destination intact; never replace its slug with a brand name. */
+/** Only link to categories with published products; preserve their canonical routes. */
 export function storefrontCategories(categories: CatalogCategory[]) {
-  const imported = categories.filter((category) => category.isSupplierCategory);
-  const preferred = imported.length
-    ? imported
-    : categories.filter((category) => category.parentSlug === "social-media");
   return [
-    ...new Map(preferred.map((category) => [category.slug, category])).values(),
+    ...new Map(
+      categories
+        .filter((category) => (category.productCount ?? 0) > 0)
+        .map((category) => [category.slug, category]),
+    ).values(),
   ].sort(
     (a, b) =>
+      Number(Boolean(b.isSupplierCategory)) -
+        Number(Boolean(a.isSupplierCategory)) ||
       (b.productCount ?? 0) - (a.productCount ?? 0) ||
       a.name.localeCompare(b.name),
   );

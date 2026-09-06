@@ -1,3 +1,7 @@
+import { paginationWindow } from "./commerce/pagination.js";
+import { localizedSeoHtml, requestLocale } from "./lib/localized-seo.js";
+import { localizedProduct, uiText } from "./i18n/marketplaceCopy.js";
+import { equivalentCategorySlugs } from "./data/categoryAliases.js";
 import express from "express";
 import fs from "node:fs";
 import path from "node:path";
@@ -20,7 +24,10 @@ import { authRouter } from "./routes/auth.routes.js";
 import { profileRouter } from "./routes/profile.routes.js";
 import { sellerRouter } from "./routes/seller.routes.js";
 import { adminRouter } from "./routes/admin.routes.js";
-import { marketplaceRouter } from "./routes/marketplace.routes.js";
+import {
+  marketplaceRouter,
+  categoryAndDescendantIds,
+} from "./routes/marketplace.routes.js";
 import { commerceRouter } from "./routes/commerce.routes.js";
 import { walletRouter } from "./routes/wallet.routes.js";
 import { nexusRouter } from "./routes/nexus.routes.js";
@@ -294,10 +301,10 @@ app.get("/robots.txt", (_req, res) => {
 
 app.get(
   "/sitemap.xml",
-  asyncHandler(async (_req, res) => {
+  asyncHandler(async (req, res) => {
     const publicSellerFilter = {
       isSuspended: false,
-      sellerProfile: { isVerified: true, isSuspended: false },
+      sellerProfile: { isSuspended: false },
     };
     const [products, categories, stores] = await Promise.all([
       prisma.product.findMany({
@@ -323,7 +330,18 @@ app.get(
         },
       }),
       prisma.category.findMany({
-        where: { isActive: true },
+        where: {
+          isActive: true,
+          products: {
+            some: {
+              status: ProductStatus.APPROVED,
+              seller: {
+                isSuspended: false,
+                sellerProfile: { isSuspended: false },
+              },
+            },
+          },
+        },
         select: {
           slug: true,
           updatedAt: true,
@@ -380,7 +398,32 @@ app.get(
       })),
     ];
     const siteUrl = env.APP_URL.replace(/\/+$/, "");
-    const xml = urls
+    const localizedUrls = urls.flatMap((item) =>
+      item.path === "/" ||
+      item.path === "/catalog" ||
+      /^\/(product|category|stores)\//.test(item.path)
+        ? [
+            item,
+            { ...item, path: item.path + "?lang=zh-CN" },
+            { ...item, path: item.path + "?lang=ru" },
+          ]
+        : [item],
+    );
+    const chunks = Math.ceil(localizedUrls.length / 45000);
+    const sitemapPage = Number(req.query.page || 0);
+    if (chunks > 1 && !sitemapPage) {
+      res
+        .type("application/xml")
+        .send(
+          `<?xml version="1.0" encoding="UTF-8"?><sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${Array.from({ length: chunks }, (_, i) => `<sitemap><loc>${xmlEscape(siteUrl + "/sitemap.xml?page=" + (i + 1))}</loc></sitemap>`).join("")}</sitemapindex>`,
+        );
+      return;
+    }
+    const xml = localizedUrls
+      .slice(
+        Math.max(0, sitemapPage - 1) * 45000,
+        Math.max(1, sitemapPage) * 45000,
+      )
       .map((item) =>
         [
           "  <url>",
@@ -425,7 +468,7 @@ if (isProduction && fs.existsSync(frontendIndex)) {
   const frontendTemplate = fs.readFileSync(frontendIndex, "utf8");
   const publicSellerFilter = {
     isSuspended: false,
-    sellerProfile: { isVerified: true, isSuspended: false },
+    sellerProfile: { isSuspended: false },
   };
   const publicSlug = (value: string | undefined) =>
     value && value.length <= 160 && /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(value)
@@ -439,6 +482,29 @@ if (isProduction && fs.existsSync(frontendIndex)) {
     items: Array<{ path: string; title: string; description?: string }>,
   ) =>
     `<ul>${items.map((item) => `<li><a href="${escapeHtml(item.path)}">${escapeHtml(item.title)}</a>${item.description ? `<p>${escapeHtml(item.description)}</p>` : ""}</li>`).join("")}</ul>`;
+  const pageLinks = (req: express.Request, total: number) => {
+    const pages = paginationWindow(
+      total,
+      Number.parseInt(String(req.query.page || "1"), 10) || 1,
+      50,
+    );
+    const numbers = new Set([
+      1,
+      pages.totalPages,
+      pages.page - 1,
+      pages.page,
+      pages.page + 1,
+    ]);
+    return `<nav aria-label="Product pages">${[...numbers]
+      .filter((n) => n > 0 && n <= pages.totalPages)
+      .sort((a, b) => a - b)
+      .map((n) => {
+        const url = new URL(req.originalUrl, siteUrl);
+        url.searchParams.set("page", String(n));
+        return `<a href="${escapeHtml(url.pathname + url.search)}"${n === pages.page ? ' aria-current="page"' : ""}>${n}</a>`;
+      })
+      .join(" · ")}</nav>`;
+  };
   const sendHtml = (res: express.Response, html: string, status = 200) => {
     res.status(status);
     res.setHeader(
@@ -447,8 +513,8 @@ if (isProduction && fs.existsSync(frontendIndex)) {
         ? "public, max-age=0, s-maxage=300, stale-while-revalidate=3600"
         : "no-store",
     );
-    res.setHeader("Content-Language", "en");
-    res.type("html").send(html);
+    res.setHeader("Content-Language", requestLocale(res.req.query.lang));
+    res.type("html").send(localizedSeoHtml(html, res.req.originalUrl, siteUrl));
   };
   const sendSeoNotFound = (res: express.Response) => {
     const notFoundPath = path.join(frontendRoot, "404.html");
@@ -475,11 +541,50 @@ if (isProduction && fs.existsSync(frontendIndex)) {
   };
 
   app.get(
-    "/catalog",
-    asyncHandler(async (_req, res) => {
+    ["/", "/catalog"],
+    asyncHandler(async (req, res) => {
+      const categoryIds =
+        typeof req.query.category === "string" && req.query.category !== "all"
+          ? await categoryAndDescendantIds(req.query.category)
+          : null;
+      const q =
+        typeof req.query.q === "string" ? req.query.q.slice(0, 100) : "";
+      const listingWhere = {
+        status: ProductStatus.APPROVED,
+        category: { isActive: true },
+        seller: publicSellerFilter,
+        ...(categoryIds ? { categoryId: { in: categoryIds } } : {}),
+        ...(q
+          ? {
+              OR: [
+                { name: { contains: q, mode: "insensitive" as const } },
+                ...["en", "zh-CN", "ru"].map((lang) => ({
+                  translations: { path: [lang, "title"], string_contains: q },
+                })),
+              ],
+            }
+          : {}),
+      };
+      const total = await prisma.product.count({ where: listingWhere });
+      const window = paginationWindow(
+        total,
+        Number.parseInt(String(req.query.page || "1"), 10) || 1,
+        50,
+      );
       const [categories, products, stores] = await Promise.all([
         prisma.category.findMany({
-          where: { isActive: true },
+          where: {
+            isActive: true,
+            products: {
+              some: {
+                status: ProductStatus.APPROVED,
+                seller: {
+                  isSuspended: false,
+                  sellerProfile: { isSuspended: false },
+                },
+              },
+            },
+          },
           orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
           select: {
             slug: true,
@@ -494,16 +599,14 @@ if (isProduction && fs.existsSync(frontendIndex)) {
           },
         }),
         prisma.product.findMany({
-          where: {
-            status: ProductStatus.APPROVED,
-            category: { isActive: true },
-            seller: publicSellerFilter,
-          },
-          orderBy: [{ salesCount: "desc" }, { publishedAt: "desc" }],
-          take: 96,
+          where: listingWhere,
+          orderBy: [{ publishedAt: "desc" }, { id: "asc" }],
+          take: 50,
+          skip: window.skip,
           select: {
             slug: true,
             name: true,
+            translations: true,
             shortDescription: true,
             category: {
               select: {
@@ -530,13 +633,14 @@ if (isProduction && fs.existsSync(frontendIndex)) {
         }),
       ]);
       const content = [
+        pageLinks(req, total),
         `<section><h2>Browse by category</h2>${links(categories.map((item) => ({ path: categorySeoPath(item), title: item.name, description: item.description })))}</section>`,
-        `<section><h2>Approved marketplace listings</h2>${products.length ? links(products.map((item) => ({ path: productSeoPath(item), title: item.name, description: item.shortDescription }))) : "<p>No public listings are available yet.</p>"}</section>`,
+        `<section><h2>Approved marketplace listings</h2>${products.length ? links(products.map((item) => ({ path: productSeoPath(item), title: localizedProduct(item, requestLocale(req.query.lang)).name, description: localizedProduct(item, requestLocale(req.query.lang)).shortDescription }))) : "<p>No public listings are available yet.</p>"}</section>`,
         stores.length
           ? `<section><h2>Verified seller stores</h2>${links(stores.map((item) => ({ path: `/stores/${item.slug}`, title: item.storeName, description: item.about })))}</section>`
           : "",
       ].join("");
-      const url = canonicalUrl("/catalog");
+      const url = canonicalUrl(req.path === "/" ? "/" : "/catalog");
       sendHtml(
         res,
         renderSeoDocument(frontendTemplate, {
@@ -592,12 +696,19 @@ if (isProduction && fs.existsSync(frontendIndex)) {
           updatedAt: true,
         },
       });
-      const category = categories.find((item) => item.slug === requestedSlug);
+      const aliases = equivalentCategorySlugs(requestedSlug);
+      const category =
+        categories.find((item) => item.slug === requestedSlug) ||
+        categories.find((item) => aliases.has(item.slug));
       if (!category) {
         sendSeoNotFound(res);
         return;
       }
-      const categoryIds = new Set([category.id]);
+      const categoryIds = new Set(
+        categories
+          .filter((item) => aliases.has(item.slug))
+          .map((item) => item.id),
+      );
       let changed = true;
       while (changed) {
         changed = false;
@@ -612,17 +723,31 @@ if (isProduction && fs.existsSync(frontendIndex)) {
           }
         }
       }
+      const total = await prisma.product.count({
+        where: {
+          categoryId: { in: [...categoryIds] },
+          status: ProductStatus.APPROVED,
+          seller: publicSellerFilter,
+        },
+      });
+      const window = paginationWindow(
+        total,
+        Number.parseInt(String(req.query.page || "1"), 10) || 1,
+        50,
+      );
       const products = await prisma.product.findMany({
         where: {
           categoryId: { in: [...categoryIds] },
           status: ProductStatus.APPROVED,
           seller: publicSellerFilter,
         },
-        orderBy: [{ salesCount: "desc" }, { publishedAt: "desc" }],
-        take: 96,
+        orderBy: [{ publishedAt: "desc" }, { id: "asc" }],
+        take: 50,
+        skip: window.skip,
         select: {
           slug: true,
           name: true,
+          translations: true,
           shortDescription: true,
           category: {
             select: {
@@ -641,10 +766,7 @@ if (isProduction && fs.existsSync(frontendIndex)) {
         (item) => item.parentId === category.id,
       );
       const canonicalPath = categorySeoPathFromFlat(category, categories);
-      if (req.path !== canonicalPath) {
-        res.redirect(308, canonicalPath);
-        return;
-      }
+
       const url = canonicalUrl(canonicalPath);
       const customTitle = category.seoTitle?.trim();
       const title = customTitle
@@ -658,9 +780,9 @@ if (isProduction && fs.existsSync(frontendIndex)) {
         "@type": "ListItem",
         position: index + 1,
         url: canonicalUrl(productSeoPath(item)),
-        name: item.name,
+        name: localizedProduct(item, requestLocale(req.query.lang)).name,
       }));
-      const content = `${childLinks.length ? `<section><h2>${escapeHtml(category.name)} specialties</h2>${links(childLinks.map((item) => ({ path: categorySeoPathFromFlat(item, categories), title: item.name, description: item.description })))}</section>` : ""}<section><h2>Available listings</h2>${products.length ? links(products.map((item) => ({ path: productSeoPath(item), title: item.name, description: item.shortDescription }))) : "<p>No approved listings are available in this exact category yet.</p>"}</section>`;
+      const content = `${pageLinks(req, total)}${childLinks.length ? `<section><h2>${escapeHtml(category.name)} specialties</h2>${links(childLinks.map((item) => ({ path: categorySeoPathFromFlat(item, categories), title: item.name, description: item.description })))}</section>` : ""}<section><h2>Available listings</h2>${products.length ? links(products.map((item) => ({ path: productSeoPath(item), title: localizedProduct(item, requestLocale(req.query.lang)).name, description: localizedProduct(item, requestLocale(req.query.lang)).shortDescription }))) : "<p>No approved listings are available in this exact category yet.</p>"}</section>`;
       sendHtml(
         res,
         renderSeoDocument(frontendTemplate, {
@@ -708,7 +830,7 @@ if (isProduction && fs.existsSync(frontendIndex)) {
         sendSeoNotFound(res);
         return;
       }
-      const product = await prisma.product.findFirst({
+      let product = await prisma.product.findFirst({
         where: {
           slug: requestedSlug,
           status: ProductStatus.APPROVED,
@@ -745,6 +867,7 @@ if (isProduction && fs.existsSync(frontendIndex)) {
         sendSeoNotFound(res);
         return;
       }
+      product = localizedProduct(product, requestLocale(req.query.lang));
       const priceCents =
         product.salePriceCents && product.salePriceCents > 0
           ? Math.min(product.priceCents, product.salePriceCents)
@@ -760,13 +883,10 @@ if (isProduction && fs.existsSync(frontendIndex)) {
         product._count.files > 0 ||
         product._count.inventoryItems > 0;
       const canonicalPath = productSeoPath(product);
-      if (req.path !== canonicalPath) {
-        res.redirect(308, canonicalPath);
-        return;
-      }
+
       const url = canonicalUrl(canonicalPath);
       const imageUrl = absolutePublicUrl(siteUrl, product.coverImageUrl);
-      const seller = product.seller.sellerProfile;
+      const seller = product.seller.sellerProfile!;
       const sellerName =
         product.isOfficial && product.officialStoreName
           ? product.officialStoreName
@@ -880,6 +1000,7 @@ if (isProduction && fs.existsSync(frontendIndex)) {
         select: {
           slug: true,
           name: true,
+          translations: true,
           shortDescription: true,
           category: {
             select: {
@@ -896,7 +1017,7 @@ if (isProduction && fs.existsSync(frontendIndex)) {
       });
       const url = canonicalUrl(`/stores/${store.slug}`);
       const imageUrl = absolutePublicUrl(siteUrl, store.logoUrl);
-      const content = `<section><h2>Products from ${escapeHtml(store.storeName)}</h2>${products.length ? links(products.map((item) => ({ path: productSeoPath(item), title: item.name, description: item.shortDescription }))) : "<p>This verified store has no public listings at the moment.</p>"}</section>`;
+      const content = `<section><h2>Products from ${escapeHtml(store.storeName)}</h2>${products.length ? links(products.map((item) => ({ path: productSeoPath(item), title: localizedProduct(item, requestLocale(req.query.lang)).name, description: localizedProduct(item, requestLocale(req.query.lang)).shortDescription }))) : "<p>This verified store has no public listings at the moment.</p>"}</section>`;
       sendHtml(
         res,
         renderSeoDocument(frontendTemplate, {
@@ -932,7 +1053,7 @@ if (isProduction && fs.existsSync(frontendIndex)) {
       return;
     }
     res.setHeader("Cache-Control", "public, max-age=0, must-revalidate");
-    res.sendFile(filePath);
+    sendHtml(res, fs.readFileSync(filePath, "utf8"));
   });
 
   const blogSlugs = new Set(blogPosts.map((post) => post.slug));
@@ -947,7 +1068,7 @@ if (isProduction && fs.existsSync(frontendIndex)) {
       return;
     }
     res.setHeader("Cache-Control", "public, max-age=0, must-revalidate");
-    res.sendFile(filePath);
+    sendHtml(res, fs.readFileSync(filePath, "utf8"));
   });
 
   app.use(

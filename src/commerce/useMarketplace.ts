@@ -244,10 +244,12 @@ function mapProduct(
     (locale.startsWith("zh") ? product.translations?.["zh-CN"] : undefined) ??
     product.translations?.en;
   const marketplaceCategorySlug =
+    product.productAttributes?.supplierFulfilled !== true &&
     typeof product.productAttributes?.marketplaceCategorySlug === "string"
       ? product.productAttributes.marketplaceCategorySlug
       : product.category.slug;
   const marketplaceCategoryPath =
+    product.productAttributes?.supplierFulfilled !== true &&
     typeof product.productAttributes?.marketplaceCategoryPath === "string"
       ? product.productAttributes.marketplaceCategoryPath
       : [
@@ -431,14 +433,13 @@ export function useMarketplaceProducts() {
 }
 
 export function useMarketplaceCategories() {
-  const [categories, setCategories] =
-    useState<CatalogCategory[]>(localCategories);
+  const [categories, setCategories] = useState<CatalogCategory[]>([]);
   useEffect(() => {
     void apiRequest<{ categories: ApiCategory[] }>(
       "/api/marketplace/categories",
     )
       .then((data) => {
-        setCategories(mergeWithLocalCategories(mapCategories(data.categories)));
+        setCategories(mapCategories(data.categories));
       })
       .catch(() => undefined);
   }, []);
@@ -718,4 +719,85 @@ export function useMarketplaceCategory(slug?: string) {
   }, [slug]);
 
   return { category, loading };
+}
+
+export function useMarketplaceProductPage(input: {
+  category?: string;
+  q?: string;
+  seller?: string;
+  page: number;
+  sort: string;
+  stock?: string;
+}) {
+  const { locale } = useLocale();
+  const query = new URLSearchParams({
+    take: "50",
+    page: String(input.page),
+    sort: input.sort,
+  });
+  if (input.category && input.category !== "all")
+    query.set("category", input.category);
+  if (input.q) query.set("q", input.q);
+  if (input.seller) query.set("seller", input.seller);
+  if (input.stock === "in_stock") query.set("stock", "in_stock");
+  const key = query.toString();
+  const [state, setState] = useState<{
+    products: CatalogProduct[];
+    loading: boolean;
+    error: string;
+    pagination: {
+      page: number;
+      pageSize: number;
+      total: number;
+      totalPages: number;
+    };
+  }>({
+    products: [],
+    loading: true,
+    error: "",
+    pagination: { page: 1, pageSize: 50, total: 0, totalPages: 1 },
+  });
+  useEffect(() => {
+    let active = true;
+    setState((old) => ({ ...old, loading: true, error: "", products: [] }));
+    void apiRequest<{
+      products: ApiProduct[];
+      pagination: {
+        page: number;
+        pageSize: number;
+        total: number;
+        totalPages: number;
+      };
+    }>(`/api/marketplace/products?${key}`)
+      .then((data) => {
+        if (!data.pagination)
+          throw new Error(
+            "The catalog API needs the latest update. Please try again after deployment.",
+          );
+        if (active)
+          setState({
+            products: data.products.map((product, i) =>
+              mapProduct(product, i, locale),
+            ),
+            pagination: data.pagination,
+            loading: false,
+            error: "",
+          });
+      })
+      .catch((error) => {
+        if (active)
+          setState((old) => ({
+            ...old,
+            loading: false,
+            error:
+              error instanceof Error
+                ? error.message
+                : "Catalog unavailable. Please try again.",
+          }));
+      });
+    return () => {
+      active = false;
+    };
+  }, [key, locale]);
+  return state;
 }

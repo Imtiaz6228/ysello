@@ -1,3 +1,4 @@
+import { UiText } from "../i18n/UiText";
 import {
   type FormEvent,
   useCallback,
@@ -241,80 +242,29 @@ const sellerMenuGroups: Array<{
   items: Array<{ label: string; tab: Tab; icon: typeof Store }>;
 }> = [
   {
-    label: "Workspace",
-    items: [{ label: "Dashboard", tab: "overview", icon: LayoutDashboard }],
-  },
-  {
-    label: "Catalog",
+    label: "Store",
     items: [
-      { label: "My products", tab: "products", icon: Boxes },
-      {
-        label: "Product groups",
-        tab: "product-groups",
-        icon: FolderKanban,
-      },
-      { label: "Categories", tab: "categories", icon: Grid3X3 },
-      { label: "Inventory & variants", tab: "inventory", icon: Layers3 },
-      { label: "Uploaded files", tab: "downloads", icon: Download },
-      { label: "Drafts & review", tab: "drafts", icon: FileText },
+      { tab: "overview", label: "Overview", icon: LayoutDashboard },
+      { tab: "products", label: "Products", icon: Boxes },
+      { tab: "inventory", label: "Inventory & delivery", icon: Layers3 },
+      { tab: "orders", label: "Orders", icon: ShoppingBag },
+      { tab: "storefront", label: "Store banner & logo", icon: Store },
     ],
   },
   {
-    label: "Orders",
+    label: "Money",
     items: [
-      { label: "All orders", tab: "orders", icon: ShoppingBag },
-      { label: "Processing", tab: "processing", icon: Clock3 },
-      { label: "Delivered", tab: "delivered", icon: PackageCheck },
-      { label: "Refunds", tab: "refunds", icon: ArrowDownRight },
-      { label: "Disputes", tab: "disputes", icon: ShieldCheck },
+      { tab: "finance", label: "Balance & transactions", icon: WalletCards },
+      { tab: "withdrawals", label: "Withdrawals", icon: CircleDollarSign },
     ],
   },
   {
-    label: "Finance",
+    label: "Customers",
     items: [
-      { label: "Financial center", tab: "finance", icon: WalletCards },
-      { label: "Transactions", tab: "transactions", icon: FileText },
-      { label: "Frozen funds", tab: "frozen", icon: LockKeyhole },
-      { label: "Earnings", tab: "earnings", icon: TrendingUp },
-      { label: "Withdrawals", tab: "withdrawals", icon: CircleDollarSign },
-      { label: "Payment methods", tab: "payments", icon: CreditCard },
-    ],
-  },
-  {
-    label: "Customers & support",
-    items: [
-      { label: "Buyer messages", tab: "messages", icon: MessageSquare },
-      { label: "Reviews", tab: "reviews", icon: BadgeCheck },
-      { label: "Support tickets", tab: "tickets", icon: TicketCheck },
-      { label: "Notifications", tab: "notifications", icon: Bell },
-      { label: "Seller support", tab: "support", icon: LifeBuoy },
-    ],
-  },
-  {
-    label: "Growth",
-    items: [
-      { label: "Coupons", tab: "coupons", icon: Tag },
-      { label: "Promotions", tab: "promotions", icon: Gift },
-      { label: "Sponsored listings", tab: "sponsored", icon: Megaphone },
-      { label: "Featured products", tab: "featured", icon: Sparkles },
-    ],
-  },
-  {
-    label: "Analytics",
-    items: [
-      { label: "Overview", tab: "analytics", icon: BarChart3 },
-      { label: "Revenue", tab: "revenue", icon: TrendingUp },
-      { label: "Visitors", tab: "visitors", icon: Users },
-      { label: "Conversion", tab: "conversion", icon: ArrowUpRight },
-    ],
-  },
-  {
-    label: "Store settings",
-    items: [
-      { label: "Store profile", tab: "storefront", icon: Store },
-      { label: "Security", tab: "security", icon: ShieldCheck },
-      { label: "API access", tab: "api", icon: KeyRound },
-      { label: "Preferences", tab: "preferences", icon: Settings },
+      { tab: "messages", label: "Messages", icon: MessageSquare },
+      { tab: "refunds", label: "Refunds", icon: ArrowDownRight },
+      { tab: "disputes", label: "Disputes", icon: ShieldCheck },
+      { tab: "tickets", label: "Support", icon: TicketCheck },
     ],
   },
 ];
@@ -1645,7 +1595,7 @@ export function SellerStudioPage() {
   }
 
   return (
-    <main className="seller-pro-dashboard">
+    <main className="seller-pro-dashboard ys-workspace ys-workspace-seller">
       <Seo
         title="Seller studio"
         description="Manage your storefront, products, files, orders, and digital delivery."
@@ -1708,37 +1658,23 @@ export function SellerStudioPage() {
           </span>
           <div>
             <small>AVAILABLE BALANCE</small>
-            <strong>
-              {formatMoney(finance?.availableBalanceCents ?? 0)}
-            </strong>
+            <strong>{formatMoney(finance?.availableBalanceCents ?? 0)}</strong>
           </div>
           <ArrowRight />
         </button>
         <div className="panel-mobile-sidebar-tools">
           <LocaleSwitcher compact />
           <Link to="/sign-out">
-            <LogOut size={16} /> Sign out
+            <LogOut size={16} /> <UiText value="Sign out" />
           </Link>
         </div>
         <nav className="seller-premium-nav">
           {sellerMenuGroups.map((group) => (
             <section key={group.label}>
-              <button
-                className="seller-nav-group"
-                type="button"
-                aria-expanded={Boolean(expandedGroups[group.label])}
-                onClick={() =>
-                  setExpandedGroups(
-                    expandedGroups[group.label] ? {} : { [group.label]: true },
-                  )
-                }
-              >
-                <span>{group.label}</span>
-                <ChevronDown
-                  className={expandedGroups[group.label] ? "rotated" : ""}
-                />
-              </button>
-              {expandedGroups[group.label] ? (
+              <p className="ys-workspace-nav-label">
+                <UiText value={group.label} />
+              </p>
+              {true ? (
                 <div>
                   {group.items.map(({ label, tab: itemTab, icon: Icon }) => (
                     <button
@@ -1748,7 +1684,9 @@ export function SellerStudioPage() {
                       onClick={() => selectTab(itemTab)}
                     >
                       <Icon size={17} />
-                      <span>{label}</span>
+                      <span>
+                        <UiText value={label} />
+                      </span>
                       {label === "Notifications" && pendingProducts > 0 ? (
                         <b>{pendingProducts}</b>
                       ) : null}
@@ -1759,18 +1697,44 @@ export function SellerStudioPage() {
             </section>
           ))}
         </nav>
-        <button
-          type="button"
-          className="seller-sidebar-support"
-          onClick={() => selectTab("support")}
-        >
-          <LifeBuoy />
-          <span>
-            <strong>Seller support</strong>
-            <small>Help whenever you need it</small>
-          </span>
-          <ArrowRight />
-        </button>
+        <label className="ys-panel-tools">
+          <span>More seller tools</span>
+          <select
+            aria-label="More seller tools"
+            value=""
+            onChange={(event) => selectTab(event.target.value as Tab)}
+          >
+            <option value="" disabled>
+              Choose a tool…
+            </option>
+            {sellerTabs
+              .filter(
+                (item) =>
+                  !sellerMenuGroups.some((group) =>
+                    group.items.some((entry) => entry.tab === item.id),
+                  ) &&
+                  ![
+                    "processing",
+                    "delivered",
+                    "revenue",
+                    "visitors",
+                    "conversion",
+                    "promotions",
+                    "sponsored",
+                    "featured",
+                    "notifications",
+                    "support",
+                    "earnings",
+                    "product-groups",
+                  ].includes(item.id),
+              )
+              .map((item) => (
+                <option key={item.id} value={item.id}>
+                  <UiText value={item.label} />
+                </option>
+              ))}
+          </select>
+        </label>
         <div className="seller-pro-sidebar-footer">
           <Link to="/">
             <Home size={16} /> Home
@@ -1795,7 +1759,11 @@ export function SellerStudioPage() {
               <Menu />
             </button>
             <span>Seller center /</span>
-            <strong>{sellerTabs.find((item) => item.id === tab)?.label}</strong>
+            <strong>
+              <UiText
+                value={sellerTabs.find((item) => item.id === tab)?.label}
+              />
+            </strong>
           </div>
           <label className="seller-global-search">
             <Search />
@@ -1841,7 +1809,7 @@ export function SellerStudioPage() {
               to="/sign-out"
               aria-label="Sign out"
             >
-              <LogOut size={16} /> Sign out
+              <LogOut size={16} /> <UiText value="Sign out" />
             </Link>
             <Link
               className="seller-mobile-signout"
@@ -1864,9 +1832,13 @@ export function SellerStudioPage() {
               <i /> STORE DATA
             </span>
             <h1>
-              {tab === "overview"
-                ? `Welcome back, ${profile?.storeName ?? "Seller"}`
-                : sellerTabs.find((item) => item.id === tab)?.label}
+              <UiText
+                value={
+                  tab === "overview"
+                    ? `Welcome back, ${profile?.storeName ?? "Seller"}`
+                    : sellerTabs.find((item) => item.id === tab)?.label
+                }
+              />
             </h1>
             <p>
               {tab === "overview"
@@ -1925,19 +1897,11 @@ export function SellerStudioPage() {
                   earned today
                 </p>
                 <div className="seller-balance-breakdown">
-                  <button
-                    type="button"
-                    onClick={() => selectTab("frozen")}
-                  >
+                  <button type="button" onClick={() => selectTab("frozen")}>
                     <small>Frozen funds</small>
-                    <b>
-                      {formatMoney(finance?.frozenBalanceCents ?? 0)}
-                    </b>
+                    <b>{formatMoney(finance?.frozenBalanceCents ?? 0)}</b>
                   </button>
-                  <button
-                    type="button"
-                    onClick={() => selectTab("earnings")}
-                  >
+                  <button type="button" onClick={() => selectTab("earnings")}>
                     <small>Lifetime earnings</small>
                     <b>
                       {formatMoney(
@@ -1945,10 +1909,7 @@ export function SellerStudioPage() {
                       )}
                     </b>
                   </button>
-                  <button
-                    type="button"
-                    onClick={() => selectTab("orders")}
-                  >
+                  <button type="button" onClick={() => selectTab("orders")}>
                     <small>Orders today</small>
                     <b>{finance?.todayOrderCount ?? 0}</b>
                   </button>
@@ -1971,7 +1932,7 @@ export function SellerStudioPage() {
                 </div>
                 <div className="seller-balance-actions">
                   <button onClick={() => selectTab("withdrawals")}>
-                    <CircleDollarSign /> Withdraw funds
+                    <CircleDollarSign /> <UiText value="Withdraw funds" />
                   </button>
                   <button onClick={() => selectTab("transactions")}>
                     <FileText /> View transactions
@@ -2011,7 +1972,7 @@ export function SellerStudioPage() {
                   <small>Pending orders</small>
                   <strong>{pendingOrders}</strong>
                   <p>
-                    <Clock3 /> Requires attention
+                    <Clock3 /> <UiText value="Requires attention" />
                   </p>
                 </div>
               </button>
@@ -2053,7 +2014,9 @@ export function SellerStudioPage() {
                 <header>
                   <div>
                     <span>Performance</span>
-                    <h2>Revenue overview</h2>
+                    <h2>
+                      <UiText value="Revenue overview" />
+                    </h2>
                   </div>
                   <div>
                     <button
@@ -2088,7 +2051,7 @@ export function SellerStudioPage() {
                     <strong>{formatMoney(revenueChart.revenue)}</strong>
                   </span>
                   <span>
-                    <i className="green" /> Orders{" "}
+                    <i className="green" /> <UiText value="Orders" />{" "}
                     <strong>{revenueChart.orders}</strong>
                   </span>
                 </div>
@@ -2105,7 +2068,9 @@ export function SellerStudioPage() {
                 </div>
                 <footer>
                   {revenueChart.labels.map((label) => (
-                    <span key={label}>{label}</span>
+                    <span key={label}>
+                      <UiText value={label} />
+                    </span>
                   ))}
                 </footer>
               </article>
@@ -2113,7 +2078,9 @@ export function SellerStudioPage() {
                 <header>
                   <div>
                     <span>Shortcuts</span>
-                    <h2>Quick actions</h2>
+                    <h2>
+                      <UiText value="Quick actions" />
+                    </h2>
                   </div>
                   <MoreHorizontal />
                 </header>
@@ -2166,10 +2133,13 @@ export function SellerStudioPage() {
               <header>
                 <div>
                   <span>Latest activity</span>
-                  <h2>Recent orders</h2>
+                  <h2>
+                    <UiText value="Recent orders" />
+                  </h2>
                 </div>
                 <button onClick={() => selectTab("orders")}>
-                  View all <ArrowRight />
+                  <UiText value="View all" />
+                  <ArrowRight />
                 </button>
               </header>
               {orders.slice(0, 4).length ? (
@@ -2206,7 +2176,9 @@ export function SellerStudioPage() {
               ) : (
                 <div className="dashboard-empty compact">
                   <ShoppingBag />
-                  <h2>No orders yet</h2>
+                  <h2>
+                    <UiText value="No orders yet" />
+                  </h2>
                   <p>Your newest orders will appear here.</p>
                 </div>
               )}
@@ -2218,7 +2190,9 @@ export function SellerStudioPage() {
           <section className="seller-collection-page">
             <header className="seller-table-toolbar">
               <div>
-                <h2>Product groups</h2>
+                <h2>
+                  <UiText value="Product groups" />
+                </h2>
                 <p>Organize listings into clear buyer-friendly collections</p>
               </div>
               <div>
@@ -2242,7 +2216,9 @@ export function SellerStudioPage() {
                     </span>
                     <div>
                       <small>COLLECTION</small>
-                      <h3>{category.name}</h3>
+                      <h3>
+                        <UiText value={category.name} />
+                      </h3>
                       <p>
                         {count} product{count === 1 ? "" : "s"}
                       </p>
@@ -2256,7 +2232,9 @@ export function SellerStudioPage() {
               {!rootCategories.length ? (
                 <div className="dashboard-empty">
                   <FolderKanban />
-                  <h2>No product groups yet</h2>
+                  <h2>
+                    <UiText value="No product groups yet" />
+                  </h2>
                   <p>
                     Groups will appear from your active marketplace categories.
                   </p>
@@ -2270,7 +2248,9 @@ export function SellerStudioPage() {
           <section className="seller-category-page">
             <header className="seller-table-toolbar">
               <div>
-                <h2>Marketplace categories</h2>
+                <h2>
+                  <UiText value="Marketplace categories" />
+                </h2>
                 <p>Use the approved category path when publishing a product</p>
               </div>
               <div>
@@ -2301,7 +2281,9 @@ export function SellerStudioPage() {
                       </span>
                       <div>
                         <small>MAIN CATEGORY</small>
-                        <h3>{root.name}</h3>
+                        <h3>
+                          <UiText value={root.name} />
+                        </h3>
                       </div>
                     </header>
                     <div>
@@ -2334,11 +2316,15 @@ export function SellerStudioPage() {
             <header className="seller-table-toolbar">
               <div>
                 <h2>
-                  {tab === "inventory"
-                    ? "Inventory & variants"
-                    : tab === "drafts"
-                      ? "Drafts and review queue"
-                      : "Product catalog"}
+                  <UiText
+                    value={
+                      tab === "inventory"
+                        ? "Inventory & variants"
+                        : tab === "drafts"
+                          ? "Drafts and review queue"
+                          : "Product catalog"
+                    }
+                  />
                 </h2>
                 <p>
                   {tab === "inventory"
@@ -2529,7 +2515,7 @@ export function SellerStudioPage() {
                         type="button"
                         onClick={() => void editProduct(product)}
                       >
-                        <FileText /> Edit
+                        <FileText /> <UiText value="Edit" />
                       </button>
                       <button
                         type="button"
@@ -2608,7 +2594,13 @@ export function SellerStudioPage() {
               <div className="dashboard-empty">
                 <FileUp />
                 <h2>
-                  {products.length ? "No matching products" : "No products yet"}
+                  <UiText
+                    value={
+                      products.length
+                        ? "No matching products"
+                        : "No products yet"
+                    }
+                  />
                 </h2>
                 <p>
                   {products.length
@@ -2632,7 +2624,9 @@ export function SellerStudioPage() {
           <section className="seller-uploaded-library">
             <header className="seller-table-toolbar">
               <div>
-                <h2>Uploaded product files</h2>
+                <h2>
+                  <UiText value="Uploaded product files" />
+                </h2>
                 <p>
                   Download and verify the files currently attached to your
                   products.
@@ -2672,7 +2666,9 @@ export function SellerStudioPage() {
             ) : (
               <div className="dashboard-empty">
                 <Download />
-                <h2>No uploaded files</h2>
+                <h2>
+                  <UiText value="No uploaded files" />
+                </h2>
                 <p>
                   Add a delivery file to one of your products and it will appear
                   here.
@@ -2736,7 +2732,7 @@ export function SellerStudioPage() {
                 className={tab === "refunds" ? "active" : ""}
                 onClick={() => selectTab("refunds")}
               >
-                Refunds{" "}
+                <UiText value="Refunds" />{" "}
                 <b>
                   {
                     new Set(
@@ -2755,7 +2751,8 @@ export function SellerStudioPage() {
                 className={tab === "disputes" ? "active" : ""}
                 onClick={() => selectTab("disputes")}
               >
-                Disputes <b>{disputes.length}</b>
+                <UiText value="Disputes" />
+                <b>{disputes.length}</b>
               </button>
             </div>
             <section className="seller-orders-grid">
@@ -2856,7 +2853,9 @@ export function SellerStudioPage() {
           <section className="seller-orders-shell seller-case-center">
             <header className="seller-table-toolbar">
               <div>
-                <h2>Disputes</h2>
+                <h2>
+                  <UiText value="Disputes" />
+                </h2>
                 <p>
                   Review the buyer’s issue, refund demand, response deadline,
                   and protected order conversation.
@@ -2870,9 +2869,12 @@ export function SellerStudioPage() {
               <button onClick={() => selectTab("orders")}>
                 All orders <b>{orderRecords.length}</b>
               </button>
-              <button onClick={() => selectTab("refunds")}>Refunds</button>
+              <button onClick={() => selectTab("refunds")}>
+                <UiText value="Refunds" />
+              </button>
               <button className="active">
-                Disputes <b>{disputes.length}</b>
+                <UiText value="Disputes" />
+                <b>{disputes.length}</b>
               </button>
             </div>
             <section className="seller-dispute-grid">
@@ -2888,7 +2890,9 @@ export function SellerStudioPage() {
                           {dispute.order.orderNumber} ·{" "}
                           {new Date(dispute.createdAt).toLocaleDateString()}
                         </small>
-                        <h3>{dispute.subject}</h3>
+                        <h3>
+                          <UiText value={dispute.subject} />
+                        </h3>
                       </div>
                       <b
                         className={`status-pill ${dispute.status.toLowerCase()}`}
@@ -2936,7 +2940,9 @@ export function SellerStudioPage() {
               ) : (
                 <div className="dashboard-empty">
                   <ShieldCheck />
-                  <h2>No disputes</h2>
+                  <h2>
+                    <UiText value="No disputes" />
+                  </h2>
                   <p>No buyer cases require your response.</p>
                 </div>
               )}
@@ -3002,7 +3008,9 @@ export function SellerStudioPage() {
                 <header>
                   <div>
                     <span>Gross order revenue</span>
-                    <h2>Income activity</h2>
+                    <h2>
+                      <UiText value="Income activity" />
+                    </h2>
                   </div>
                   <button
                     type="button"
@@ -3034,7 +3042,9 @@ export function SellerStudioPage() {
                     <ShieldCheck />
                   </span>
                   <div>
-                    <h2>Frozen funds protection</h2>
+                    <h2>
+                      <UiText value="Frozen funds protection" />
+                    </h2>
                     <p>
                       Funds are released automatically after the marketplace
                       safety hold.
@@ -3067,7 +3077,9 @@ export function SellerStudioPage() {
               <header>
                 <div>
                   <span>Activity log</span>
-                  <h2>Recent payout activity</h2>
+                  <h2>
+                    <UiText value="Recent payout activity" />
+                  </h2>
                 </div>
               </header>
               {withdrawals.length ? (
@@ -3094,7 +3106,9 @@ export function SellerStudioPage() {
               ) : (
                 <div className="dashboard-empty compact">
                   <FileText />
-                  <h2>No payout activity yet</h2>
+                  <h2>
+                    <UiText value="No payout activity yet" />
+                  </h2>
                   <p>Submitted payout requests will appear here.</p>
                 </div>
               )}
@@ -3110,7 +3124,9 @@ export function SellerStudioPage() {
                   <CircleDollarSign />
                 </span>
                 <div>
-                  <h2>Withdraw funds</h2>
+                  <h2>
+                    <UiText value="Withdraw funds" />
+                  </h2>
                   <p>Send your available balance to a verified wallet.</p>
                 </div>
               </header>
@@ -3210,7 +3226,9 @@ export function SellerStudioPage() {
               <header>
                 <div>
                   <span>History</span>
-                  <h2>Recent withdrawals</h2>
+                  <h2>
+                    <UiText value="Recent withdrawals" />
+                  </h2>
                 </div>
                 <button>
                   <SlidersHorizontal />
@@ -3237,7 +3255,9 @@ export function SellerStudioPage() {
               ) : (
                 <div className="dashboard-empty">
                   <CircleDollarSign />
-                  <h2>No withdrawals yet</h2>
+                  <h2>
+                    <UiText value="No withdrawals yet" />
+                  </h2>
                   <p>
                     Your submitted requests will appear here with live status.
                   </p>
@@ -3251,7 +3271,9 @@ export function SellerStudioPage() {
           <section className="seller-ticket-center">
             <header className="seller-table-toolbar">
               <div>
-                <h2>Support tickets</h2>
+                <h2>
+                  <UiText value="Support tickets" />
+                </h2>
                 <p>Order-linked support conversations and priority status</p>
               </div>
               <div>
@@ -3294,7 +3316,9 @@ export function SellerStudioPage() {
                           {ticket.ticketNumber} ·{" "}
                           {ticket.category.replaceAll("_", " ")}
                         </small>
-                        <h3>{ticket.subject}</h3>
+                        <h3>
+                          <UiText value={ticket.subject} />
+                        </h3>
                         <p>
                           {ticket.creator?.firstName ?? "Buyer"} ·{" "}
                           {ticket.messages?.length ?? 0} messages · Updated{" "}
@@ -3315,7 +3339,9 @@ export function SellerStudioPage() {
             ) : (
               <div className="dashboard-empty">
                 <TicketCheck />
-                <h2>No support tickets</h2>
+                <h2>
+                  <UiText value="No support tickets" />
+                </h2>
                 <p>Buyer order tickets will appear here.</p>
               </div>
             )}
@@ -3434,7 +3460,9 @@ export function SellerStudioPage() {
                 {!products.some((product) => product.status === "APPROVED") ? (
                   <div className="dashboard-empty compact">
                     <Megaphone />
-                    <h2>No eligible products</h2>
+                    <h2>
+                      <UiText value="No eligible products" />
+                    </h2>
                     <p>
                       Publish and approve a product before creating a campaign.
                     </p>
@@ -3462,7 +3490,9 @@ export function SellerStudioPage() {
                 <span>
                   <ShoppingBag />
                 </span>
-                <small>Orders</small>
+                <small>
+                  <UiText value="Orders" />
+                </small>
                 <strong>{orderRecords.length}</strong>
                 <p>{deliveredOrders} delivered or completed</p>
               </article>
@@ -3488,7 +3518,9 @@ export function SellerStudioPage() {
                 <header>
                   <div>
                     <span>Sales intelligence</span>
-                    <h2>Revenue trend</h2>
+                    <h2>
+                      <UiText value="Revenue trend" />
+                    </h2>
                   </div>
                   <div>
                     <button
@@ -3540,14 +3572,20 @@ export function SellerStudioPage() {
                 </div>
                 <footer>
                   {revenueChart.labels.map((label) => (
-                    <span key={label}>{label}</span>
+                    <span key={label}>
+                      <UiText value={label} />
+                    </span>
                   ))}
                 </footer>
               </article>
               <article className="seller-top-products">
                 <header>
-                  <span>Products</span>
-                  <h2>Top performers</h2>
+                  <span>
+                    <UiText value="Products" />
+                  </span>
+                  <h2>
+                    <UiText value="Top performers" />
+                  </h2>
                 </header>
                 {topProductPerformance.map((entry, index) => (
                   <div key={entry.product?.id ?? entry.name}>
@@ -3575,7 +3613,9 @@ export function SellerStudioPage() {
                 {!topProductPerformance.length ? (
                   <div className="dashboard-empty compact">
                     <BarChart3 />
-                    <h2>No sales data</h2>
+                    <h2>
+                      <UiText value="No sales data" />
+                    </h2>
                     <p>Paid product performance will appear here.</p>
                   </div>
                 ) : null}
@@ -3589,7 +3629,9 @@ export function SellerStudioPage() {
             <header>
               <div>
                 <span>Live priorities</span>
-                <h2>Activity center</h2>
+                <h2>
+                  <UiText value="Activity center" />
+                </h2>
                 <p>
                   Current product, order, dispute, and support signals
                   calculated from your seller records.
@@ -3599,7 +3641,9 @@ export function SellerStudioPage() {
                 <RefreshCw /> Refresh
               </button>
             </header>
-            <h3>Requires attention</h3>
+            <h3>
+              <UiText value="Requires attention" />
+            </h3>
             {pendingProducts > 0 ? (
               <article className="warning">
                 <span>
@@ -3645,7 +3689,9 @@ export function SellerStudioPage() {
                   <p>
                     Check response deadlines and the protected conversation.
                   </p>
-                  <small>Buyer protection</small>
+                  <small>
+                    <UiText value="Buyer protection" />
+                  </small>
                 </div>
                 <button onClick={() => selectTab("disputes")}>View</button>
               </article>
@@ -3660,7 +3706,9 @@ export function SellerStudioPage() {
                 <div>
                   <strong>Open seller support tickets</strong>
                   <p>Review the latest support conversation.</p>
-                  <small>Support</small>
+                  <small>
+                    <UiText value="Support" />
+                  </small>
                 </div>
                 <button onClick={() => selectTab("tickets")}>View</button>
               </article>
@@ -3685,13 +3733,17 @@ export function SellerStudioPage() {
             <header>
               <div>
                 <span className="section-index">BUYER INBOX</span>
-                <h2>Buyer conversations</h2>
+                <h2>
+                  <UiText value="Buyer conversations" />
+                </h2>
                 <p>
                   Answer pre-sale questions here. Paid-order chats remain tied
                   to each order for delivery and dispute protection.
                 </p>
               </div>
-              <span>{inquiries.length + conversationOrders.length} conversations</span>
+              <span>
+                {inquiries.length + conversationOrders.length} conversations
+              </span>
             </header>
             {inquiries.length ? (
               <div className="seller-preorder-inquiries">
@@ -3699,8 +3751,8 @@ export function SellerStudioPage() {
                   <article key={inquiry.id}>
                     <header>
                       <span>
-                        {(inquiry.user?.firstName?.[0] ?? "B")}
-                        {(inquiry.user?.lastName?.[0] ?? "")}
+                        {inquiry.user?.firstName?.[0] ?? "B"}
+                        {inquiry.user?.lastName?.[0] ?? ""}
                       </span>
                       <div>
                         <strong>
@@ -3708,17 +3760,25 @@ export function SellerStudioPage() {
                             ? `${inquiry.user.firstName} ${inquiry.user.lastName}`
                             : "Marketplace buyer"}
                         </strong>
-                        <small>{inquiry.subject ?? inquiry.contextLabel ?? "Store inquiry"}</small>
+                        <small>
+                          {inquiry.subject ??
+                            inquiry.contextLabel ??
+                            "Store inquiry"}
+                        </small>
                       </div>
                       <b className="status-pill pending">PRE-SALE</b>
                       {inquiry.contextUrl ? (
-                        <Link to={inquiry.contextUrl}>View item <ArrowRight /></Link>
+                        <Link to={inquiry.contextUrl}>
+                          View item <ArrowRight />
+                        </Link>
                       ) : null}
                     </header>
                     <div className="seller-inquiry-thread">
                       {inquiry.messages.map((entry) => (
                         <p className={entry.role} key={entry.id}>
-                          <small>{entry.role === "seller" ? "You" : "Buyer"}</small>
+                          <small>
+                            {entry.role === "seller" ? "You" : "Buyer"}
+                          </small>
                           {entry.body}
                         </p>
                       ))}
@@ -3739,7 +3799,9 @@ export function SellerStudioPage() {
                         }
                         placeholder="Reply to this buyer…"
                       />
-                      <button disabled={busy || !inquiryReply[inquiry.id]?.trim()}>
+                      <button
+                        disabled={busy || !inquiryReply[inquiry.id]?.trim()}
+                      >
                         Send reply <ArrowRight />
                       </button>
                     </form>
@@ -3775,10 +3837,10 @@ export function SellerStudioPage() {
             ) : !inquiries.length ? (
               <div className="dashboard-empty">
                 <MessageSquare />
-                <h2>No conversations yet</h2>
-                <p>
-                  Pre-sale questions and paid-order chats will appear here.
-                </p>
+                <h2>
+                  <UiText value="No conversations yet" />
+                </h2>
+                <p>Pre-sale questions and paid-order chats will appear here.</p>
               </div>
             ) : null}
           </section>
@@ -3788,7 +3850,9 @@ export function SellerStudioPage() {
           <section className="seller-review-center">
             <header className="seller-table-toolbar">
               <div>
-                <h2>Buyer reviews</h2>
+                <h2>
+                  <UiText value="Buyer reviews" />
+                </h2>
                 <p>
                   Read verified product feedback and post one clear public
                   response.
@@ -3866,7 +3930,9 @@ export function SellerStudioPage() {
             ) : (
               <div className="dashboard-empty">
                 <BadgeCheck />
-                <h2>No reviews yet</h2>
+                <h2>
+                  <UiText value="No reviews yet" />
+                </h2>
                 <p>
                   Verified buyer feedback will appear after completed purchases.
                 </p>
@@ -3898,7 +3964,9 @@ export function SellerStudioPage() {
               </span>
               <div>
                 <small>PUBLIC STOREFRONT</small>
-                <h2>{profile?.storeName}</h2>
+                <h2>
+                  <UiText value={profile?.storeName} />
+                </h2>
                 <p>{profile?.about}</p>
                 <b>{profile?.isVerified ? "✓ Verified seller" : "Seller"}</b>
               </div>
@@ -3909,7 +3977,9 @@ export function SellerStudioPage() {
                   <Store />
                 </span>
                 <div>
-                  <h2>Store media & identity</h2>
+                  <h2>
+                    <UiText value="Store media & identity" />
+                  </h2>
                   <p>
                     Upload professional images with an instant preview. JPEG,
                     PNG and WebP are supported.
@@ -4070,7 +4140,9 @@ export function SellerStudioPage() {
                       ? "CONVERSION TREND"
                       : "REVENUE TREND"}
                 </span>
-                <h3>Performance over time</h3>
+                <h3>
+                  <UiText value="Performance over time" />
+                </h3>
               </div>
               <div className="seller-css-chart analytics">
                 {[22, 31, 28, 46, 52, 43, 61, 68, 59, 77, 73, 86, 82, 96].map(
@@ -4108,7 +4180,9 @@ export function SellerStudioPage() {
                   </span>
                   <div>
                     <small>Marketplace balance</small>
-                    <h3>Seller wallet</h3>
+                    <h3>
+                      <UiText value="Seller wallet" />
+                    </h3>
                     <p>
                       Sales earnings, frozen funds and withdrawals are managed
                       in Financial Center.
@@ -4124,14 +4198,17 @@ export function SellerStudioPage() {
                   </span>
                   <div>
                     <small>Payout network</small>
-                    <h3>Crypto withdrawals</h3>
+                    <h3>
+                      <UiText value="Crypto withdrawals" />
+                    </h3>
                     <p>
                       Submit a verified wallet and network when you request a
                       withdrawal.
                     </p>
                   </div>
                   <button onClick={() => selectTab("withdrawals")}>
-                    Manage <ArrowRight />
+                    <UiText value="Manage" />
+                    <ArrowRight />
                   </button>
                 </article>
               </div>
@@ -4141,7 +4218,9 @@ export function SellerStudioPage() {
                 <article>
                   <BadgeCheck />
                   <div>
-                    <h3>Store verification</h3>
+                    <h3>
+                      <UiText value="Store verification" />
+                    </h3>
                     <p>
                       {profile?.isVerified
                         ? "Your seller identity is verified."
@@ -4157,7 +4236,9 @@ export function SellerStudioPage() {
                 <article>
                   <LockKeyhole />
                   <div>
-                    <h3>Protected account access</h3>
+                    <h3>
+                      <UiText value="Protected account access" />
+                    </h3>
                     <p>
                       Password, authentication and active account controls stay
                       managed by the existing profile workflow.
@@ -4176,7 +4257,9 @@ export function SellerStudioPage() {
                 </span>
                 <div>
                   <small>API ACCESS</small>
-                  <h3>Secure integration access</h3>
+                  <h3>
+                    <UiText value="Secure integration access" />
+                  </h3>
                   <p>
                     API credentials are issued by marketplace administration.
                     Keys are never displayed until access has been approved for
@@ -4237,7 +4320,9 @@ export function SellerStudioPage() {
                 </span>
                 <div>
                   <small>SELLER SUPPORT</small>
-                  <h3>Help when your business needs it</h3>
+                  <h3>
+                    <UiText value="Help when your business needs it" />
+                  </h3>
                   <p>
                     Open a protected support ticket, review buyer-linked
                     conversations, or visit the marketplace help center.
@@ -4270,7 +4355,9 @@ export function SellerStudioPage() {
           onClick={() => selectTab("products")}
         >
           <Boxes />
-          <span>Products</span>
+          <span>
+            <UiText value="Products" />
+          </span>
         </button>
         <button
           className="seller-mobile-fab"
@@ -4284,14 +4371,18 @@ export function SellerStudioPage() {
           onClick={() => selectTab("orders")}
         >
           <ShoppingBag />
-          <span>Orders</span>
+          <span>
+            <UiText value="Orders" />
+          </span>
         </button>
         <button
           className={tab === "finance" ? "active" : ""}
           onClick={() => selectTab("finance")}
         >
           <WalletCards />
-          <span>Finance</span>
+          <span>
+            <UiText value="Finance" />
+          </span>
         </button>
       </nav>
 
@@ -4306,7 +4397,9 @@ export function SellerStudioPage() {
             <header>
               <div>
                 <small>DELIVERY DETAILS</small>
-                <h2>{deliveryOrder.productName}</h2>
+                <h2>
+                  <UiText value={deliveryOrder.productName} />
+                </h2>
                 <p>
                   Order #{deliveryOrder.order.orderNumber} ·{" "}
                   {deliveryOrder.order.buyer.firstName}{" "}
@@ -4418,14 +4511,17 @@ export function SellerStudioPage() {
               ×
             </button>
             <span className="section-index">NEW PRODUCT</span>
-            <h2>Create a smooth, buyer-friendly listing.</h2>
+            <h2>
+              <UiText value="Create a smooth, buyer-friendly listing." />
+            </h2>
             <p className="modal-helper">
               Choose each catalog detail once. Social account listings follow
               Category → Platform → Accounts → Account type.
             </p>
             <div className="seller-flow-steps">
               <span className={form.categoryPathIds[0] ? "done" : "active"}>
-                <b>1</b>Category
+                <b>1</b>
+                <UiText value="Category" />
               </span>
               <span
                 className={
@@ -4524,7 +4620,7 @@ export function SellerStudioPage() {
                       </option>
                       {choices.map((category) => (
                         <option value={category.id} key={category.id}>
-                          {category.name}
+                          <UiText value={category.name} />
                         </option>
                       ))}
                     </select>
@@ -4550,7 +4646,9 @@ export function SellerStudioPage() {
                   <span>Platform</span>
                   <b>{socialAccountPlatform}</b>
                   <span>Product</span>
-                  <b>Account</b>
+                  <b>
+                    <UiText value="Account" />
+                  </b>
                   <span>Account type</span>
                   <b>{socialAccountType}</b>
                 </p>
@@ -4623,7 +4721,7 @@ export function SellerStudioPage() {
               </header>
               <section>
                 <h3>
-                  <b>1</b> Product titles
+                  <b>1</b> <UiText value="Product titles" />
                 </h3>
                 <div className="form-grid three">
                   <label>
@@ -4663,7 +4761,7 @@ export function SellerStudioPage() {
               </section>
               <section>
                 <h3>
-                  <b>2</b> Short descriptions
+                  <b>2</b> <UiText value="Short descriptions" />
                 </h3>
                 <div className="form-grid three">
                   <label>
@@ -4712,7 +4810,7 @@ export function SellerStudioPage() {
               </section>
               <section>
                 <h3>
-                  <b>3</b> Full descriptions
+                  <b>3</b> <UiText value="Full descriptions" />
                 </h3>
                 <div className="form-grid three">
                   <label>
@@ -4758,7 +4856,7 @@ export function SellerStudioPage() {
               </section>
               <section>
                 <h3>
-                  <b>4</b> Prices
+                  <b>4</b> <UiText value="Prices" />
                 </h3>
                 <div className="form-grid three">
                   <label>
@@ -4811,7 +4909,7 @@ export function SellerStudioPage() {
               </section>
               <section>
                 <h3>
-                  <b>5</b> SEO titles
+                  <b>5</b> <UiText value="SEO titles" />
                 </h3>
                 <div className="form-grid three">
                   <label>
@@ -4857,7 +4955,7 @@ export function SellerStudioPage() {
               </section>
               <section>
                 <h3>
-                  <b>6</b> SEO meta descriptions
+                  <b>6</b> <UiText value="SEO meta descriptions" />
                 </h3>
                 <div className="form-grid three">
                   <label>
@@ -4989,7 +5087,9 @@ export function SellerStudioPage() {
                 </summary>
                 <div className="seller-create-advanced-body">
                   <section>
-                    <h3>Pricing and inventory</h3>
+                    <h3>
+                      <UiText value="Pricing and inventory" />
+                    </h3>
                     <div className="form-grid three">
                       <label>
                         <span>Sale price</span>
@@ -5099,7 +5199,9 @@ export function SellerStudioPage() {
                     </div>
                   </section>
                   <section>
-                    <h3>Searchable specifications</h3>
+                    <h3>
+                      <UiText value="Searchable specifications" />
+                    </h3>
                     <div className="form-grid three">
                       {(
                         [
@@ -5125,7 +5227,9 @@ export function SellerStudioPage() {
                         )
                         .map(([key, label]) => (
                           <label key={key}>
-                            <span>{label}</span>
+                            <span>
+                              <UiText value={label} />
+                            </span>
                             <input
                               value={form[key]}
                               onChange={(event) =>
@@ -5137,7 +5241,9 @@ export function SellerStudioPage() {
                     </div>
                   </section>
                   <section>
-                    <h3>Fulfillment</h3>
+                    <h3>
+                      <UiText value="Fulfillment" />
+                    </h3>
                     <div className="seller-option-toggles">
                       <label>
                         <input
@@ -5203,7 +5309,9 @@ export function SellerStudioPage() {
                       />
                     </label>
                     <label>
-                      <span>Refund policy</span>
+                      <span>
+                        <UiText value="Refund policy" />
+                      </span>
                       <textarea
                         rows={3}
                         value={form.refundPolicy}

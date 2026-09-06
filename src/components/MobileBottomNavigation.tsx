@@ -1,3 +1,5 @@
+import { UiText } from "../i18n/UiText";
+import { homePathForRole } from "../api/client";
 import {
   Home,
   ShoppingBag,
@@ -29,7 +31,7 @@ export function MobileBottomNavigation() {
     return null;
   }
 
-  const accountPath = user ? "/dashboard" : "/sign-in";
+  const accountPath = user ? homePathForRole(user.role) : "/sign-in";
 
   return (
     <nav className="mobile-bottom-nav" aria-label="Mobile navigation">
@@ -54,14 +56,14 @@ export function MobileBottomNavigation() {
       >
         <ShoppingBag aria-hidden="true" />
         {count > 0 ? <b>{count > 99 ? "99+" : count}</b> : null}
-        <span>Cart</span>
+        <span><UiText value="Cart" /></span>
       </Link>
       <Link
         to={accountPath}
         aria-current={location.pathname === accountPath ? "page" : undefined}
       >
         <UserRound aria-hidden="true" />
-        <span>Account</span>
+        <span><UiText value="Account" /></span>
       </Link>
     </nav>
   );

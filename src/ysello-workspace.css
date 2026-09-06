@@ -1,0 +1,1211 @@
+/* Storefront and workspaces share one restrained design system. */
+.ys-header {
+  position: relative;
+  z-index: 40;
+  background: #fff;
+  color: #172a46;
+  border-bottom: 1px solid #e5eaf2;
+  font-family: Inter, system-ui, sans-serif;
+}
+.ys-header * {
+  box-sizing: border-box;
+}
+.ys-header a {
+  text-decoration: none;
+  color: inherit;
+}
+.ys-header svg {
+  width: 19px;
+  height: 19px;
+  flex-shrink: 0;
+}
+.ys-header-announcement {
+  display: flex;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 10px max(24px, calc((100% - 1320px) / 2));
+  background: #142c50;
+  color: #e4edfb;
+  font-size: 12px;
+}
+.ys-header-announcement a {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+}
+.ys-header-announcement svg {
+  width: 14px;
+  height: 14px;
+}
+.ys-header-main {
+  width: min(1320px, calc(100% - 48px));
+  margin: auto;
+  display: flex;
+  align-items: center;
+  gap: 28px;
+  padding: 22px 0;
+}
+.ys-header-logo {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  flex-shrink: 0;
+}
+.ys-header-logo img {
+  width: 42px;
+  height: 42px;
+}
+.ys-header-logo strong {
+  font-size: 29px;
+  font-weight: 700;
+  letter-spacing: -0.04em;
+  line-height: 1.05;
+}
+.ys-header-logo strong span {
+  display: block;
+  margin-top: 5px;
+  font-size: 10px;
+  letter-spacing: 0.05em;
+  font-weight: 500;
+  color: #6e7f96;
+}
+.ys-header-search {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 5px 5px 5px 14px;
+  border: 1px solid #dde5f0;
+  border-radius: 8px;
+  background: #f7f9fd;
+  flex: 1;
+  min-width: 0;
+}
+.ys-header-search > svg {
+  color: #70819a;
+}
+.ys-header-search input {
+  border: 0;
+  outline: 0;
+  background: transparent;
+  min-width: 0;
+  flex: 1;
+  padding: 7px 0;
+  font-size: 14px;
+  color: #172a46;
+}
+.ys-header-search button {
+  border: 0;
+  border-radius: 5px;
+  background: #2359df;
+  color: #fff;
+  padding: 10px 15px;
+  font-size: 13px;
+  cursor: pointer;
+}
+.ys-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 19px;
+}
+.ys-header-actions > a {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 14px;
+  white-space: nowrap;
+}
+.ys-header-actions b {
+  background: #2359df;
+  color: #fff;
+  border-radius: 99px;
+  padding: 3px 5px;
+  font-size: 10px;
+}
+.ys-header-navigation {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 25px;
+  width: min(1320px, calc(100% - 48px));
+  margin: auto;
+  min-height: 57px;
+  border-top: 1px solid #edf1f7;
+}
+.ys-header details summary {
+  cursor: pointer;
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 600;
+}
+.ys-header summary::-webkit-details-marker {
+  display: none;
+}
+.ys-header-category-menu {
+  flex-shrink: 0;
+}
+.ys-header-category-menu > nav {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 100%;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  background: #fff;
+  border: 1px solid #e3e9f2;
+  border-radius: 0 0 12px 12px;
+  box-shadow: 0 18px 40px #172a4620;
+  padding: 20px;
+  max-height: 65vh;
+  overflow-y: auto;
+}
+.ys-header-category-menu nav > a {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  min-height: 44px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  font-size: 14px;
+}
+.ys-header-category-menu nav > a:hover {
+  background: #f1f5ff;
+}
+.ys-header-category-menu nav img,
+.ys-header-shortcuts img {
+  width: 22px;
+  height: 22px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+.ys-header-shortcuts {
+  flex: 1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 23px;
+  padding: 10px 0;
+}
+.ys-header-shortcuts a {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 13px;
+  color: #526580;
+}
+.ys-header-stores {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+.ys-header-mobile-menu {
+  display: none;
+}
+.ys-modern-catalog-page {
+  background: #f8fafd;
+  min-height: 100vh;
+}
+.ys-catalog-browser {
+  width: min(1420px, calc(100% - 48px));
+  margin: 32px auto 55px;
+  color: #172a46;
+  scroll-margin-top: 20px;
+}
+.ys-catalog-browser.is-embedded {
+  width: 100%;
+  margin: 0;
+}
+.ys-catalog-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  margin-bottom: 25px;
+}
+.ys-catalog-heading h1 {
+  font-size: 32px;
+  font-weight: 650;
+  letter-spacing: -0.035em;
+  line-height: 1.2;
+  margin: 8px 0;
+}
+.ys-catalog-heading p {
+  color: #6b7c94;
+  font-size: 14px;
+  line-height: 1.6;
+  margin: 0;
+}
+.ys-catalog-heading > span {
+  font-size: 13px;
+  color: #6b7c94;
+}
+.ys-catalog-layout {
+  display: grid;
+  grid-template-columns: 210px minmax(0, 1fr);
+  gap: 25px;
+  align-items: start;
+}
+.is-embedded .ys-catalog-layout {
+  grid-template-columns: 1fr;
+}
+.ys-catalog-categories {
+  padding: 18px 12px;
+  border: 1px solid #e2e8f1;
+  border-radius: 10px;
+  background: #fff;
+}
+.ys-catalog-categories > strong {
+  display: block;
+  font-size: 13px;
+  padding: 0 10px 12px;
+}
+.ys-catalog-categories > a {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  padding: 10px;
+  border-radius: 6px;
+  color: #54657e;
+  text-decoration: none;
+  font-size: 14px;
+}
+.ys-catalog-categories > a.active {
+  background: #edf3ff;
+  color: #2459d6;
+}
+.ys-catalog-categories img,
+.ys-catalog-categories svg {
+  width: 21px;
+  height: 21px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+.ys-catalog-categories a span {
+  flex: 1;
+  overflow-wrap: anywhere;
+}
+.ys-catalog-categories a small {
+  font-size: 11px;
+}
+.ys-catalog-results {
+  min-width: 0;
+}
+.ys-catalog-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  background: #fff;
+  border: 1px solid #e2e8f1;
+  border-radius: 10px;
+  padding: 12px;
+}
+.ys-catalog-controls label {
+  min-width: 0;
+}
+.ys-catalog-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  min-width: 200px !important;
+}
+.ys-catalog-search svg {
+  width: 18px;
+  height: 18px;
+  color: #8392a9;
+}
+.ys-catalog-search input {
+  border: 0 !important;
+  background: transparent !important;
+  font-size: 14px;
+  min-width: 60px;
+  width: 100%;
+  outline: 0;
+}
+.ys-catalog-search button {
+  border: 0;
+  border-radius: 5px;
+  padding: 9px 12px;
+  font-size: 13px;
+  background: #2359df;
+  color: #fff;
+  cursor: pointer;
+}
+.ys-catalog-controls select {
+  padding: 10px 26px 10px 10px;
+  max-width: 200px;
+  border: 1px solid #dfe5ef;
+  border-radius: 6px;
+  background: #fff;
+  color: #2e4260;
+  font-size: 13px;
+}
+.ys-stock-filter {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 13px;
+}
+.ys-stock-filter input {
+  accent-color: #2359df;
+  width: 15px;
+  height: 15px;
+}
+.ys-catalog-status {
+  margin: 18px 0;
+  font-size: 13px;
+  line-height: 1.6;
+  color: #657895;
+}
+.ys-catalog-product-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+}
+.ys-catalog-reset {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: #2359df;
+  margin: 20px 0;
+  text-decoration: none;
+}
+.ys-catalog-reset svg {
+  width: 17px;
+}
+/* Explicit media dimensions win over legacy desktop card rules. Images never depend on nested SVG styling. */
+body
+  .ys-ref-product-card.g2-product-card
+  .ys-ref-product-media.g2-product-media {
+  display: block !important;
+  position: relative !important;
+  height: 160px !important;
+  min-height: 160px !important;
+  max-height: none !important;
+  width: 100% !important;
+  overflow: hidden !important;
+  background: #f4f7fc !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+body .ys-ref-product-card.g2-product-card .g2-product-image-link {
+  display: block !important;
+  position: relative !important;
+  width: 100% !important;
+  height: 100% !important;
+  min-height: 160px !important;
+  padding: 0 !important;
+}
+body .ys-reliable-artwork {
+  display: flex !important;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 13px;
+  position: relative !important;
+  width: 100% !important;
+  height: 100% !important;
+  min-height: 140px !important;
+  background: #f5f8fe !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+body .ys-reliable-artwork img {
+  display: block !important;
+  position: static !important;
+  width: 82px !important;
+  height: 82px !important;
+  max-width: 65% !important;
+  max-height: 100px !important;
+  object-fit: contain !important;
+  padding: 8px !important;
+  filter: none !important;
+  transform: none !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+  border: 0 !important;
+  border-radius: 10px !important;
+  background: #fff !important;
+}
+body .ys-reliable-artwork > span {
+  color: #314966 !important;
+  font-size: 14px !important;
+  font-weight: 600;
+}
+body .ys-detail-platform-art {
+  height: 340px;
+  width: 100%;
+}
+body .ys-detail-platform-art .ys-reliable-artwork img {
+  width: 130px !important;
+  height: 130px !important;
+  max-height: 150px !important;
+}
+.ys-catalog-product-grid .ys-ref-product-card.g2-product-card {
+  display: flex !important;
+  flex-direction: column !important;
+  min-width: 0 !important;
+  width: auto !important;
+  background: #fff !important;
+  border: 1px solid #e2e8f1 !important;
+  border-radius: 10px !important;
+  box-shadow: none !important;
+  overflow: hidden !important;
+}
+.ys-catalog-product-grid .g2-product-copy {
+  display: flex !important;
+  flex-direction: column !important;
+  flex: 1;
+  padding: 14px !important;
+  min-width: 0 !important;
+}
+.ys-catalog-product-grid .ys-ref-product-title {
+  font-size: 14px !important;
+  line-height: 1.55 !important;
+  font-weight: 600 !important;
+  min-height: 44px;
+  color: #203856 !important;
+}
+.ys-catalog-product-grid .g2-product-description {
+  font-size: 12px !important;
+  line-height: 1.5 !important;
+}
+.ys-catalog-product-grid .g2-product-price-row {
+  margin-top: auto !important;
+  padding-top: 12px !important;
+}
+.ys-catalog-product-grid .g2-product-actions {
+  display: grid !important;
+  grid-template-columns: 1fr 1fr !important;
+  gap: 6px !important;
+}
+.ys-catalog-product-grid .g2-product-actions a,
+.ys-catalog-product-grid .g2-product-actions button {
+  padding: 10px 5px !important;
+  font-size: 12px !important;
+}
+.ys-catalog-product-grid .g2-product-actions button {
+  background: #2359df !important;
+  color: #fff !important;
+  border-radius: 6px !important;
+}
+.ys-catalog-product-grid .g2-product-actions button:disabled {
+  background: #e4eaf4 !important;
+  color: #7c899c !important;
+}
+.ys-pagination {
+  margin: 25px 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.ys-pagination p {
+  font-size: 13px;
+  color: #667b97;
+  margin: 0;
+}
+.ys-pagination nav {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.ys-pagination button {
+  display: grid;
+  place-items: center;
+  min-width: 38px;
+  min-height: 38px;
+  border: 1px solid #dce4f0;
+  border-radius: 6px;
+  background: white;
+  color: #304b70;
+  font-size: 14px;
+  cursor: pointer;
+}
+.ys-pagination button[aria-current="page"] {
+  background: #2359df;
+  border-color: #2359df;
+  color: white;
+}
+.ys-pagination button:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+.ys-pagination svg {
+  width: 17px;
+  height: 17px;
+}
+.ys-pagination nav > span {
+  color: #8292a9;
+}
+/* Every panel has one primary menu, one tools selector, and a spacious work area. */
+main.ys-workspace {
+  display: grid !important;
+  grid-template-columns: 236px minmax(0, 1fr) !important;
+  align-items: start !important;
+  min-height: 100vh !important;
+  background: #f4f7fb !important;
+  color: #18314f !important;
+  font-family: Inter, system-ui, sans-serif !important;
+}
+main.ys-workspace > .ops-sidebar,
+main.ys-workspace > .dashboard-sidebar,
+main.ys-workspace > .seller-pro-sidebar {
+  display: flex !important;
+  flex-direction: column !important;
+  position: sticky !important;
+  top: 0 !important;
+  left: auto !important;
+  bottom: auto !important;
+  width: 236px !important;
+  height: 100dvh !important;
+  min-height: 0 !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  border: 0 !important;
+  border-right: 1px solid #e0e7f1 !important;
+  padding: 20px 14px !important;
+  background: #fff !important;
+  color: #24405f !important;
+  box-shadow: none !important;
+  transform: none !important;
+  z-index: 80 !important;
+}
+main.ys-workspace > .ops-main,
+main.ys-workspace > .dashboard-main,
+main.ys-workspace > .seller-pro-main {
+  width: 100% !important;
+  min-width: 0 !important;
+  margin: 0 !important;
+  padding: 0 28px 32px !important;
+  overflow: hidden;
+}
+.ys-workspace .ys-workspace-nav-label {
+  margin: 21px 10px 8px !important;
+  color: #8291a8 !important;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-size: 10px !important;
+  font-weight: 700 !important;
+}
+.ys-workspace .buyer-grouped-nav,
+.ys-workspace .seller-premium-nav,
+.ys-workspace .admin-grouped-nav {
+  display: block !important;
+  padding: 0 !important;
+}
+.ys-workspace .buyer-grouped-nav section,
+.ys-workspace .seller-premium-nav section,
+.ys-workspace .admin-grouped-nav section {
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+}
+.ys-workspace .buyer-grouped-nav section > div,
+.ys-workspace .seller-premium-nav section > div,
+.ys-workspace .admin-grouped-nav section > div {
+  display: grid !important;
+  gap: 3px !important;
+  padding: 0 !important;
+}
+.ys-workspace .buyer-grouped-nav section > div > button,
+.ys-workspace .seller-premium-nav section > div > button,
+.ys-workspace .admin-nav-item > button {
+  display: flex !important;
+  align-items: center !important;
+  gap: 11px !important;
+  width: 100% !important;
+  min-height: 41px !important;
+  padding: 10px 12px !important;
+  color: #58708d !important;
+  background: transparent !important;
+  border: 0 !important;
+  border-radius: 7px !important;
+  font-size: 13px !important;
+  font-weight: 500 !important;
+  box-shadow: none !important;
+  text-align: left !important;
+}
+.ys-workspace .buyer-grouped-nav section > div > button.active,
+.ys-workspace .seller-premium-nav section > div > button.active,
+.ys-workspace .admin-nav-item > button.active {
+  color: #2359df !important;
+  background: #edf3ff !important;
+  font-weight: 650 !important;
+}
+.ys-workspace .buyer-grouped-nav button svg,
+.ys-workspace .seller-premium-nav button svg,
+.ys-workspace .admin-nav-item button svg {
+  width: 17px !important;
+  height: 17px !important;
+  flex-shrink: 0;
+  color: inherit !important;
+}
+.ys-workspace .buyer-grouped-nav button > b,
+.ys-workspace .seller-premium-nav button > b,
+.ys-workspace .admin-nav-item button > b {
+  margin-left: auto !important;
+  background: #e8f0ff !important;
+  color: #315aaa !important;
+  font-size: 10px !important;
+}
+.ys-workspace .brand-lockup,
+.ys-workspace .admin-brand-row,
+.ys-workspace .seller-sidebar-head {
+  background: none !important;
+  border: 0 !important;
+  padding: 0 5px 15px !important;
+  color: #163559 !important;
+}
+.ys-workspace .brand-lockup strong,
+.ys-workspace .seller-sidebar-head strong,
+.ys-workspace .admin-brand-row strong {
+  color: #173351 !important;
+  font-size: 21px !important;
+  letter-spacing: -0.04em !important;
+}
+.ys-workspace .brand-lockup small,
+.ys-workspace .seller-sidebar-head small,
+.ys-workspace .admin-brand-row small {
+  color: #8191a8 !important;
+  font-size: 10px !important;
+  letter-spacing: 0.1em !important;
+}
+.ys-workspace .sidebar-user {
+  padding: 12px 7px !important;
+  background: #f5f8fc !important;
+  border: 1px solid #e6edf5 !important;
+  border-radius: 9px !important;
+}
+.ys-workspace .sidebar-user strong {
+  color: #2e4769 !important;
+  font-size: 12px !important;
+}
+.ys-workspace .sidebar-user small {
+  color: #7a8ca6 !important;
+  font-size: 11px !important;
+}
+.ys-workspace .sidebar-user .role-pill-small {
+  display: none !important;
+}
+.ys-workspace .seller-sidebar-balance {
+  background: #f1f6ff !important;
+  color: #26559b !important;
+  border: 1px solid #dfe9f9 !important;
+  border-radius: 9px !important;
+  padding: 15px !important;
+}
+.ys-workspace .seller-sidebar-balance strong {
+  font-size: 23px !important;
+  color: #24518d !important;
+}
+.ys-panel-tools {
+  display: grid;
+  gap: 8px;
+  padding: 20px 4px 15px;
+}
+.ys-panel-tools > span {
+  font-size: 11px;
+  color: #6d819d;
+  font-weight: 600;
+}
+.ys-panel-tools select {
+  width: 100%;
+  padding: 10px 7px;
+  border: 1px solid #dfe6f0;
+  border-radius: 6px;
+  font-size: 12px;
+  color: #426082;
+  background: #f9fbff;
+}
+.ys-workspace .ops-topbar,
+.ys-workspace .seller-pro-topbar,
+.ys-workspace .buyer-topbar,
+.ys-workspace .dashboard-command-bar {
+  min-height: 80px !important;
+  background: transparent !important;
+  border: 0 !important;
+  border-bottom: 1px solid #dfe6f0 !important;
+  box-shadow: none !important;
+  padding: 16px 0 !important;
+  margin-bottom: 24px !important;
+  flex-wrap: wrap !important;
+  gap: 14px !important;
+}
+.ys-workspace h1 {
+  color: #163353 !important;
+  font-size: 29px !important;
+  font-weight: 650 !important;
+  line-height: 1.25 !important;
+  letter-spacing: -0.035em !important;
+}
+.ys-workspace h2 {
+  font-size: 20px !important;
+  font-weight: 650 !important;
+  line-height: 1.35 !important;
+  color: #254568 !important;
+}
+.ys-workspace h3 {
+  font-size: 16px !important;
+  line-height: 1.4 !important;
+}
+.ys-workspace
+  :is(
+    .ops-card,
+    .buyer-panel,
+    .seller-panel,
+    .dashboard-card,
+    .seller-stat-card,
+    .buyer-stat-card
+  ) {
+  background: #fff !important;
+  border: 1px solid #e2e9f2 !important;
+  border-radius: 12px !important;
+  box-shadow: none !important;
+}
+.ys-workspace :is(.ops-message, .buyer-message, .seller-message) {
+  border-radius: 8px !important;
+  font-size: 14px !important;
+  line-height: 1.6 !important;
+}
+.ys-workspace
+  :is(.primary-button, .seller-create-button, .buyer-primary-button) {
+  border: 0 !important;
+  border-radius: 7px !important;
+  background: #2359df !important;
+  color: #fff !important;
+  font-size: 13px !important;
+  box-shadow: none !important;
+}
+.ys-workspace
+  :is(
+    input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
+    select,
+    textarea
+  ) {
+  border-radius: 7px !important;
+  font-size: 14px !important;
+}
+.ys-workspace .admin-system-pill {
+  display: none !important;
+}
+.ys-workspace .admin-menu-search {
+  display: none !important;
+}
+.ys-workspace
+  :is(.admin-sidebar-footer, .sidebar-footer, .seller-pro-sidebar-footer) {
+  margin-top: auto !important;
+  padding-top: 20px !important;
+  border-top: 1px solid #e4eaf3 !important;
+  color: #647e9d !important;
+}
+.ys-workspace .panel-home-link,
+.ys-workspace .panel-topbar-signout {
+  font-size: 12px !important;
+}
+.ys-workspace
+  :is(.ops-table-wrap, .table-scroll, .table-responsive, .seller-table-wrap) {
+  max-width: 100% !important;
+  overflow-x: auto !important;
+}
+.ys-workspace table {
+  font-size: 13px !important;
+}
+.ys-workspace th {
+  color: #617b9b !important;
+  font-size: 11px !important;
+  background: #f4f7fc !important;
+  padding: 13px !important;
+}
+.ys-workspace td {
+  padding: 14px 13px !important;
+  border-color: #e8eef6 !important;
+}
+.ys-catalog-repair {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  margin: 20px 0;
+  padding: 20px;
+  background: #eef4ff;
+  border: 1px solid #d9e5fc;
+  border-radius: 10px;
+}
+.ys-catalog-repair strong {
+  font-size: 14px;
+}
+.ys-catalog-repair p {
+  font-size: 13px;
+  color: #6b7e98;
+  line-height: 1.6;
+  margin: 7px 0 0;
+}
+main.ys-workspace.sidebar-collapsed {
+  grid-template-columns: 80px minmax(0, 1fr) !important;
+}
+main.ys-workspace.sidebar-collapsed > .ops-sidebar {
+  width: 80px !important;
+  padding: 20px 10px !important;
+}
+.ys-workspace.sidebar-collapsed .ys-panel-tools,
+.ys-workspace.sidebar-collapsed .ys-workspace-nav-label {
+  display: none !important;
+}
+.ys-store-page .professional-store-hero {
+  background-image: none !important;
+  padding: 0 !important;
+  display: block !important;
+  max-width: 1320px !important;
+  width: calc(100% - 48px) !important;
+  margin: 28px auto !important;
+  border: 1px solid #e0e8f3 !important;
+  border-radius: 14px !important;
+  overflow: hidden !important;
+  background: #fff !important;
+  color: #1c3555 !important;
+}
+.ys-store-banner-image {
+  display: block;
+  width: 100%;
+  height: 230px;
+  object-fit: cover;
+  object-position: center;
+}
+.ys-store-profile-row {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  padding: 25px 30px;
+}
+.ys-store-profile-row > div:nth-child(2) {
+  flex: 1;
+  min-width: 0;
+}
+.ys-store-page .professional-store-hero h1 {
+  color: #19385d !important;
+  font-size: 30px !important;
+}
+.ys-store-page .professional-store-hero p,
+.ys-store-page .store-facts {
+  color: #627b9b !important;
+}
+.ys-store-page .store-logo {
+  background: #fff !important;
+  width: 85px !important;
+  height: 85px !important;
+  flex: 0 0 85px !important;
+  border: 1px solid #e1e8f1 !important;
+}
+@media (max-width: 1200px) {
+  .ys-catalog-product-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .ys-header-main {
+    gap: 18px;
+  }
+  .ys-header-shortcuts {
+    gap: 10px 15px;
+  }
+  .ys-header-shortcuts a {
+    font-size: 12px;
+  }
+  .ys-workspace .seller-global-search {
+    max-width: 280px !important;
+  }
+}
+@media (max-width: 1024px) {
+  main.ys-workspace,
+  main.ys-workspace.sidebar-collapsed {
+    display: block !important;
+  }
+  main.ys-workspace > .ops-sidebar,
+  main.ys-workspace > .dashboard-sidebar,
+  main.ys-workspace > .seller-pro-sidebar {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 260px !important;
+    transform: translateX(-110%) !important;
+    visibility: hidden;
+    transition: transform 0.2s;
+  }
+  main.ys-workspace > .ops-sidebar.mobile-open,
+  main.ys-workspace > .dashboard-sidebar.open,
+  main.ys-workspace > .seller-pro-sidebar.open {
+    transform: translateX(0) !important;
+    visibility: visible;
+  }
+  .ys-workspace
+    :is(
+      .seller-mobile-menu,
+      .buyer-mobile-menu,
+      .admin-mobile-menu,
+      .buyer-sidebar-close
+    ) {
+    display: inline-flex !important;
+  }
+  main.ys-workspace > .ops-main,
+  main.ys-workspace > .dashboard-main,
+  main.ys-workspace > .seller-pro-main {
+    padding: 0 20px 28px !important;
+  }
+  .ys-header-main {
+    flex-wrap: wrap;
+    gap: 15px;
+  }
+  .ys-header-search {
+    order: 3;
+    flex-basis: 100%;
+  }
+  .ys-header-actions {
+    margin-left: auto;
+  }
+  .ys-header-shortcuts {
+    gap: 10px 16px;
+  }
+  .ys-header-stores {
+    display: none;
+  }
+  .ys-header-category-menu > nav {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .ys-catalog-layout {
+    grid-template-columns: 170px minmax(0, 1fr);
+    gap: 16px;
+  }
+  .ys-catalog-product-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 700px) {
+  .ys-header-announcement {
+    padding: 8px 15px;
+    font-size: 10px;
+  }
+  .ys-header-announcement a {
+    display: none;
+  }
+  .ys-header-main {
+    width: calc(100% - 30px);
+    padding: 16px 0;
+  }
+  .ys-header-logo strong {
+    font-size: 25px;
+  }
+  .ys-header-logo img {
+    width: 37px;
+    height: 37px;
+  }
+  .ys-header-actions {
+    gap: 13px;
+  }
+  .ys-header-actions > a > span {
+    display: none;
+  }
+  .ys-header-actions > .locale-switcher {
+    max-width: 65px;
+  }
+  .ys-header-mobile-menu {
+    display: block;
+  }
+  .ys-header-mobile-menu nav {
+    position: absolute;
+    left: 15px;
+    right: 15px;
+    top: 70px;
+    display: grid;
+    padding: 15px;
+    background: #fff;
+    box-shadow: 0 15px 30px #142c5029;
+    border: 1px solid #e2e9f4;
+    border-radius: 9px;
+    z-index: 5;
+  }
+  .ys-header-mobile-menu nav a {
+    padding: 11px;
+    font-size: 14px;
+  }
+  .ys-header-navigation {
+    width: calc(100% - 30px);
+    display: block;
+    padding: 12px 0;
+  }
+  .ys-header-category-menu summary {
+    font-size: 13px;
+  }
+  .ys-header-shortcuts {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+    padding: 14px 0 0;
+  }
+  .ys-header-shortcuts a {
+    font-size: 12px;
+    min-width: 0;
+  }
+  .ys-header-shortcuts a span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .ys-header-category-menu > nav {
+    grid-template-columns: 1fr 1fr;
+    padding: 12px;
+    gap: 5px;
+  }
+  .ys-header-category-menu nav > a {
+    font-size: 12px;
+    padding: 6px;
+  }
+  .ys-header-shortcuts img {
+    width: 19px;
+    height: 19px;
+  }
+  .ys-catalog-browser {
+    width: calc(100% - 28px);
+    margin: 25px auto;
+  }
+  .ys-catalog-heading {
+    align-items: flex-start;
+  }
+  .ys-catalog-heading h1 {
+    font-size: 27px;
+  }
+  .ys-catalog-heading > span {
+    font-size: 11px;
+    white-space: nowrap;
+  }
+  .ys-catalog-layout {
+    grid-template-columns: 1fr;
+  }
+  .ys-catalog-categories {
+    display: none;
+  }
+  .ys-catalog-controls {
+    gap: 9px;
+  }
+  .ys-catalog-search {
+    flex-basis: 100%;
+    min-width: 0 !important;
+  }
+  .ys-catalog-controls > label:not(.ys-catalog-search):not(.ys-stock-filter) {
+    width: calc(50% - 5px);
+  }
+  .ys-catalog-controls select {
+    width: 100%;
+    max-width: none;
+    font-size: 12px;
+  }
+  .ys-catalog-product-grid {
+    gap: 10px;
+  }
+  .ys-catalog-product-grid .g2-product-copy {
+    padding: 11px !important;
+  }
+  .ys-catalog-product-grid .g2-product-actions {
+    grid-template-columns: 1fr !important;
+  }
+  .ys-pagination {
+    justify-content: center;
+    text-align: center;
+  }
+  .ys-pagination p {
+    width: 100%;
+  }
+  .ys-pagination button {
+    min-width: 34px;
+    min-height: 38px;
+  }
+  .ys-pagination nav {
+    gap: 4px;
+  }
+  body
+    .ys-ref-product-card.g2-product-card
+    .ys-ref-product-media.g2-product-media {
+    height: 145px !important;
+    min-height: 145px !important;
+  }
+  body .ys-ref-product-card.g2-product-card .g2-product-image-link {
+    min-height: 145px !important;
+  }
+  .ys-catalog-product-grid .ys-ref-product-title {
+    font-size: 13px !important;
+  }
+  body .ys-reliable-artwork img {
+    width: 70px !important;
+    height: 70px !important;
+  }
+  main.ys-workspace > .ops-main,
+  main.ys-workspace > .dashboard-main,
+  main.ys-workspace > .seller-pro-main {
+    padding: 0 14px 25px !important;
+  }
+  .ys-workspace h1 {
+    font-size: 24px !important;
+  }
+  .ys-workspace h2 {
+    font-size: 19px !important;
+  }
+  .ys-workspace .seller-global-search {
+    display: none !important;
+  }
+  .ys-catalog-repair {
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 16px;
+  }
+  .ys-store-page .professional-store-hero {
+    width: calc(100% - 28px) !important;
+    margin: 20px auto !important;
+  }
+  .ys-store-banner-image {
+    height: 145px;
+  }
+  .ys-store-profile-row {
+    padding: 20px;
+    gap: 14px;
+    flex-wrap: wrap;
+  }
+  .ys-store-page .store-logo {
+    width: 62px !important;
+    height: 62px !important;
+    flex-basis: 62px !important;
+  }
+  .ys-store-page .professional-store-hero h1 {
+    font-size: 23px !important;
+  }
+  .ys-store-profile-row > button {
+    width: 100%;
+  }
+}
+@media (max-width: 360px) {
+  .ys-catalog-product-grid {
+    grid-template-columns: 1fr;
+  }
+  .ys-header-actions {
+    gap: 8px;
+  }
+  .ys-header-logo strong span {
+    display: none;
+  }
+  .ys-header-shortcuts {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ys-workspace * {
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
+}

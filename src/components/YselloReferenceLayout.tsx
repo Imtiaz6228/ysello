@@ -1,3 +1,5 @@
+import { UiText } from "../i18n/UiText";
+import { ProductArtwork } from "./ProductArtwork";
 import {
   BadgeCheck,
   BarChart3,
@@ -65,7 +67,9 @@ export function YselloReferenceHeader() {
         <span>•</span>
         <span>Verified sellers</span>
         <span>•</span>
-        <span>Buyer protection</span>
+        <span>
+          <UiText value="Buyer protection" />
+        </span>
       </div>
       <div className="ys-ref-nav">
         <Link className="ys-ref-wordmark" to="/" aria-label="Ysello home">
@@ -74,7 +78,9 @@ export function YselloReferenceHeader() {
         </Link>
         <nav className="ys-ref-desktop-links" aria-label="Primary navigation">
           <Link to="/catalog">Marketplace</Link>
-          <Link to="/#categories">Categories</Link>
+          <Link to="/#categories">
+            <UiText value="Categories" />
+          </Link>
           <Link to="/#how-it-works">How It Works</Link>
           <Link to="/seller/apply">Become a Seller</Link>
         </nav>
@@ -136,7 +142,9 @@ export function YselloReferenceHeader() {
             aria-label="Search marketplace"
             placeholder="Search products"
           />
-          <button type="submit">Search</button>
+          <button type="submit">
+            <UiText value="Search" />
+          </button>
         </form>
       ) : null}
       {menuOpen ? (
@@ -163,12 +171,15 @@ export function YselloReferenceHeader() {
             </div>
             <Link to="/">Home</Link>
             <Link to="/catalog">Marketplace</Link>
-            <Link to="/#categories">Categories</Link>
+            <Link to="/#categories">
+              <UiText value="Categories" />
+            </Link>
             <Link to="/#how-it-works">How It Works</Link>
             <Link to="/seller/apply">Become a Seller</Link>
             <Link to="/buyer-protection">Buyer Protection</Link>
             <Link to="/cart">
-              Cart <span>{count}</span>
+              <UiText value="Cart" />
+              <span>{count}</span>
             </Link>
             <Link
               className="ys-ref-primary-button"
@@ -215,7 +226,9 @@ export function YselloReferenceFooter() {
         <div>
           <strong>Marketplace</strong>
           <Link to="/catalog">All Products</Link>
-          <Link to="/#categories">Categories</Link>
+          <Link to="/#categories">
+            <UiText value="Categories" />
+          </Link>
           <Link to="/#products">Trending Now</Link>
           <Link to="/#sellers">Top Sellers</Link>
         </div>
@@ -227,7 +240,9 @@ export function YselloReferenceFooter() {
           <Link to="/support">Seller Support</Link>
         </div>
         <div>
-          <strong>Support</strong>
+          <strong>
+            <UiText value="Support" />
+          </strong>
           <Link to="/support">Help Center</Link>
           <Link to="/buyer-protection">Buyer Protection</Link>
           <Link to="/contact">Contact Us</Link>
@@ -236,7 +251,9 @@ export function YselloReferenceFooter() {
         <div>
           <strong>Company</strong>
           <Link to="/about">About Us</Link>
-          <Link to="/blog">Guides</Link>
+          <Link to="/blog">
+            <UiText value="Guides" />
+          </Link>
           <Link to="/privacy">Privacy Policy</Link>
           <Link to="/copyright">Copyright</Link>
         </div>
@@ -338,33 +355,7 @@ export function YselloReferenceProductCard({
           to={productPath(product)}
           aria-label={`View ${product.title}`}
         >
-          {supplierFulfilled ? (
-            brandSlug ? (
-              <MarketplaceBrandArtwork
-                brandSlug={brandSlug}
-                className="ys-product-native-brand"
-              />
-            ) : (
-              <YselloMarketplaceArtwork
-                label={categoryLabel}
-                className="ys-product-native-brand"
-              />
-            )
-          ) : product.imageUrl ? (
-            <img
-              src={product.imageUrl}
-              alt={product.title}
-              loading="lazy"
-              decoding="async"
-              width="640"
-              height="480"
-            />
-          ) : (
-            <span className="ys-ref-product-symbol" aria-hidden="true">
-              <i>{product.icon || <ProductIcon />}</i>
-              <small>{categoryLabel}</small>
-            </span>
-          )}
+          <ProductArtwork product={product} />
         </Link>
         <button
           type="button"
@@ -423,7 +414,9 @@ export function YselloReferenceProductCard({
           <span>{product.delivery || "Delivery shown at checkout"}</span>
         </div>
         <div className="ys-ref-product-card-actions g2-product-actions">
-          <Link to={productPath(product)}>View details</Link>
+          <Link to={productPath(product)}>
+            <UiText value="View details" />
+          </Link>
           {onBuy ? (
             <button
               type="button"

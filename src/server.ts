@@ -1,3 +1,4 @@
+import { startCatalogTranslations } from "./services/catalog-translation.service.js";
 import { app } from "./api-app.js";
 import { env } from "./config/env.js";
 import { YSELLO_RELEASE_ID, railwayReleaseMetadata } from "./config/release.js";
@@ -6,18 +7,26 @@ import { ensureDefaultMarketplaceCategories } from "./services/category.service.
 import {
   processPendingDarkShoppingFulfillments,
   syncDarkShoppingListings,
+  repairDarkShoppingCatalog,
 } from "./services/dark-shopping-resale.service.js";
 
 const server = await (async () => {
   await ensureDefaultMarketplaceCategories();
+  const repair = await repairDarkShoppingCatalog();
+  console.log("Ysello catalog classification", repair);
   return app.listen(env.PORT, () => {
-    console.log(`Ysello API ${YSELLO_RELEASE_ID} listening on port ${env.PORT}`, railwayReleaseMetadata());
+    console.log(
+      `Ysello API ${YSELLO_RELEASE_ID} listening on port ${env.PORT}`,
+      railwayReleaseMetadata(),
+    );
   });
 })().catch(async (error) => {
   console.error("API startup failed", error);
   await prisma.$disconnect();
   process.exit(1);
 });
+
+startCatalogTranslations();
 
 let supplierFulfillmentRunning = false;
 const supplierFulfillmentTimer = env.DARK_SHOPPING_API_KEY

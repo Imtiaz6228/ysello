@@ -1,3 +1,5 @@
+import { UiText } from "../i18n/UiText";
+import { CatalogBrowser } from "../components/CatalogBrowser";
 import {
   ArrowRight,
   BadgeCheck,
@@ -44,9 +46,11 @@ function TopStoreCard({ store }: { store: FeaturedStore }) {
         to={`/stores/${store.slug}`}
         aria-label={`Visit ${store.name}`}
         style={{
-          backgroundImage: store.bannerUrl
-            ? `linear-gradient(135deg, rgba(7, 12, 28, .08), rgba(7, 12, 28, .48)), url(${store.bannerUrl})`
-            : undefined,
+          backgroundImage:
+            store.bannerUrl ||
+            (isOfficial ? "/ysello-official-banner.svg" : null)
+              ? `linear-gradient(135deg, rgba(7, 12, 28, .08), rgba(7, 12, 28, .48)), url(${store.bannerUrl || "/ysello-official-banner.svg"})`
+              : undefined,
         }}
       >
         <strong className="ys-store-cover-name">{store.name}</strong>
@@ -157,15 +161,18 @@ export function MarketplaceHomePage() {
       <div className="ys-home-container">
         <section className="ys-company-hero" aria-labelledby="ys-home-title">
           <div className="ys-company-hero-copy">
-            <span className="ys-eyebrow">THE DIGITAL MARKETPLACE</span>
+            <span className="ys-eyebrow">
+              <UiText value="THE DIGITAL MARKETPLACE" />
+            </span>
             <h1 id="ys-home-title">
-              Your next account.
+              <UiText value="Your next account." />
               <br />
-              <em>Your next possibility.</em>
+              <em>
+                <UiText value="Your next possibility." />
+              </em>
             </h1>
             <p>
-              Social accounts, everyday subscriptions and digital essentials.
-              Find your platform. Compare the details. Make it yours.
+              <UiText value="Social accounts, everyday subscriptions and digital essentials. Find your platform. Compare the details. Make it yours." />
             </p>
             <div className="ys-hero-actions">
               <Link className="ys-primary-link" to="/catalog">
@@ -209,7 +216,9 @@ export function MarketplaceHomePage() {
                           compact
                         />
                       )}
-                      <span>{category.name}</span>
+                      <span>
+                        <UiText value={category.name} />
+                      </span>
                       <ArrowRight />
                     </Link>
                   );
@@ -259,10 +268,13 @@ export function MarketplaceHomePage() {
           <header className="ys-section-heading">
             <div>
               <span className="ys-eyebrow">FIND YOUR PLATFORM</span>
-              <h2>Shop by category</h2>
+              <h2>
+                <UiText value="Shop by category" />
+              </h2>
             </div>
             <Link to="/catalog">
-              All products <ArrowRight />
+              <UiText value="All products" />
+              <ArrowRight />
             </Link>
           </header>
           <div className="ys-company-categories">
@@ -282,7 +294,9 @@ export function MarketplaceHomePage() {
                     <YselloMarketplaceArtwork label={category.name} compact />
                   )}
                   <span>
-                    <strong>{category.name}</strong>
+                    <strong>
+                      <UiText value={category.name} />
+                    </strong>
                     <small>{category.productCount ?? 0} products</small>
                   </span>
                   <ArrowRight />
@@ -290,150 +304,10 @@ export function MarketplaceHomePage() {
               );
             })}
           </div>
-          <div className="ys-department-links">
-            {marketplaceTaxonomy.map((category) => (
-              <Link
-                key={category.slug}
-                to={categoryPath(category.slug, categories)}
-              >
-                <MarketplaceCategoryIcon slug={category.slug} />
-                {category.name}
-                <ArrowRight />
-              </Link>
-            ))}
-          </div>
         </section>
 
         <section className="ys-company-section" id="account-listings">
-          <header className="ys-section-heading">
-            <div>
-              <span className="ys-eyebrow">THE ACCOUNT COLLECTION</span>
-              <h2>Choose your next account</h2>
-              <p>Stock, price and delivery details. All in one place.</p>
-            </div>
-            <Link
-              to={
-                categoryFilter === "all"
-                  ? "/catalog"
-                  : categoryPath(categoryFilter, categories)
-              }
-            >
-              View full catalog <ArrowRight />
-            </Link>
-          </header>
-          <div className="ys-listing-toolbar">
-            <span>
-              <Grid2X2 /> Browse the collection
-            </span>
-            <label>
-              <span className="sr-only">Filter account category</span>
-              <select
-                value={categoryFilter}
-                onChange={(event) => setCategoryFilter(event.target.value)}
-              >
-                <option value="all">All account categories</option>
-                {accountCategories.map((category) => (
-                  <option key={category.slug} value={category.slug}>
-                    {category.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-          </div>
-          <div className="ys-account-list" aria-busy={loading}>
-            {accounts.map((product) => {
-              const brand = detectMarketplaceBrandSlug(
-                product.facts?.platform,
-                product.category,
-                product.title,
-              );
-              const canBuy =
-                (product.stockCount ?? 0) >= (product.minimumOrder ?? 1);
-              return (
-                <article className="ys-account-row" key={product.id}>
-                  <Link
-                    className="ys-account-row-product"
-                    to={productPath(product)}
-                  >
-                    {brand ? (
-                      <MarketplaceBrandArtwork brandSlug={brand} compact />
-                    ) : (
-                      <YselloMarketplaceArtwork
-                        label={product.category}
-                        compact
-                      />
-                    )}
-                    <span>
-                      <small>{product.category}</small>
-                      <strong>{product.title}</strong>
-                      <span className="ys-account-row-terms">
-                        {product.warranty || "See listing for delivery terms"}
-                      </span>
-                    </span>
-                  </Link>
-                  <Link
-                    className="ys-account-row-seller"
-                    to={`/stores/${product.sellerSlug}`}
-                  >
-                    <Store />
-                    <span>
-                      {product.seller}
-                      {product.isOfficial ? (
-                        <small>Ysello Official</small>
-                      ) : null}
-                    </span>
-                  </Link>
-                  <div
-                    className={`ys-account-row-stock ${canBuy ? "" : "is-unavailable"}`}
-                  >
-                    <strong>
-                      {canBuy
-                        ? (product.stockCount ?? 0).toLocaleString()
-                        : "Sold out"}
-                    </strong>
-                    <small>{canBuy ? "in stock" : "Check back soon"}</small>
-                  </div>
-                  <div className="ys-account-row-price">
-                    <strong>{formatProductMoney(product)}</strong>
-                    <small>
-                      per item
-                      {(product.minimumOrder ?? 1) > 1
-                        ? ` · min. ${product.minimumOrder}`
-                        : ""}
-                    </small>
-                  </div>
-                  <button
-                    type="button"
-                    disabled={!canBuy}
-                    onClick={() => buy(product)}
-                  >
-                    {canBuy ? "Buy now" : "Sold out"}
-                    <ArrowRight />
-                  </button>
-                </article>
-              );
-            })}
-            {!accounts.length ? (
-              <div className="ys-catalog-empty">
-                <Search />
-                <h3>
-                  {loading
-                    ? "Loading the account collection…"
-                    : error
-                      ? "The catalog is temporarily unavailable"
-                      : "No accounts in this selection yet"}
-                </h3>
-                <p>
-                  {error
-                    ? "Please reload the page or try the full catalog again shortly."
-                    : "Explore the full catalog for current products and availability."}
-                </p>
-                <Link to="/catalog">
-                  Browse marketplace <ArrowRight />
-                </Link>
-              </div>
-            ) : null}
-          </div>
+          <CatalogBrowser embedded />
         </section>
 
         <section
@@ -443,9 +317,9 @@ export function MarketplaceHomePage() {
           <Link to="/catalog?stock=in_stock" className="ys-collection-banner">
             <span className="ys-eyebrow">READY WHEN YOU ARE</span>
             <h2>
-              Less searching.
+              <UiText value="Less searching." />
               <br />
-              More possibilities.
+              <UiText value="More possibilities." />
             </h2>
             <p>Explore digital products available today.</p>
             <span>
@@ -453,14 +327,14 @@ export function MarketplaceHomePage() {
             </span>
           </Link>
           <Link
-            to="/category/subscriptions"
+            to="/catalog"
             className="ys-collection-banner ys-collection-banner-light"
           >
             <span className="ys-eyebrow">EVERYDAY DIGITAL ESSENTIALS</span>
             <h2>
-              Make more of
+              <UiText value="Make more of" />
               <br />
-              your digital day.
+              <UiText value="your digital day." />
             </h2>
             <p>Subscriptions and software for work and downtime.</p>
             <span>
@@ -474,7 +348,9 @@ export function MarketplaceHomePage() {
             <header className="ys-section-heading">
               <div>
                 <span className="ys-eyebrow">EXPLORE THE MARKETPLACE</span>
-                <h2>Fresh finds on Ysello</h2>
+                <h2>
+                  <UiText value="Fresh finds on Ysello" />
+                </h2>
               </div>
               <Link to="/catalog?sort=newest">
                 View all products <ArrowRight />
@@ -496,7 +372,9 @@ export function MarketplaceHomePage() {
           <header className="ys-section-heading">
             <div>
               <span className="ys-eyebrow">THE PEOPLE BEHIND THE PRODUCTS</span>
-              <h2>Discover our stores</h2>
+              <h2>
+                <UiText value="Discover our stores" />
+              </h2>
               <p>Explore each seller’s products, profile and policies.</p>
             </div>
             <Link to="/seller/apply">
@@ -511,7 +389,9 @@ export function MarketplaceHomePage() {
           {!stores.length ? (
             <div className="ys-catalog-empty">
               <Store />
-              <h3>Storefronts are coming soon</h3>
+              <h3>
+                <UiText value="Storefronts are coming soon" />
+              </h3>
               <p>Browse the marketplace for the latest available listings.</p>
               <Link to="/catalog">
                 Explore products <ArrowRight />
@@ -523,7 +403,9 @@ export function MarketplaceHomePage() {
         <section className="ys-shopping-guide" id="how-it-works">
           <div>
             <span className="ys-eyebrow">FROM DISCOVERY TO DELIVERY</span>
-            <h2>A straightforward way to shop.</h2>
+            <h2>
+              <UiText value="A straightforward way to shop." />
+            </h2>
             <Link to="/buyer-protection">
               About buyer protection <ArrowRight />
             </Link>
@@ -564,7 +446,9 @@ export function MarketplaceHomePage() {
         <section className="ys-company-section ys-home-faq">
           <header className="ys-section-heading">
             <div>
-              <h2>A few things before you buy</h2>
+              <h2>
+                <UiText value="A few things before you buy" />
+              </h2>
             </div>
             <Link to="/support">
               Visit help center <ArrowRight />
@@ -597,7 +481,9 @@ export function MarketplaceHomePage() {
         <section className="ys-seller-invitation">
           <div>
             <span className="ys-eyebrow">GROW WITH YSELLO</span>
-            <h2>Your products. Your storefront.</h2>
+            <h2>
+              <UiText value="Your products. Your storefront." />
+            </h2>
             <p>
               Build your store with a custom banner, logo and a catalog of your
               own.

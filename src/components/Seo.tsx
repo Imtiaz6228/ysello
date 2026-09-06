@@ -1,3 +1,5 @@
+import { useLocation } from "react-router-dom";
+import { uiText } from "../i18n/marketplaceCopy";
 import { useEffect, useMemo } from "react";
 import { useLocale } from "../i18n/LocaleContext";
 
@@ -54,7 +56,8 @@ function canonicalPathname(value: string) {
     const url = new URL(value, configuredOrigin);
     const pathname =
       url.pathname === "/" ? "/" : url.pathname.replace(/\/+$/, "");
-    return `${url.origin}${pathname}`;
+    const page = new URLSearchParams(window.location.search).get("page");
+    return `${url.origin}${pathname}${page && Number(page) > 1 ? `?page=${Math.floor(Number(page))}` : ""}`;
   } catch {
     const pathname = value.split(/[?#]/, 1)[0] || "/";
     return absoluteUrl(
@@ -74,17 +77,33 @@ export function Seo({
   schema,
 }: SeoProps) {
   const { locale } = useLocale();
+  const location = useLocation();
   const schemaText = useMemo(
     () => (schema ? JSON.stringify(schema) : ""),
     [schema],
   );
 
   useEffect(() => {
+    title = uiText(title, locale);
+    description = uiText(description, locale);
+    if (location.pathname === "/" && locale !== "en") {
+      title = locale.startsWith("zh")
+        ? "Ysello 数字商城 | 社交账号与数字商品"
+        : "Ysello — цифровые товары и социальные аккаунты";
+      description = locale.startsWith("zh")
+        ? "在 Ysello 选购数字商品与社交账号。比较价格、库存和交付条款，探索专业卖家的店铺。"
+        : "Цифровые товары и социальные аккаунты на Ysello. Сравнивайте цены, наличие и условия доставки.";
+    }
     const pageTitle = title.toLowerCase().includes("ysello")
       ? title
       : `${title} · Ysello`;
     const canonicalBase = canonicalPathname(canonicalPath);
     const canonical = new URL(canonicalBase);
+    if (location.pathname === "/catalog") {
+      const category = new URLSearchParams(location.search).get("category");
+      if (category && category !== "all")
+        canonical.searchParams.set("category", category);
+    }
     if (locale === "zh-CN" || locale === "ru")
       canonical.searchParams.set("lang", locale);
     const canonicalUrl = canonical.toString();
@@ -118,7 +137,9 @@ export function Seo({
       'meta[property="og:locale"]',
       "property",
       "og:locale",
-      locale.replace("-", "_") || "en_US",
+      (
+        { en: "en_US", "zh-CN": "zh_CN", ru: "ru_RU" } as Record<string, string>
+      )[locale] || locale.replace("-", "_"),
     );
     setMeta('meta[property="og:title"]', "property", "og:title", pageTitle);
     setMeta(
@@ -184,7 +205,8 @@ export function Seo({
       alternate.rel = "alternate";
       alternate.hreflang = hreflang;
       alternate.dataset.yselloHreflang = "true";
-      const href = new URL(canonicalBase);
+      const href = new URL(canonical);
+      href.searchParams.delete("lang");
       if (lang) href.searchParams.set("lang", lang);
       alternate.href = href.toString();
       document.head.appendChild(alternate);
@@ -207,6 +229,8 @@ export function Seo({
     };
   }, [
     canonicalPath,
+    location.pathname,
+    location.search,
     description,
     image,
     imageAlt,
