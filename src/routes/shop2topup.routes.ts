@@ -24,6 +24,9 @@ shop2TopupRouter.use((_req, res, next) => {
 
 const positiveId = z.coerce.number().int().positive();
 
+const uuid = z.string().uuid();
+const isoDate = z.string().datetime({ offset: true });
+
 shop2TopupRouter.get(
   "/resale",
   asyncHandler(async (_req, res) => {
@@ -104,6 +107,36 @@ shop2TopupRouter.get(
   asyncHandler(async (req, res) => {
     const categoryId = positiveId.parse(req.params.categoryId);
     res.json({ requirements: await shop2TopupClient().getRequirements(categoryId) });
+  }),
+);
+
+shop2TopupRouter.get(
+  "/orders/:orderId",
+  asyncHandler(async (req, res) => {
+    const orderId = uuid.parse(req.params.orderId);
+    res.json({ order: await shop2TopupClient().getOrder(orderId) });
+  }),
+);
+
+shop2TopupRouter.post(
+  "/orders/batch",
+  asyncHandler(async (req, res) => {
+    const input = z.object({ orderIds: z.array(uuid).min(1).max(50) }).parse(req.body);
+    res.json(await shop2TopupClient().getOrdersBatch(input.orderIds));
+  }),
+);
+
+shop2TopupRouter.get(
+  "/orders",
+  asyncHandler(async (req, res) => {
+    const input = z.object({
+      page: z.coerce.number().int().min(1).optional(),
+      limit: z.coerce.number().int().min(1).max(100).optional(),
+      status: z.enum(["pending", "completed", "refunded", "partial"]).optional(),
+      createdAfter: isoDate.optional(),
+      createdBefore: isoDate.optional(),
+    }).parse(req.query);
+    res.json(await shop2TopupClient().listOrders(input));
   }),
 );
 

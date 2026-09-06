@@ -285,4 +285,37 @@ export class Shop2TopupClient {
     );
     return result.order;
   }
+
+  async getOrdersBatch(orderIds: string[]) {
+    const result = await this.request<{
+      success: true;
+      orders: Shop2TopupOrder[];
+      not_found?: string[];
+    }>("/orders/batch", {
+      method: "POST",
+      body: JSON.stringify({ order_ids: orderIds }),
+    });
+    return { orders: result.orders ?? [], notFound: result.not_found ?? [] };
+  }
+
+  async listOrders(input: {
+    page?: number;
+    limit?: number;
+    status?: "pending" | "completed" | "refunded" | "partial";
+    createdAfter?: string;
+    createdBefore?: string;
+  } = {}) {
+    const params = new URLSearchParams();
+    if (input.page) params.set("page", String(input.page));
+    if (input.limit) params.set("limit", String(input.limit));
+    if (input.status) params.set("status", input.status);
+    if (input.createdAfter) params.set("created_after", input.createdAfter);
+    if (input.createdBefore) params.set("created_before", input.createdBefore);
+    const suffix = params.size ? `?${params.toString()}` : "";
+    return this.request<{
+      success: true;
+      orders: Shop2TopupOrder[];
+      pagination: { page: number; limit: number; total: number; total_pages: number };
+    }>(`/orders${suffix}`);
+  }
 }
