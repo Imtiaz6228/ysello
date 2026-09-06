@@ -307,6 +307,7 @@ const buyerMenuGroups: Array<{
     items: [
       { tab: "overview", label: "Overview", icon: Home },
       { tab: "orders", label: "Orders & delivery", icon: ShoppingBag },
+      { tab: "downloads", label: "Downloads & keys", icon: Download },
       { tab: "wallet", label: "Wallet & top up", icon: Wallet },
     ],
   },
@@ -336,6 +337,29 @@ function buyerGroupLabel(tab: Tab) {
   );
 }
 
+
+const buyerLegacyTabMap: Partial<Record<Tab, Tab>> = {
+  "active-orders": "orders",
+  "completed-orders": "orders",
+  "pending-orders": "orders",
+  "cancelled-orders": "orders",
+  "purchased-products": "downloads",
+  "license-keys": "downloads",
+  "activation-codes": "downloads",
+  "delivery-history": "downloads",
+  messages: "chats",
+  transactions: "wallet",
+  "payment-methods": "wallet",
+  addresses: "profile",
+  preferences: "profile",
+};
+
+function normalizeBuyerTab(value: string): Tab {
+  const candidate = value as Tab;
+  const normalized = buyerLegacyTabMap[candidate] ?? candidate;
+  return tabs.some((item) => item.id === normalized) ? normalized : "overview";
+}
+
 function roleDashboardRedirect(role: string) {
   if (STAFF_ROLES.some((staffRole) => staffRole === role)) return "/admin";
   return null;
@@ -345,31 +369,29 @@ export function AccountDashboardPage() {
   const { user } = useAuth();
   const { formatMoney } = useLocale();
   const [tab, setTabState] = useState<Tab>(() => {
-    const hash = window.location.hash.replace("#", "") as Tab;
-    return tabs.some((item) => item.id === hash) ? hash : "overview";
+    return normalizeBuyerTab(window.location.hash.replace("#", ""));
   });
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>(
     () => ({ [buyerGroupLabel(tab)]: true }),
   );
   function selectTab(next: Tab) {
-    setTabState(next);
-    setExpandedGroups({ [buyerGroupLabel(next)]: true });
+    const normalized = normalizeBuyerTab(next);
+    setTabState(normalized);
+    setExpandedGroups({ [buyerGroupLabel(normalized)]: true });
     setDrawerOpen(false);
     window.history.replaceState(
       null,
       "",
-      `${window.location.pathname}${window.location.search}#${next}`,
+      `${window.location.pathname}${window.location.search}#${normalized}`,
     );
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
   useEffect(() => {
     const syncTab = () => {
-      const hash = window.location.hash.replace("#", "") as Tab;
-      if (tabs.some((item) => item.id === hash)) {
-        setTabState(hash);
-        setExpandedGroups({ [buyerGroupLabel(hash)]: true });
-      }
+      const next = normalizeBuyerTab(window.location.hash.replace("#", ""));
+      setTabState(next);
+      setExpandedGroups({ [buyerGroupLabel(next)]: true });
     };
     window.addEventListener("hashchange", syncTab);
     return () => window.removeEventListener("hashchange", syncTab);
@@ -929,42 +951,6 @@ export function AccountDashboardPage() {
             </section>
           ))}
         </div>
-        <label className="ys-panel-tools">
-          <span>More account tools</span>
-          <select
-            aria-label="More account tools"
-            value=""
-            onChange={(event) => selectTab(event.target.value as Tab)}
-          >
-            <option value="" disabled>
-              Choose a tool…
-            </option>
-            {tabs
-              .filter(
-                (item) =>
-                  !buyerMenuGroups.some((group) =>
-                    group.items.some((entry) => entry.tab === item.id),
-                  ) &&
-                  ![
-                    "rewards",
-                    "cashback",
-                    "gift-cards",
-                    "favorites",
-                    "addresses",
-                    "active-orders",
-                    "completed-orders",
-                    "pending-orders",
-                    "cancelled-orders",
-                  ].includes(item.id) &&
-                  (!item.roles || item.roles.includes(user.role)),
-              )
-              .map((item) => (
-                <option key={item.id} value={item.id}>
-                  <UiText value={item.label} />
-                </option>
-              ))}
-          </select>
-        </label>
         <div className="sidebar-footer">
           <Link to="/" className="secondary-button">
             <Home size={16} /> Home

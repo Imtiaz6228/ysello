@@ -23,9 +23,9 @@ import { useMarketplaceCategories } from "../commerce/useMarketplace";
 import { categoryPath } from "../commerce/marketplaceUrls";
 import { storefrontCategories } from "../commerce/storefrontCategories";
 import {
-  identifyProductPlatform,
-  platformImage,
-} from "../data/platformIdentity";
+  MarketplaceBrandArtwork,
+  detectMarketplaceBrandSlug,
+} from "./MarketplaceBrandIcon";
 import { useLocale } from "../i18n/LocaleContext";
 import { LocaleSwitcher } from "./LocaleSwitcher";
 
@@ -51,11 +51,11 @@ export function MarketHeader() {
     if (mobileMenu.current) mobileMenu.current.open = false;
   }, [location.pathname, location.search]);
   function categoryLink(category: (typeof categories)[number]) {
-    const platform = identifyProductPlatform(category.name, category.slug);
+    const brandSlug = detectMarketplaceBrandSlug(category.name, category.slug);
     return (
       <Link key={category.slug} to={categoryPath(category, categories)}>
-        {platform ? (
-          <img src={platformImage(platform)} width="24" height="24" alt="" />
+        {brandSlug ? (
+          <MarketplaceBrandArtwork brandSlug={brandSlug} className="ys-category-brand-icon" compact />
         ) : (
           <Store />
         )}
@@ -121,6 +121,12 @@ export function MarketHeader() {
             <Link to="/catalog">
               <UiText value="All products" />
             </Link>
+            <details className="ys-mobile-category-list">
+              <summary>
+                <Grid2X2 /> <UiText value="Categories" /> <ChevronDown />
+              </summary>
+              <div>{populated.map(categoryLink)}</div>
+            </details>
             <Link to={account}>{user ? "My account" : "Sign in"}</Link>
             {!user ? (
               <Link to="/register">Create account</Link>

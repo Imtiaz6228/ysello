@@ -13,10 +13,11 @@ import {
 } from "../commerce/useMarketplace";
 import { YselloReferenceProductCard } from "./YselloReferenceLayout";
 import { CatalogPagination } from "./CatalogPagination";
+import { identifyProductPlatform } from "../data/platformIdentity";
 import {
-  identifyProductPlatform,
-  platformImage,
-} from "../data/platformIdentity";
+  MarketplaceBrandArtwork,
+  detectMarketplaceBrandSlug,
+} from "./MarketplaceBrandIcon";
 import { Seo } from "./Seo";
 
 export function CatalogBrowser({
@@ -56,6 +57,13 @@ export function CatalogBrowser({
     sort,
     stock: params.get("stock") || "all",
   });
+  useEffect(() => {
+    if (data.loading || data.error || data.pagination.page === page) return;
+    const next = new URLSearchParams(params);
+    if (data.pagination.page <= 1) next.delete("page");
+    else next.set("page", String(data.pagination.page));
+    setParams(next, { replace: true });
+  }, [data.error, data.loading, data.pagination.page, page, params, setParams]);
   function filter(key: string, value: string) {
     const next = new URLSearchParams(params);
     value ? next.set(key, value) : next.delete(key);
@@ -119,7 +127,7 @@ export function CatalogBrowser({
               <UiText value="All products" />
             </Link>
             {available.map((category) => {
-              const brand = identifyProductPlatform(
+              const brandSlug = detectMarketplaceBrandSlug(
                 category.name,
                 category.slug,
               );
@@ -129,13 +137,8 @@ export function CatalogBrowser({
                   to={categoryPath(category, categories)}
                   className={selected === category.slug ? "active" : ""}
                 >
-                  {brand ? (
-                    <img
-                      src={platformImage(brand)}
-                      alt=""
-                      width="24"
-                      height="24"
-                    />
+                  {brandSlug ? (
+                    <MarketplaceBrandArtwork brandSlug={brandSlug} className="ys-category-brand-icon" compact />
                   ) : (
                     <Store />
                   )}

@@ -146,40 +146,53 @@ export function MarketplaceHomePage() {
   return (
     <main className="market-home-page ys-company-home">
       <Seo
-        title="Buy Social Media Accounts & Digital Products | Ysello Marketplace"
-        description="Shop social media accounts, email accounts, subscriptions and digital products on Ysello. Compare stock, delivery terms and seller storefronts before you buy."
+        title="Buy Digital Products, Accounts, Top-Ups & Subscriptions | Ysello"
+        description="Buy digital products, social and email accounts, game top-ups, gift cards and subscriptions on Ysello. Compare pricing, delivery terms, stock and seller storefronts before checkout."
         canonicalPath="/"
-        schema={{
-          "@context": "https://schema.org",
-          "@type": "Organization",
-          name: "Ysello",
-          url: "https://ysello.com",
-          logo: "https://ysello.com/ysello-mark.svg",
-        }}
+        schema={[
+          {
+            "@context": "https://schema.org",
+            "@type": "Organization",
+            name: "Ysello",
+            url: "https://ysello.com",
+            logo: "https://ysello.com/ysello-mark.svg",
+          },
+          {
+            "@context": "https://schema.org",
+            "@type": "WebSite",
+            name: "Ysello",
+            url: "https://ysello.com",
+            potentialAction: {
+              "@type": "SearchAction",
+              target: "https://ysello.com/catalog?q={search_term_string}",
+              "query-input": "required name=search_term_string",
+            },
+          },
+        ]}
       />
       <MarketHeader />
       <div className="ys-home-container">
         <section className="ys-company-hero" aria-labelledby="ys-home-title">
           <div className="ys-company-hero-copy">
             <span className="ys-eyebrow">
-              <UiText value="THE DIGITAL MARKETPLACE" />
+              <UiText value="DIGITAL PRODUCTS · TOP-UPS · ACCOUNTS" />
             </span>
             <h1 id="ys-home-title">
-              <UiText value="Your next account." />
+              <UiText value="Buy digital products" />
               <br />
               <em>
-                <UiText value="Your next possibility." />
+                <UiText value="with clear delivery." />
               </em>
             </h1>
             <p>
-              <UiText value="Social accounts, everyday subscriptions and digital essentials. Find your platform. Compare the details. Make it yours." />
+              <UiText value="Browse social and email accounts, game top-ups, gift cards, subscriptions and other digital essentials. Compare the seller, stock, price and delivery terms before you pay." />
             </p>
             <div className="ys-hero-actions">
               <Link className="ys-primary-link" to="/catalog">
-                Explore marketplace <ArrowRight />
+                Browse all products <ArrowRight />
               </Link>
               <a href="#account-listings">
-                Shop accounts <ArrowRight />
+                Shop by category <ArrowRight />
               </a>
             </div>
             <div className="ys-hero-footnote">

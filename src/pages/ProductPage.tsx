@@ -32,11 +32,7 @@ import {
 } from "../commerce/useMarketplace";
 import { useLocale } from "../i18n/LocaleContext";
 import { MarketplaceProductCard } from "../components/MarketplaceProductCard";
-import {
-  MarketplaceBrandArtwork,
-  YselloMarketplaceArtwork,
-  detectMarketplaceBrandSlug,
-} from "../components/MarketplaceBrandIcon";
+import { detectMarketplaceBrandSlug } from "../components/MarketplaceBrandIcon";
 import type { CatalogProduct } from "../data/catalog";
 import { NotFoundPage } from "./NotFoundPage";
 
@@ -161,15 +157,11 @@ export function ProductPage() {
   );
   const available = product.type === "SERVICE" || (product.stockCount ?? 0) > 0;
   const supplierFulfilled = product.attributes?.supplierFulfilled === true;
-  const brandSlug = supplierFulfilled
-    ? detectMarketplaceBrandSlug(
-        typeof product.facts?.platform === "string"
-          ? product.facts.platform
-          : "",
-        product.category,
-        product.title,
-      )
-    : null;
+  const brandSlug = detectMarketplaceBrandSlug(
+    typeof product.facts?.platform === "string" ? product.facts.platform : "",
+    product.category,
+    product.title,
+  );
   const requirementFacts = Object.entries(product.facts ?? {}).slice(0, 4);
 
   return (
@@ -225,7 +217,7 @@ export function ProductPage() {
         <div className="product-gallery">
           <div className={`product-detail-art product-art-${artMode}`}>
             {artMode === "cover" ? (
-              supplierFulfilled ? (
+              brandSlug ? (
                 <div className="ys-detail-platform-art">
                   <ProductArtwork product={product} />
                 </div>

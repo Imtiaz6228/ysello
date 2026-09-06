@@ -285,6 +285,39 @@ type DarkShoppingResale = {
   fulfillments: DarkShoppingFulfillment[];
 };
 
+type Shop2TopupStatus = {
+  configuration: {
+    configured: boolean;
+    webhookSecretConfigured: boolean;
+    baseUrl: string;
+    timeoutMs: number;
+    marginPercent: number;
+    settingsUrl: string;
+    documentationUrl: string;
+    webhookUrl: string;
+    secretStorage: string;
+  };
+  access: {
+    status: string;
+    message: string;
+    providerStatus: number | null;
+    code?: string;
+  };
+  account: {
+    id: number;
+    username: string;
+    wallet: string;
+    enabled: boolean;
+    verified: boolean;
+  } | null;
+};
+
+type Shop2TopupBigCategory = {
+  id: number;
+  name: string;
+  description?: string | null;
+};
+
 type Order = {
   id: string;
   orderNumber: string;
@@ -746,6 +779,10 @@ export function OperationsAdminPage() {
   const [darkMarginPercent, setDarkMarginPercent] = useState(30);
   const [darkPublish, setDarkPublish] = useState(true);
   const [darkAutoCategory, setDarkAutoCategory] = useState(true);
+  const [shop2Topup, setShop2Topup] = useState<Shop2TopupStatus | null>(null);
+  const [shop2TopupBigCategories, setShop2TopupBigCategories] = useState<
+    Shop2TopupBigCategory[]
+  >([]);
 
   function selectTab(next: Tab) {
     setTabState(next);
@@ -804,7 +841,10 @@ export function OperationsAdminPage() {
   const load = useCallback(async () => {
     setMessage("");
     setLoading(true);
-    if (tab === "suppliers") setDarkResale(null);
+    if (tab === "suppliers") {
+      setDarkResale(null);
+      setShop2Topup(null);
+    }
     const paths: Record<Tab, string> = {
       overview: "/api/admin/overview",
       sellers: "/api/admin/seller-applications",
@@ -824,6 +864,21 @@ export function OperationsAdminPage() {
       reports: "/api/admin/reports",
       homepage: "/api/admin/homepage",
     };
+
+    if (tab === "suppliers") {
+      const shopStatus = await apiRequest<Shop2TopupStatus>(
+        "/api/admin/shop2topup/status",
+      ).catch(() => null);
+      setShop2Topup(shopStatus);
+      if (shopStatus?.configuration.configured && shopStatus.access.status === "ready") {
+        const catalog = await apiRequest<{ bigCategories: Shop2TopupBigCategory[] }>(
+          "/api/admin/shop2topup/catalog/big-categories",
+        ).catch(() => ({ bigCategories: [] }));
+        setShop2TopupBigCategories(catalog.bigCategories ?? []);
+      } else {
+        setShop2TopupBigCategories([]);
+      }
+    }
 
     try {
       const data = await apiRequest<Record<string, unknown>>(paths[tab]);
@@ -923,6 +978,25 @@ export function OperationsAdminPage() {
     await post(activeChatId, `/api/nexus/admin/chats/${activeChatId}/reply`, {
       body: text,
     });
+  }
+
+  async function testShop2TopupConnection() {
+    setBusy("shop2topup-test");
+    setMessage("");
+    try {
+      const result = await apiRequest<{
+        ok: boolean;
+        account: { username: string; wallet: string; enabled: boolean; verified: boolean };
+      }>("/api/admin/shop2topup/test", { method: "POST", body: {} });
+      setMessage(
+        `SHOP2TOPUP connected as ${result.account.username}. Wallet: $${Number(result.account.wallet).toFixed(2)}.`,
+      );
+      await load();
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "SHOP2TOPUP connection test failed.");
+    } finally {
+      setBusy("");
+    }
   }
 
   async function searchDarkShoppingProducts(event?: FormEvent, page = 1) {
@@ -2229,6 +2303,60 @@ export function OperationsAdminPage() {
 
         {tab === "suppliers" && (
           <section className="dark-resale-workspace">
+            <section className="ys-catalog-repair shop2topup-admin-card">
+              <div>
+                <span className="section-index">SHOP2TOPUP · GAME TOP-UPS & VOUCHERS</span>
+                <h2>SHOP2TOPUP reseller API</h2>
+                <p>
+                  Server-side supplier connection for game top-ups, vouchers and the live catalog.
+                  The API key stays in Railway environment variables and is never sent to the browser.
+                </p>
+                {shop2Topup ? (
+                  <div className="ops-inline-meta">
+                    <Status value={shop2Topup.access.status.toUpperCase()} />
+                    <span>Wallet: {shop2Topup.account ? `$${Number(shop2Topup.account.wallet).toFixed(2)}` : "Unavailable"}</span>
+                    <span>{shop2TopupBigCategories.length} supplier catalog groups loaded</span>
+                    <span>Markup: {shop2Topup.configuration.marginPercent}%</span>
+                  </div>
+                ) : (
+                  <p>Supplier status is not available from this API deployment.</p>
+                )}
+                {shop2TopupBigCategories.length ? (
+                  <div className="shop2topup-group-preview" aria-label="SHOP2TOPUP catalog groups">
+                    {shop2TopupBigCategories.slice(0, 10).map((group) => (
+                      <span key={group.id}>{group.name}</span>
+                    ))}
+                  </div>
+                ) : null}
+                {shop2Topup ? (
+                  <div className="ops-message info">
+                    <strong>Webhook URL</strong>
+                    <code>{shop2Topup.configuration.webhookUrl}</code>
+                    <span>
+                      {shop2Topup.configuration.webhookSecretConfigured
+                        ? "Signed webhook verification is enabled."
+                        : "URL validation is ready. After the URL is saved in SHOP2TOPUP, add the generated webhook signing secret as SHOP2TOPUP_WEBHOOK_SECRET in Railway."}
+                    </span>
+                  </div>
+                ) : null}
+              </div>
+              <div className="dark-resale-balance">
+                <button
+                  type="button"
+                  disabled={busy === "shop2topup-test" || !shop2Topup?.configuration.configured}
+                  onClick={() => void testShop2TopupConnection()}
+                >
+                  <ShieldCheck size={15} />
+                  {busy === "shop2topup-test" ? "Testing…" : "Test SHOP2TOPUP"}
+                </button>
+                {shop2Topup ? (
+                  <>
+                    <a href={shop2Topup.configuration.settingsUrl} target="_blank" rel="noreferrer">API & webhook settings</a>
+                    <a href={shop2Topup.configuration.documentationUrl} target="_blank" rel="noreferrer">API documentation</a>
+                  </>
+                ) : null}
+              </div>
+            </section>
             <header className="admin-workspace-toolbar dark-resale-heading">
               <div>
                 <span className="section-index">DARK SHOPPING SUPPLIER</span>

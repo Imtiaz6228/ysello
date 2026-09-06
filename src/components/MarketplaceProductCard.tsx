@@ -19,7 +19,6 @@ import {
 } from "../commerce/marketplaceUrls";
 import {
   MarketplaceBrandArtwork,
-  YselloMarketplaceArtwork,
   detectMarketplaceBrandSlug,
 } from "./MarketplaceBrandIcon";
 
@@ -48,14 +47,11 @@ export function MarketplaceProductCard({
   const categoryParts = product.category.split(" / ");
   const categoryLabel =
     categoryParts[categoryParts.length - 1] ?? product.category;
-  const brandSlug =
-    product.attributes?.supplierFulfilled === true
-      ? detectMarketplaceBrandSlug(
-          typeof product.facts?.platform === "string" ? product.facts.platform : "",
-          product.category,
-          product.title,
-        )
-      : null;
+  const brandSlug = detectMarketplaceBrandSlug(
+    typeof product.facts?.platform === "string" ? product.facts.platform : "",
+    product.category,
+    product.title,
+  );
 
   return (
     <article
@@ -68,12 +64,8 @@ export function MarketplaceProductCard({
           to={productPath(product)}
           aria-label={`View ${product.title}`}
         >
-          {product.attributes?.supplierFulfilled === true ? (
-            brandSlug ? (
-              <MarketplaceBrandArtwork brandSlug={brandSlug} className="ys-product-native-brand" />
-            ) : (
-              <YselloMarketplaceArtwork label={categoryLabel} className="ys-product-native-brand" />
-            )
+          {brandSlug ? (
+            <MarketplaceBrandArtwork brandSlug={brandSlug} className="ys-product-native-brand" />
           ) : product.imageUrl ? (
             <span
               className="ys-product-image"

@@ -1,7 +1,5 @@
-import { useEffect, useState } from "react";
 import {
   ArrowRight,
-  ImageIcon,
   Minus,
   Plus,
   ShieldCheck,
@@ -9,38 +7,12 @@ import {
   Trash2,
 } from "lucide-react";
 import { Link } from "react-router-dom";
-import { mediaUrl } from "../api/client";
 import { useCart } from "../commerce/CartContext";
 import { productPath } from "../commerce/marketplaceUrls";
 import { MarketFooter, MarketHeader } from "../components/MarketHeader";
+import { ProductArtwork } from "../components/ProductArtwork";
 import { Seo } from "../components/Seo";
 import { useLocale } from "../i18n/LocaleContext";
-
-function CartProductImage({
-  src,
-  alt,
-  icon,
-}: {
-  src?: string | null;
-  alt: string;
-  icon: string;
-}) {
-  const [failed, setFailed] = useState(false);
-  useEffect(() => setFailed(false), [src]);
-  return src && !failed ? (
-    <img
-      src={mediaUrl(src)}
-      alt={alt}
-      loading="lazy"
-      decoding="async"
-      width="160"
-      height="120"
-      onError={() => setFailed(true)}
-    />
-  ) : (
-    <span aria-label={`${alt} image unavailable`}>{icon || <ImageIcon />}</span>
-  );
-}
 
 export function CartPage() {
   const { formatMoney, formatProductMoney, t } = useLocale();
@@ -76,11 +48,7 @@ export function CartPage() {
             {items.map(({ product, quantity }) => (
               <article key={product.id}>
                 <div className="cart-thumb">
-                  <CartProductImage
-                    src={product.imageUrl}
-                    alt={product.title}
-                    icon={product.icon}
-                  />
+                  <ProductArtwork product={product} />
                 </div>
                 <div>
                   <span>{product.category}</span>

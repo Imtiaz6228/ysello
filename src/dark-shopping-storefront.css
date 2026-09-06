@@ -1105,3 +1105,16 @@
   position: relative !important;
   overflow: hidden;
 }
+
+/* Recognizable gaming/top-up artwork fallbacks. These use a relevant game icon
+   plus each publisher/title's familiar brand palette when no usable cover exists. */
+.ys-brand-artwork.brand-pubg-mobile { --ys-brand: #f2a900; color: #171717 !important; }
+.ys-brand-artwork.brand-free-fire { --ys-brand: #f39c12; color: #171717 !important; }
+.ys-brand-artwork.brand-genshin-impact { --ys-brand: #4f6fa7; }
+.ys-brand-artwork.brand-honkai-star-rail { --ys-brand: #4556a6; }
+.ys-brand-artwork.brand-wuthering-waves { --ys-brand: #184552; }
+.ys-brand-artwork.brand-zenless-zone-zero { --ys-brand: #111827; }
+.ys-brand-artwork.brand-mobile-legends { --ys-brand: #1b5bbf; }
+.ys-brand-artwork.brand-valorant { --ys-brand: #ff4655; }
+.ys-brand-artwork.brand-fortnite { --ys-brand: #6f3bf5; }
+.ys-brand-artwork.brand-roblox { --ys-brand: #111111; }

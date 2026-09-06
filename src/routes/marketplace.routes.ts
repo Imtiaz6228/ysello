@@ -6,21 +6,15 @@ import { prisma } from "../lib/prisma.js";
 import { requireAuth } from "../middleware/auth.js";
 import { ApiError, asyncHandler } from "../middleware/error-handler.js";
 import { equivalentCategorySlugs } from "../data/categoryAliases.js";
-import { marketplaceTaxonomySlugs } from "../data/marketplaceTaxonomy.js";
 
 export const marketplaceRouter = Router();
 
-const publicCategorySlugs = [...marketplaceTaxonomySlugs];
 const DARK_SHOPPING_CATEGORY_TAG = "supplier:dark-shopping";
 
+// Any active admin-created category is eligible for the public catalog. Whether
+// it appears in navigation is decided by its descendant-aware published count.
 function publicCategoryPolicyWhere() {
-  return {
-    isActive: true,
-    OR: [
-      { slug: { in: publicCategorySlugs } },
-      { metaKeywords: { has: DARK_SHOPPING_CATEGORY_TAG } },
-    ],
-  };
+  return { isActive: true };
 }
 
 function publicListingPolicyWhere() {
@@ -63,24 +57,41 @@ marketplaceRouter.get(
       orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
       include: {
         parent: { select: { id: true, slug: true, name: true } },
-        _count: {
-          select: {
-            products: {
-              where: {
-                status: ProductStatus.APPROVED,
-                seller: {
-                  isSuspended: false,
-                  sellerProfile: { isSuspended: false },
-                },
-              },
-            },
-          },
-        },
       },
     });
+
+    const directCounts = await prisma.product.groupBy({
+      by: ["categoryId"],
+      where: {
+        status: ProductStatus.APPROVED,
+        category: publicCategoryPolicyWhere(),
+        seller: {
+          isSuspended: false,
+          sellerProfile: { isSuspended: false },
+        },
+      },
+      _count: { _all: true },
+    });
+    const productCount = new Map(
+      directCounts.map((entry) => [entry.categoryId, entry._count._all]),
+    );
+    const byId = new Map(categories.map((category) => [category.id, category]));
+    for (const category of categories) {
+      const count = productCount.get(category.id) ?? 0;
+      if (!count) continue;
+      let parentId = category.parentId;
+      const visited = new Set<string>();
+      while (parentId && !visited.has(parentId)) {
+        visited.add(parentId);
+        productCount.set(parentId, (productCount.get(parentId) ?? 0) + count);
+        parentId = byId.get(parentId)?.parentId ?? null;
+      }
+    }
+
     res.json({
       categories: categories.map((category) => ({
         ...category,
+        _count: { products: productCount.get(category.id) ?? 0 },
         isSupplierCategory: category.metaKeywords.includes(
           DARK_SHOPPING_CATEGORY_TAG,
         ),

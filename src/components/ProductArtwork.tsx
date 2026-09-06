@@ -1,31 +1,39 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import type { CatalogProduct } from "../data/catalog";
 import {
-  identifyProductPlatform,
-  platformImage,
-} from "../data/platformIdentity";
+  MarketplaceBrandArtwork,
+  detectMarketplaceBrandSlug,
+} from "./MarketplaceBrandIcon";
+
 export function ProductArtwork({ product }: { product: CatalogProduct }) {
-  const identity = identifyProductPlatform(
-    product.title,
-    product.facts?.platform,
+  const brandSlug = detectMarketplaceBrandSlug(
+    typeof product.facts?.platform === "string" ? product.facts.platform : "",
     product.category,
+    product.title,
   );
-  const source = identity
-    ? platformImage(identity)
-    : product.imageUrl || "/ysello-mark.svg";
+  const source = product.imageUrl || "/ysello-mark.svg";
   const [failedSource, setFailedSource] = useState("");
+  useEffect(() => setFailedSource(""), [source]);
+
+  if (brandSlug) {
+    return (
+      <span className="ys-reliable-artwork is-platform">
+        <MarketplaceBrandArtwork brandSlug={brandSlug} />
+      </span>
+    );
+  }
+
   return (
-    <span className={`ys-reliable-artwork ${identity ? "is-platform" : ""}`}>
+    <span className="ys-reliable-artwork">
       <img
         src={source === failedSource ? "/ysello-mark.svg" : source}
-        alt={identity ? `${identity.name} logo` : product.title}
+        alt={product.title}
         width="160"
         height="160"
         loading="lazy"
         decoding="async"
         onError={() => setFailedSource(source)}
       />
-      {identity ? <span>{identity.name}</span> : null}
     </span>
   );
 }

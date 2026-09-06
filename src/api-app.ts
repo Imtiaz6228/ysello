@@ -32,6 +32,8 @@ import { commerceRouter } from "./routes/commerce.routes.js";
 import { walletRouter } from "./routes/wallet.routes.js";
 import { nexusRouter } from "./routes/nexus.routes.js";
 import { darkShoppingRouter } from "./routes/dark-shopping.routes.js";
+import { shop2TopupRouter } from "./routes/shop2topup.routes.js";
+import { shop2TopupWebhookHandler } from "./routes/shop2topup-webhook.js";
 import { railwayReleaseMetadata } from "./config/release.js";
 import { prisma } from "./lib/prisma.js";
 import { blogPosts } from "./content/blog.js";
@@ -156,6 +158,15 @@ app.use(
       );
     },
   }),
+);
+
+
+// External supplier callback: keep the exact raw body for HMAC verification and
+// mount it before express.json() and CSRF middleware.
+app.post(
+  "/api/webhooks/shop2topup",
+  express.raw({ type: "application/json", limit: "1mb" }),
+  shop2TopupWebhookHandler,
 );
 
 app.use(express.json({ limit: "1mb" }));
@@ -316,6 +327,7 @@ app.get(
         select: {
           slug: true,
           updatedAt: true,
+          categoryId: true,
           category: {
             select: {
               slug: true,
@@ -330,19 +342,10 @@ app.get(
         },
       }),
       prisma.category.findMany({
-        where: {
-          isActive: true,
-          products: {
-            some: {
-              status: ProductStatus.APPROVED,
-              seller: {
-                isSuspended: false,
-                sellerProfile: { isSuspended: false },
-              },
-            },
-          },
-        },
+        where: { isActive: true },
         select: {
+          id: true,
+          parentId: true,
           slug: true,
           updatedAt: true,
           parent: {
@@ -362,6 +365,20 @@ app.get(
         select: { slug: true, updatedAt: true },
       }),
     ]);
+    const publishedCategoryIds = new Set(products.map((product) => product.categoryId));
+    const categoryById = new Map(categories.map((category) => [category.id, category]));
+    for (const categoryId of [...publishedCategoryIds]) {
+      let parentId = categoryById.get(categoryId)?.parentId ?? null;
+      const visited = new Set<string>();
+      while (parentId && !visited.has(parentId)) {
+        visited.add(parentId);
+        publishedCategoryIds.add(parentId);
+        parentId = categoryById.get(parentId)?.parentId ?? null;
+      }
+    }
+    const sitemapCategories = categories.filter((category) =>
+      publishedCategoryIds.has(category.id),
+    );
     const contentModifiedAt = new Date(
       `${siteContentLastModified}T00:00:00.000Z`,
     );
@@ -384,7 +401,7 @@ app.get(
         changeFrequency: "weekly",
         priority: 0.8,
       })),
-      ...categories.map((item) => ({
+      ...sitemapCategories.map((item) => ({
         path: categorySeoPath(item),
         updatedAt: item.updatedAt,
         changeFrequency: "weekly",
@@ -455,6 +472,7 @@ app.use("/api/commerce", commerceRouter);
 app.use("/api/wallet", walletRouter);
 app.use("/api/seller", sellerRouter);
 app.use("/api/admin/dark-shopping", darkShoppingRouter);
+app.use("/api/admin/shop2topup", shop2TopupRouter);
 app.use("/api/admin", adminRouter);
 app.use("/api/nexus", nexusRouter);
 
@@ -571,22 +589,13 @@ if (isProduction && fs.existsSync(frontendIndex)) {
         Number.parseInt(String(req.query.page || "1"), 10) || 1,
         50,
       );
-      const [categories, products, stores] = await Promise.all([
+      const [allCategories, categoryProductCounts, products, stores] = await Promise.all([
         prisma.category.findMany({
-          where: {
-            isActive: true,
-            products: {
-              some: {
-                status: ProductStatus.APPROVED,
-                seller: {
-                  isSuspended: false,
-                  sellerProfile: { isSuspended: false },
-                },
-              },
-            },
-          },
+          where: { isActive: true },
           orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
           select: {
+            id: true,
+            parentId: true,
             slug: true,
             name: true,
             description: true,
@@ -597,6 +606,15 @@ if (isProduction && fs.existsSync(frontendIndex)) {
               },
             },
           },
+        }),
+        prisma.product.groupBy({
+          by: ["categoryId"],
+          where: {
+            status: ProductStatus.APPROVED,
+            category: { isActive: true },
+            seller: publicSellerFilter,
+          },
+          _count: { _all: true },
         }),
         prisma.product.findMany({
           where: listingWhere,
@@ -632,6 +650,29 @@ if (isProduction && fs.existsSync(frontendIndex)) {
           select: { slug: true, storeName: true, about: true },
         }),
       ]);
+      const ssrCategoryCounts = new Map(
+        categoryProductCounts.map((entry) => [entry.categoryId, entry._count._all]),
+      );
+      const ssrCategoryById = new Map(
+        allCategories.map((category) => [category.id, category]),
+      );
+      for (const category of allCategories) {
+        const count = ssrCategoryCounts.get(category.id) ?? 0;
+        if (!count) continue;
+        let parentId = category.parentId;
+        const visited = new Set<string>();
+        while (parentId && !visited.has(parentId)) {
+          visited.add(parentId);
+          ssrCategoryCounts.set(
+            parentId,
+            (ssrCategoryCounts.get(parentId) ?? 0) + count,
+          );
+          parentId = ssrCategoryById.get(parentId)?.parentId ?? null;
+        }
+      }
+      const categories = allCategories.filter(
+        (category) => (ssrCategoryCounts.get(category.id) ?? 0) > 0,
+      );
       const content = [
         pageLinks(req, total),
         `<section><h2>Browse by category</h2>${links(categories.map((item) => ({ path: categorySeoPath(item), title: item.name, description: item.description })))}</section>`,
@@ -644,9 +685,14 @@ if (isProduction && fs.existsSync(frontendIndex)) {
       sendHtml(
         res,
         renderSeoDocument(frontendTemplate, {
-          title: "Browse digital products and services · Ysello",
+          title:
+            req.path === "/"
+              ? "Buy Digital Products, Accounts, Top-Ups & Subscriptions | Ysello"
+              : "Browse Digital Products, Accounts & Top-Ups | Ysello",
           description:
-            "Explore approved digital products and expert services by category, seller, price, and delivery type on Ysello.",
+            req.path === "/"
+              ? "Buy digital products, social and email accounts, game top-ups, gift cards and subscriptions on Ysello. Compare stock, delivery terms and seller storefronts before checkout."
+              : "Explore approved digital products, accounts, top-ups and services by category, seller, price and delivery type on Ysello.",
           canonicalUrl: url,
           body: shell(
             "Browse digital products and expert services",

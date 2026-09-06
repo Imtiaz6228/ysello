@@ -264,10 +264,47 @@ const sellerMenuGroups: Array<{
       { tab: "messages", label: "Messages", icon: MessageSquare },
       { tab: "refunds", label: "Refunds", icon: ArrowDownRight },
       { tab: "disputes", label: "Disputes", icon: ShieldCheck },
+      { tab: "reviews", label: "Reviews", icon: BadgeCheck },
       { tab: "tickets", label: "Support", icon: TicketCheck },
     ],
   },
+  {
+    label: "Account",
+    items: [{ tab: "security", label: "Security", icon: ShieldCheck }],
+  },
 ];
+
+
+const sellerLegacyTabMap: Partial<Record<Tab, Tab>> = {
+  "product-groups": "products",
+  categories: "products",
+  downloads: "inventory",
+  drafts: "products",
+  processing: "orders",
+  delivered: "orders",
+  transactions: "finance",
+  frozen: "finance",
+  earnings: "finance",
+  notifications: "overview",
+  coupons: "products",
+  promotions: "products",
+  sponsored: "products",
+  featured: "products",
+  analytics: "overview",
+  revenue: "finance",
+  visitors: "overview",
+  conversion: "overview",
+  payments: "finance",
+  api: "security",
+  preferences: "storefront",
+  support: "tickets",
+};
+
+function normalizeSellerTab(value: string): Tab {
+  const candidate = value as Tab;
+  const normalized = sellerLegacyTabMap[candidate] ?? candidate;
+  return sellerTabs.some((item) => item.id === normalized) ? normalized : "overview";
+}
 
 function sellerGroupLabel(tab: Tab) {
   return (
@@ -497,8 +534,7 @@ function downloadCsv(filename: string, rows: Array<Array<string | number>>) {
 export function SellerStudioPage() {
   const { formatMoney } = useLocale();
   const [tab, setTabState] = useState<Tab>(() => {
-    const hash = window.location.hash.replace("#", "");
-    return validTab(hash) ? hash : "overview";
+    return normalizeSellerTab(window.location.hash.replace("#", ""));
   });
   const [products, setProducts] = useState<Product[]>([]);
   const [orders, setOrders] = useState<SellerOrder[]>([]);
@@ -767,25 +803,24 @@ export function SellerStudioPage() {
   }
 
   function selectTab(next: Tab) {
-    setTabState(next);
-    setExpandedGroups({ [sellerGroupLabel(next)]: true });
+    const normalized = normalizeSellerTab(next);
+    setTabState(normalized);
+    setExpandedGroups({ [sellerGroupLabel(normalized)]: true });
     setDrawerOpen(false);
     setSearchQuery("");
     setStatusFilter("ALL");
     window.history.replaceState(
       null,
       "",
-      `${window.location.pathname}${window.location.search}#${next}`,
+      `${window.location.pathname}${window.location.search}#${normalized}`,
     );
   }
 
   useEffect(() => {
     const syncTab = () => {
-      const hash = window.location.hash.replace("#", "");
-      if (validTab(hash)) {
-        setTabState(hash);
-        setExpandedGroups({ [sellerGroupLabel(hash)]: true });
-      }
+      const next = normalizeSellerTab(window.location.hash.replace("#", ""));
+      setTabState(next);
+      setExpandedGroups({ [sellerGroupLabel(next)]: true });
     };
     window.addEventListener("hashchange", syncTab);
     return () => window.removeEventListener("hashchange", syncTab);
@@ -1697,44 +1732,6 @@ export function SellerStudioPage() {
             </section>
           ))}
         </nav>
-        <label className="ys-panel-tools">
-          <span>More seller tools</span>
-          <select
-            aria-label="More seller tools"
-            value=""
-            onChange={(event) => selectTab(event.target.value as Tab)}
-          >
-            <option value="" disabled>
-              Choose a tool…
-            </option>
-            {sellerTabs
-              .filter(
-                (item) =>
-                  !sellerMenuGroups.some((group) =>
-                    group.items.some((entry) => entry.tab === item.id),
-                  ) &&
-                  ![
-                    "processing",
-                    "delivered",
-                    "revenue",
-                    "visitors",
-                    "conversion",
-                    "promotions",
-                    "sponsored",
-                    "featured",
-                    "notifications",
-                    "support",
-                    "earnings",
-                    "product-groups",
-                  ].includes(item.id),
-              )
-              .map((item) => (
-                <option key={item.id} value={item.id}>
-                  <UiText value={item.label} />
-                </option>
-              ))}
-          </select>
-        </label>
         <div className="seller-pro-sidebar-footer">
           <Link to="/">
             <Home size={16} /> Home

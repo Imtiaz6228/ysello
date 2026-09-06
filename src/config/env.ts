@@ -128,6 +128,28 @@ const darkShoppingApiBaseUrl = z.preprocess(
     .default("https://dark.shopping/api/v1"),
 );
 
+
+const shop2TopupApiBaseUrl = z.preprocess(
+  trimmedStringToUndefined,
+  z
+    .string()
+    .url()
+    .refine((value) => {
+      const url = new URL(value);
+      return (
+        url.protocol === "https:" &&
+        url.hostname === "shop2topup.com" &&
+        !url.port &&
+        !url.username &&
+        !url.password &&
+        url.pathname.replace(/\/+$/, "") === "/api/endpoints/v1" &&
+        !url.search &&
+        !url.hash
+      );
+    }, "must be the official https://shop2topup.com/api/endpoints/v1 endpoint")
+    .default("https://shop2topup.com/api/endpoints/v1"),
+);
+
 const envSchema = z.object({
   NODE_ENV: z
     .enum(["development", "test", "production"])
@@ -214,6 +236,27 @@ const envSchema = z.object({
     .max(240)
     .default(30),
   CRYPTO_WEBHOOK_SECRET: z.preprocess(emptyToUndefined, z.string().optional()),
+  SHOP2TOPUP_API_KEY: z.preprocess(
+    trimmedStringToUndefined,
+    z.string().min(3).max(512).optional(),
+  ),
+  SHOP2TOPUP_API_BASE_URL: shop2TopupApiBaseUrl,
+  SHOP2TOPUP_TIMEOUT_MS: z.coerce
+    .number()
+    .int()
+    .min(1_000)
+    .max(30_000)
+    .default(15_000),
+  SHOP2TOPUP_MARGIN_PERCENT: z.coerce
+    .number()
+    .int()
+    .min(0)
+    .max(500)
+    .default(20),
+  SHOP2TOPUP_WEBHOOK_SECRET: z.preprocess(
+    trimmedStringToUndefined,
+    z.string().min(16).max(512).optional(),
+  ),
   DARK_SHOPPING_API_KEY: z.preprocess(
     trimmedStringToUndefined,
     z.string().min(1).max(255).optional(),
