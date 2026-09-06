@@ -418,6 +418,9 @@ app.get(
     const localizedUrls = urls.flatMap((item) =>
       item.path === "/" ||
       item.path === "/catalog" ||
+      item.path === "/games" ||
+      item.path === "/gift-cards" ||
+      item.path === "/topups" ||
       /^\/(product|category|stores)\//.test(item.path)
         ? [
             item,

@@ -48,7 +48,9 @@ export function CatalogBrowser({
     params.get("sort") || "",
   )
     ? params.get("sort")!
-    : "newest";
+    : embedded
+      ? "popular"
+      : "newest";
   const page = Math.max(1, Number.parseInt(params.get("page") || "1", 10) || 1);
   const data = useMarketplaceProductPage({
     category: selected,
@@ -104,10 +106,10 @@ export function CatalogBrowser({
             <UiText value="YSELLO MARKETPLACE" />
           </span>
           <h1>
-            <UiText value={embedded ? "Browse the collection" : title} />
+            <UiText value={embedded ? "Popular products" : title} />
           </h1>
           <p>
-            <UiText value="Choose a platform. Compare the details. Find your next product." />
+            <UiText value={embedded ? "Explore the products buyers choose most across Ysello." : "Choose a platform. Compare the details. Find your next product."} />
           </p>
         </div>
         <span>

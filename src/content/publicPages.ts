@@ -9,7 +9,7 @@ export type PublicPage = {
   priority: number;
 };
 
-export const siteContentLastModified = "2026-09-05";
+export const siteContentLastModified = "2026-09-06";
 
 export const publicPages: PublicPage[] = [
   {
@@ -32,6 +32,33 @@ export const publicPages: PublicPage[] = [
     heading: "Browse digital products and expert services",
     intro:
       "Find professional assets, software, education, creative tools, and seller-delivered services with clear purchase details.",
+    changeFrequency: "daily",
+    priority: 0.9,
+  },
+  {
+    path: "/games",
+    title: "Buy Games, Game Top-Ups & Gaming Credit | Ysello",
+    description: "Browse games, game top-ups, gaming currency and vouchers by game and platform on Ysello.",
+    heading: "Games, top-ups and gaming credit",
+    intro: "Choose a game or gaming category and compare the relevant digital products before checkout.",
+    changeFrequency: "daily",
+    priority: 0.9,
+  },
+  {
+    path: "/gift-cards",
+    title: "Buy Digital Gift Cards & Vouchers | Ysello",
+    description: "Browse digital gift cards and vouchers by platform, store and service on Ysello.",
+    heading: "Digital gift cards and vouchers",
+    intro: "Choose a gift-card category and compare available denominations and delivery details.",
+    changeFrequency: "daily",
+    priority: 0.9,
+  },
+  {
+    path: "/topups",
+    title: "Buy Game & Digital Top-Ups | Ysello",
+    description: "Browse game top-ups, diamonds, coins, points and other digital credit on Ysello.",
+    heading: "Game and digital top-ups",
+    intro: "Choose a game or service, then compare the available top-up products and requirements.",
     changeFrequency: "daily",
     priority: 0.9,
   },

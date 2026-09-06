@@ -8,6 +8,11 @@ import { SupportWidgetPro } from "./components/SupportWidgetPro";
 import { publicPages } from "./content/publicPages";
 import { MarketplaceHomePage } from "./pages/MarketplaceHomePage";
 
+const DiscoveryLandingPage = lazy(() =>
+  import("./pages/DiscoveryLandingPage").then((module) => ({
+    default: module.DiscoveryLandingPage,
+  })),
+);
 const CatalogPage = lazy(() =>
   import("./pages/CatalogPage").then((module) => ({
     default: module.CatalogPage,
@@ -143,6 +148,9 @@ export function App() {
           <Routes>
             <Route path="/" element={<MarketplaceHomePage />} />
             <Route path="/catalog" element={<CatalogPage />} />
+            <Route path="/games" element={<DiscoveryLandingPage kind="games" />} />
+            <Route path="/gift-cards" element={<DiscoveryLandingPage kind="gift-cards" />} />
+            <Route path="/topups" element={<DiscoveryLandingPage kind="topups" />} />
             <Route
               path="/category/:rootSlug/:slug"
               element={<CategoryPage />}

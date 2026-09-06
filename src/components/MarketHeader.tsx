@@ -13,6 +13,9 @@ import {
   ShoppingCart,
   Store,
   UserRound,
+  Gamepad2,
+  Gift,
+  Zap,
 } from "lucide-react";
 import { useEffect, useRef } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
@@ -68,9 +71,9 @@ export function MarketHeader() {
   return (
     <header className="ys-header">
       <div className="ys-header-announcement">
-        Digital products. Clear details. Support with every order.
+        <UiText value="Digital products. Clear details. Support with every order." />
         <Link to="/support">
-          Help center <ArrowRight />
+          <UiText value="Help center" /> <ArrowRight />
         </Link>
       </div>
       <div className="ys-header-main">
@@ -95,8 +98,8 @@ export function MarketHeader() {
           <input
             name="q"
             type="search"
-            placeholder="Search accounts, subscriptions and more"
-            aria-label="Search marketplace"
+            placeholder={t("search")}
+            aria-label={t("searchMarketplace")}
           />
           <button type="submit">
             <UiText value="Search" />
@@ -127,16 +130,16 @@ export function MarketHeader() {
               </summary>
               <div>{populated.map(categoryLink)}</div>
             </details>
-            <Link to={account}>{user ? "My account" : "Sign in"}</Link>
+            <Link to={account}><UiText value={user ? "My account" : "Sign in"} /></Link>
             {!user ? (
-              <Link to="/register">Create account</Link>
+              <Link to="/register"><UiText value="Create account" /></Link>
             ) : (
               <Link to="/sign-out">
                 <UiText value="Sign out" />
               </Link>
             )}
-            <Link to="/#top-stores">Stores</Link>
-            <Link to="/seller/apply">Become a seller</Link>
+            <Link to="/#top-stores"><UiText value="Stores" /></Link>
+            <Link to="/seller/apply"><UiText value="Become a seller" /></Link>
             <Link to="/support">
               <UiText value="Support" />
             </Link>
@@ -159,7 +162,21 @@ export function MarketHeader() {
           </nav>
         </details>
         <nav className="ys-header-shortcuts" aria-label="Popular categories">
-          {populated.slice(0, 6).map(categoryLink)}
+          {[
+            ["Telegram", "telegram-accounts"],
+            ["Instagram", "instagram-accounts"],
+            ["Facebook", "facebook-accounts"],
+            ["X / Twitter", "x-accounts"],
+            ["Threads", "threads-accounts"],
+            ["Software", "software-marketplace"],
+          ].map(([label, slug]) => {
+            const category = populated.find((item) => item.slug === slug);
+            if (!category) return null;
+            return categoryLink(category);
+          })}
+          <Link to="/games"><Gamepad2 /><span><UiText value="Games" /></span></Link>
+          <Link to="/gift-cards"><Gift /><span><UiText value="Gift Cards" /></span></Link>
+          <Link to="/topups"><Zap /><span><UiText value="Top-Ups" /></span></Link>
         </nav>
         <Link className="ys-header-stores" to="/#top-stores">
           Stores <ArrowRight />

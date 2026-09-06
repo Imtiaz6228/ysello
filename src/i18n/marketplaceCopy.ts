@@ -248,6 +248,49 @@ Digital products|数字商品|Цифровые товары
 Official store|官方店铺|Официальный магазин
 Ysello Official|Ysello 官方店铺|Официальный магазин Ysello
 Repair categories & images|修复分类与图片|Исправить категории и изображения
+Popular products|热门商品|Популярные товары
+Explore the products buyers choose most across Ysello.|浏览 Ysello 买家最常选择的热门商品。|Смотрите товары, которые покупатели Ysello выбирают чаще всего.
+Games|游戏|Игры
+Gift Cards|礼品卡|Подарочные карты
+Top-Ups|充值|Пополнения
+GAMES MARKETPLACE|游戏商城|ИГРОВОЙ МАРКЕТПЛЕЙС
+DIGITAL GIFT CARDS|数字礼品卡|ЦИФРОВЫЕ ПОДАРОЧНЫЕ КАРТЫ
+GAME & DIGITAL TOP-UPS|游戏与数字充值|ИГРОВЫЕ И ЦИФРОВЫЕ ПОПОЛНЕНИЯ
+Choose a game or gaming category, then compare the available products, top-ups, currencies and vouchers.|选择游戏或游戏分类，然后比较可用商品、充值、游戏币和代金券。|Выберите игру или категорию и сравните товары, пополнения, игровую валюту и ваучеры.
+Browse gift cards and vouchers by platform, storefront and service.|按平台、商店和服务浏览礼品卡与代金券。|Просматривайте подарочные карты и ваучеры по платформе, магазину и сервису.
+Choose a game or service and view the available credit, diamonds, coins, points and other top-up products.|选择游戏或服务，查看可用余额、钻石、金币、点数及其他充值商品。|Выберите игру или сервис и смотрите доступные кредиты, алмазы, монеты, очки и другие пополнения.
+CHOOSE A CATEGORY|选择分类|ВЫБЕРИТЕ КАТЕГОРИЮ
+Choose a game|选择游戏|Выберите игру
+Browse Gift Cards|浏览礼品卡|Подарочные карты
+Browse Top-Ups|浏览充值|Пополнения
+POPULAR PRODUCTS|热门商品|ПОПУЛЯРНЫЕ ТОВАРЫ
+Popular Games|热门游戏|Популярные игры
+Popular Gift Cards|热门礼品卡|Популярные подарочные карты
+Popular Top-Ups|热门充值|Популярные пополнения
+products|商品|товаров
+No matching categories are published yet.|暂时没有已发布的匹配分类。|Подходящие опубликованные категории пока отсутствуют.
+Digital products. Clear details. Support with every order.|数字商品，信息清晰，每个订单都有支持。|Цифровые товары, понятные условия и поддержка каждого заказа.
+Help center|帮助中心|Центр помощи
+Create account|创建账号|Создать аккаунт
+Stores|店铺|Магазины
+Become a seller|成为卖家|Стать продавцом
+DIGITAL PRODUCTS · TOP-UPS · ACCOUNTS|数字商品 · 充值 · 账号|ЦИФРОВЫЕ ТОВАРЫ · ПОПОЛНЕНИЯ · АККАУНТЫ
+Buy digital products|购买数字商品|Покупайте цифровые товары
+with clear delivery.|交付方式清晰透明。|с понятной доставкой.
+Browse social and email accounts, game top-ups, gift cards, subscriptions and other digital essentials. Compare the seller, stock, price and delivery terms before you pay.|浏览社交与邮箱账号、游戏充值、礼品卡、订阅及其他数字商品。付款前比较卖家、库存、价格和交付条款。|Просматривайте аккаунты соцсетей и почты, игровые пополнения, подарочные карты, подписки и другие цифровые товары. До оплаты сравнивайте продавца, наличие, цену и условия доставки.
+Browse all products|浏览全部商品|Смотреть все товары
+Clear terms. Secure checkout. Support with every order.|条款清晰、安全结账、每个订单都有支持。|Понятные условия, безопасная оплата и поддержка каждого заказа.
+ONE MARKETPLACE. YOUR PLATFORMS.|一个商城，覆盖您的平台。|ОДИН МАРКЕТПЛЕЙС. ВАШИ ПЛАТФОРМЫ.
+Discover your next digital essential|发现下一款数字必需品|Найдите следующий цифровой товар
+Seller storefronts|卖家店铺|Витрины продавцов
+Know who you buy from|了解您的卖家|Знайте, у кого покупаете
+Transparent pricing|透明价格|Прозрачные цены
+Compare before checkout|结账前先比较|Сравнивайте до оплаты
+Digital delivery|数字交付|Цифровая доставка
+Access orders in your account|在账号中查看订单|Доступ к заказам в аккаунте
+Order support|订单支持|Поддержка заказов
+Help when you need it|需要时随时获得帮助|Помощь, когда она нужна
+FIND YOUR PLATFORM|选择您的平台|НАЙДИТЕ СВОЮ ПЛАТФОРМУ
 `;
 export const marketplaceCopy = Object.fromEntries(
   entries
@@ -260,18 +303,53 @@ export const marketplaceCopy = Object.fromEntries(
 ) as Record<string, Record<string, string>>;
 export function uiText(value: string, locale: string): string {
   const key = locale.startsWith("zh") ? "zh-CN" : locale;
+  const trimmed = value.trim();
   const exact =
-    marketplaceCopy[value.trim()]?.[key] ||
+    marketplaceCopy[trimmed]?.[key] ||
     marketplaceCopy[
       Object.keys(marketplaceCopy).find(
-        (item) => item.toLowerCase() === value.trim().toLowerCase(),
+        (item) => item.toLowerCase() === trimmed.toLowerCase(),
       ) || ""
     ]?.[key];
   if (exact) return exact;
   if (key === "en") return value;
   if (value.startsWith("Welcome back, "))
     return `${uiText("Welcome back,", locale)} ${value.slice(14)}`;
-  return value;
+
+  // Dynamic catalog/category fallback: preserve brand names, numbers and model
+  // names while translating common marketplace terms so imported categories do
+  // not fall back to an otherwise-English storefront.
+  const replacements: Record<string, Array<[RegExp, string]>> = {
+    "zh-CN": [
+      [/\bgift cards?\b/gi, "礼品卡"], [/\bvouchers?\b/gi, "代金券"],
+      [/\btop[ -]?ups?\b/gi, "充值"], [/\baccounts?\b/gi, "账号"],
+      [/\bgames?\b/gi, "游戏"], [/\bgaming\b/gi, "游戏"],
+      [/\bsubscriptions?\b/gi, "订阅"], [/\bsoftware\b/gi, "软件"],
+      [/\bmobile\b/gi, "手机"], [/\bnew\b/gi, "新"], [/\bold\b/gi, "老"],
+      [/\bwith followers\b/gi, "带粉丝"], [/\bwith posts\b/gi, "带帖子"],
+      [/\bdigital\b/gi, "数字"], [/\bservices?\b/gi, "服务"],
+      [/\bemail\b/gi, "邮箱"], [/\bsocial media\b/gi, "社交媒体"],
+      [/\bcredits?\b/gi, "点数"], [/\bcurrency\b/gi, "货币"],
+      [/\bpoints\b/gi, "点数"], [/\bdiamonds\b/gi, "钻石"], [/\bcoins\b/gi, "金币"],
+    ],
+    ru: [
+      [/\bgift cards?\b/gi, "подарочные карты"], [/\bvouchers?\b/gi, "ваучеры"],
+      [/\btop[ -]?ups?\b/gi, "пополнения"], [/\baccounts?\b/gi, "аккаунты"],
+      [/\bgames?\b/gi, "игры"], [/\bgaming\b/gi, "игровые товары"],
+      [/\bsubscriptions?\b/gi, "подписки"], [/\bsoftware\b/gi, "программы"],
+      [/\bmobile\b/gi, "мобильные"], [/\bnew\b/gi, "новые"], [/\bold\b/gi, "старые"],
+      [/\bwith followers\b/gi, "с подписчиками"], [/\bwith posts\b/gi, "с публикациями"],
+      [/\bdigital\b/gi, "цифровые"], [/\bservices?\b/gi, "услуги"],
+      [/\bemail\b/gi, "почта"], [/\bsocial media\b/gi, "социальные сети"],
+      [/\bcredits?\b/gi, "кредиты"], [/\bcurrency\b/gi, "валюта"],
+      [/\bpoints\b/gi, "очки"], [/\bdiamonds\b/gi, "алмазы"], [/\bcoins\b/gi, "монеты"],
+    ],
+  };
+  let translated = value;
+  for (const [pattern, replacement] of replacements[key] ?? []) {
+    translated = translated.replace(pattern, replacement);
+  }
+  return translated;
 }
 export function localizedProduct<
   T extends {

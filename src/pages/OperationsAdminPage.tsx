@@ -824,6 +824,7 @@ export function OperationsAdminPage() {
     Shop2TopupBigCategory[]
   >([]);
   const [shop2TopupBigCategoryId, setShop2TopupBigCategoryId] = useState("");
+  const [shop2TopupCatalogError, setShop2TopupCatalogError] = useState("");
   const [shop2TopupCategories, setShop2TopupCategories] = useState<
     Shop2TopupCategory[]
   >([]);
@@ -946,12 +947,21 @@ export function OperationsAdminPage() {
       setShop2TopupCategoryMappings(shopResale?.categoryMappings ?? []);
       setShop2TopupImports(shopResale?.imports ?? []);
       if (shopStatus?.configuration.configured) {
-        const catalog = await apiRequest<{ bigCategories: Shop2TopupBigCategory[] }>(
-          "/api/admin/shop2topup/catalog/big-categories",
-        ).catch(() => ({ bigCategories: [] }));
-        setShop2TopupBigCategories(catalog.bigCategories ?? []);
+        try {
+          const catalog = await apiRequest<{ bigCategories: Shop2TopupBigCategory[] }>(
+            "/api/admin/shop2topup/catalog/big-categories",
+          );
+          setShop2TopupBigCategories(catalog.bigCategories ?? []);
+          setShop2TopupCatalogError("");
+        } catch (error) {
+          setShop2TopupBigCategories([]);
+          setShop2TopupCatalogError(
+            error instanceof Error ? error.message : "SHOP2TOPUP catalog could not be loaded.",
+          );
+        }
       } else {
         setShop2TopupBigCategories([]);
+        setShop2TopupCatalogError("SHOP2TOPUP_API_KEY is not configured in the Railway API service.");
       }
     }
 
@@ -1069,6 +1079,27 @@ export function OperationsAdminPage() {
       await load();
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "SHOP2TOPUP connection test failed.");
+    } finally {
+      setBusy("");
+    }
+  }
+
+  async function refreshShop2TopupCatalog() {
+    setBusy("shop2topup-refresh");
+    setMessage("");
+    setShop2TopupCatalogError("");
+    try {
+      const catalog = await apiRequest<{ bigCategories: Shop2TopupBigCategory[] }>(
+        "/api/admin/shop2topup/catalog/big-categories",
+      );
+      setShop2TopupBigCategories(catalog.bigCategories ?? []);
+      if (!(catalog.bigCategories ?? []).length) {
+        setShop2TopupCatalogError("SHOP2TOPUP returned an empty catalog group list.");
+      }
+    } catch (error) {
+      const text = error instanceof Error ? error.message : "SHOP2TOPUP catalog could not be loaded.";
+      setShop2TopupCatalogError(text);
+      setMessage(text);
     } finally {
       setBusy("");
     }
@@ -2598,6 +2629,26 @@ export function OperationsAdminPage() {
 
               <div className="shop2topup-import-grid">
                 <section className="shop2topup-import-controls">
+                  <div className="shop2topup-catalog-toolbar">
+                    <button
+                      type="button"
+                      className="shop2topup-secondary-action"
+                      disabled={Boolean(busy) || !shop2Topup?.configuration.configured}
+                      onClick={() => void refreshShop2TopupCatalog()}
+                    >
+                      <RefreshCw size={16} />
+                      {busy === "shop2topup-refresh" ? "Refreshing catalog…" : "Refresh supplier catalog"}
+                    </button>
+                    {shop2TopupCatalogError ? (
+                      <p className="shop2topup-catalog-error">
+                        <strong>Catalog unavailable:</strong> {shop2TopupCatalogError}
+                        {shop2Topup?.access.status === "disabled" ? (
+                          <> SHOP2TOPUP has authenticated the key but disabled the reseller account. Enable the account in the supplier portal before catalog groups can be fetched.</>
+                        ) : null}
+                      </p>
+                    ) : null}
+                  </div>
+
                   <label>
                     <span>Supplier catalog group</span>
                     <select
@@ -2607,7 +2658,15 @@ export function OperationsAdminPage() {
                         void browseShop2TopupBigCategory(event.target.value)
                       }
                     >
-                      <option value="">Choose a group</option>
+                      <option value="">
+                        {shop2Topup?.access.status === "disabled"
+                          ? "Supplier account disabled — enable API access"
+                          : busy === "shop2topup-refresh"
+                            ? "Loading supplier groups…"
+                            : shop2TopupBigCategories.length
+                              ? "Choose a group"
+                              : "No supplier groups loaded"}
+                      </option>
                       {shop2TopupBigCategories.map((group) => (
                         <option value={group.id} key={group.id}>
                           {group.name}

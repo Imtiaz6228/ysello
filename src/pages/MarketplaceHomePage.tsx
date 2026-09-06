@@ -189,20 +189,19 @@ export function MarketplaceHomePage() {
             </p>
             <div className="ys-hero-actions">
               <Link className="ys-primary-link" to="/catalog">
-                Browse all products <ArrowRight />
+                <UiText value="Browse all products" /> <ArrowRight />
               </Link>
               <a href="#account-listings">
-                Shop by category <ArrowRight />
+                <UiText value="Shop by category" /> <ArrowRight />
               </a>
             </div>
             <div className="ys-hero-footnote">
-              <ShieldCheck /> Clear terms. Secure checkout. Support with every
-              order.
+              <ShieldCheck /> <UiText value="Clear terms. Secure checkout. Support with every order." />
             </div>
           </div>
           <div className="ys-hero-platforms">
             <div className="ys-hero-platform-heading">
-              <span>ONE MARKETPLACE. YOUR PLATFORMS.</span>
+              <span><UiText value="ONE MARKETPLACE. YOUR PLATFORMS." /></span>
               <Grid2X2 />
             </div>
             <div className="ys-hero-platform-grid">
@@ -238,7 +237,7 @@ export function MarketplaceHomePage() {
                 })}
             </div>
             <Link className="ys-hero-platform-footer" to="/catalog">
-              Discover your next digital essential <ArrowRight />
+              <UiText value="Discover your next digital essential" /> <ArrowRight />
             </Link>
           </div>
         </section>
@@ -250,29 +249,29 @@ export function MarketplaceHomePage() {
           <span>
             <BadgeCheck />
             <span>
-              <strong>Seller storefronts</strong>
-              <small>Know who you buy from</small>
+              <strong><UiText value="Seller storefronts" /></strong>
+              <small><UiText value="Know who you buy from" /></small>
             </span>
           </span>
           <span>
             <ShoppingBag />
             <span>
-              <strong>Transparent pricing</strong>
-              <small>Compare before checkout</small>
+              <strong><UiText value="Transparent pricing" /></strong>
+              <small><UiText value="Compare before checkout" /></small>
             </span>
           </span>
           <span>
             <Download />
             <span>
-              <strong>Digital delivery</strong>
-              <small>Access orders in your account</small>
+              <strong><UiText value="Digital delivery" /></strong>
+              <small><UiText value="Access orders in your account" /></small>
             </span>
           </span>
           <Link to="/support">
             <Headphones />
             <span>
-              <strong>Order support</strong>
-              <small>Help when you need it</small>
+              <strong><UiText value="Order support" /></strong>
+              <small><UiText value="Help when you need it" /></small>
             </span>
           </Link>
         </section>
@@ -280,7 +279,7 @@ export function MarketplaceHomePage() {
         <section className="ys-company-section" id="categories">
           <header className="ys-section-heading">
             <div>
-              <span className="ys-eyebrow">FIND YOUR PLATFORM</span>
+              <span className="ys-eyebrow"><UiText value="FIND YOUR PLATFORM" /></span>
               <h2>
                 <UiText value="Shop by category" />
               </h2>
@@ -310,7 +309,7 @@ export function MarketplaceHomePage() {
                     <strong>
                       <UiText value={category.name} />
                     </strong>
-                    <small>{category.productCount ?? 0} products</small>
+                    <small>{category.productCount ?? 0} <UiText value="products" /></small>
                   </span>
                   <ArrowRight />
                 </Link>
