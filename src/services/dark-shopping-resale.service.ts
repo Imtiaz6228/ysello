@@ -463,7 +463,7 @@ export async function importDarkShoppingCategory(remoteCategoryId: number) {
   return { category, imported: true, reactivated: false };
 }
 
-async function ensureOfficialSellerProfile(userId: string) {
+export async function ensureOfficialSellerProfile(userId: string) {
   const existing = await prisma.sellerProfile.findUnique({ where: { userId } });
   if (existing) {
     if (

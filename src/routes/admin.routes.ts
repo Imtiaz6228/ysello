@@ -960,6 +960,24 @@ adminRouter.patch(
     if (!productForModeration)
       throw new ApiError(404, "Product not found.", "PRODUCT_NOT_FOUND");
 
+    const supplierAttributes =
+      productForModeration.productAttributes &&
+      typeof productForModeration.productAttributes === "object" &&
+      !Array.isArray(productForModeration.productAttributes)
+        ? (productForModeration.productAttributes as Record<string, unknown>)
+        : null;
+    if (
+      input.status === "APPROVED" &&
+      supplierAttributes?.supplier === "shop2topup" &&
+      supplierAttributes.supplierCheckoutReady !== true
+    ) {
+      throw new ApiError(
+        409,
+        "This SHOP2TOPUP product is not ready to publish because its player/account requirement fields are not yet collected by checkout.",
+        "SHOP2TOPUP_CHECKOUT_REQUIREMENTS_PENDING",
+      );
+    }
+
     // Moderation and fulfillment readiness are separate concerns. Admins must
     // be able to approve the listing itself; a download without delivery stock
     // is published as unavailable until the seller adds a file or inventory.

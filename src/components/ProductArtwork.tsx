@@ -12,10 +12,22 @@ export function ProductArtwork({ product }: { product: CatalogProduct }) {
     product.title,
   );
   const source = product.imageUrl || "/ysello-mark.svg";
+  const genericGameArtwork = new Set([
+    "pubg-mobile",
+    "free-fire",
+    "genshin-impact",
+    "honkai-star-rail",
+    "wuthering-waves",
+    "zenless-zone-zero",
+    "mobile-legends",
+    "valorant",
+    "fortnite",
+    "roblox",
+  ]);
   const [failedSource, setFailedSource] = useState("");
   useEffect(() => setFailedSource(""), [source]);
 
-  if (brandSlug) {
+  if (brandSlug && !(product.imageUrl && genericGameArtwork.has(brandSlug))) {
     return (
       <span className="ys-reliable-artwork is-platform">
         <MarketplaceBrandArtwork brandSlug={brandSlug} />

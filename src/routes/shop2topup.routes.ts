@@ -7,6 +7,12 @@ import {
   shop2TopupClient,
   shop2TopupStatus,
 } from "../services/shop2topup.service.js";
+import {
+  importShop2TopupCategory,
+  importShop2TopupProducts,
+  listShop2TopupCategoryMappings,
+  listShop2TopupImports,
+} from "../services/shop2topup-resale.service.js";
 
 export const shop2TopupRouter = Router();
 shop2TopupRouter.use(requireAuth, requireRole(Role.ADMIN, Role.SUPER_ADMIN));
@@ -17,6 +23,18 @@ shop2TopupRouter.use((_req, res, next) => {
 });
 
 const positiveId = z.coerce.number().int().positive();
+
+shop2TopupRouter.get(
+  "/resale",
+  asyncHandler(async (_req, res) => {
+    const [status, categoryMappings, imports] = await Promise.all([
+      shop2TopupStatus(),
+      listShop2TopupCategoryMappings(),
+      listShop2TopupImports(),
+    ]);
+    res.json({ status, categoryMappings, imports });
+  }),
+);
 
 shop2TopupRouter.get(
   "/status",
@@ -86,5 +104,36 @@ shop2TopupRouter.get(
   asyncHandler(async (req, res) => {
     const categoryId = positiveId.parse(req.params.categoryId);
     res.json({ requirements: await shop2TopupClient().getRequirements(categoryId) });
+  }),
+);
+
+shop2TopupRouter.post(
+  "/resale/categories/import",
+  asyncHandler(async (req, res) => {
+    const input = z.object({ remoteCategoryId: positiveId }).parse(req.body);
+    const result = await importShop2TopupCategory(input.remoteCategoryId);
+    res.status(result.imported ? 201 : 200).json(result);
+  }),
+);
+
+shop2TopupRouter.post(
+  "/resale/import",
+  asyncHandler(async (req, res) => {
+    const input = z
+      .object({
+        remoteCategoryId: positiveId,
+        remoteItemIds: z.array(positiveId).min(1).max(50),
+        categoryId: z.string().uuid().optional(),
+        autoCategory: z.boolean().default(true),
+      })
+      .refine((value) => value.autoCategory || Boolean(value.categoryId), {
+        message: "Choose a destination category or automatic category mapping.",
+      })
+      .parse(req.body);
+    const result = await importShop2TopupProducts({
+      ...input,
+      adminId: req.auth!.id,
+    });
+    res.status(201).json(result);
   }),
 );

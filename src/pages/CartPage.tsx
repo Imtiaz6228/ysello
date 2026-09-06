@@ -16,7 +16,7 @@ import { useLocale } from "../i18n/LocaleContext";
 
 export function CartPage() {
   const { formatMoney, formatProductMoney, t } = useLocale();
-  const { items, subtotalCents, remove, setQuantity } = useCart();
+  const { items, subtotalCents, remove, setQuantity, clear } = useCart();
   return (
     <main className="commerce-page">
       <Seo
@@ -45,6 +45,12 @@ export function CartPage() {
       ) : (
         <section className="cart-layout">
           <div className="cart-items">
+            <div className="cart-list-toolbar">
+              <span>{items.length} selected product{items.length === 1 ? "" : "s"}</span>
+              <button type="button" onClick={clear}>
+                <Trash2 /> Clear cart
+              </button>
+            </div>
             {items.map(({ product, quantity }) => (
               <article key={product.id}>
                 <div className="cart-thumb">
@@ -85,11 +91,11 @@ export function CartPage() {
                 </div>
                 <strong>{formatProductMoney(product, quantity)}</strong>
                 <button
-                  className="icon-button"
+                  className="cart-remove-button"
                   onClick={() => remove(product.id)}
                   aria-label={`Remove ${product.title}`}
                 >
-                  <Trash2 />
+                  <Trash2 /> <span>Remove</span>
                 </button>
               </article>
             ))}

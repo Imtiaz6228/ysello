@@ -318,6 +318,46 @@ type Shop2TopupBigCategory = {
   description?: string | null;
 };
 
+type Shop2TopupCategory = {
+  id: number;
+  name: string;
+  description?: string | null;
+  big_category_id: number;
+  big_category_name: string;
+  image?: string | null;
+  image_url?: string | null;
+};
+
+type Shop2TopupProduct = {
+  item_id: number;
+  name: string;
+  description?: string | null;
+  category_id: number;
+  category_name: string;
+  price: string;
+  fulfillment_type?: string | null;
+  returns_voucher?: boolean;
+};
+
+type Shop2TopupImport = {
+  id: string;
+  name: string;
+  slug: string;
+  sku?: string | null;
+  status: string;
+  priceUsdCents: number;
+  updatedAt: string;
+  category: { id: string; name: string; slug: string };
+};
+
+type Shop2TopupCategoryMapping = {
+  remoteCategoryId: number;
+  categoryId: string;
+  name: string;
+  slug: string;
+  isActive: boolean;
+};
+
 type Order = {
   id: string;
   orderNumber: string;
@@ -783,6 +823,36 @@ export function OperationsAdminPage() {
   const [shop2TopupBigCategories, setShop2TopupBigCategories] = useState<
     Shop2TopupBigCategory[]
   >([]);
+  const [shop2TopupBigCategoryId, setShop2TopupBigCategoryId] = useState("");
+  const [shop2TopupCategories, setShop2TopupCategories] = useState<
+    Shop2TopupCategory[]
+  >([]);
+  const [shop2TopupCategoryId, setShop2TopupCategoryId] = useState("");
+  const [shop2TopupProducts, setShop2TopupProducts] = useState<
+    Shop2TopupProduct[]
+  >([]);
+  const [shop2TopupProductSearch, setShop2TopupProductSearch] = useState("");
+  const [shop2TopupSelectedItemIds, setShop2TopupSelectedItemIds] = useState<
+    number[]
+  >([]);
+  const [shop2TopupTargetCategoryId, setShop2TopupTargetCategoryId] =
+    useState("");
+  const [shop2TopupAutoCategory, setShop2TopupAutoCategory] = useState(true);
+  const [shop2TopupImports, setShop2TopupImports] = useState<
+    Shop2TopupImport[]
+  >([]);
+  const [shop2TopupCategoryMappings, setShop2TopupCategoryMappings] = useState<
+    Shop2TopupCategoryMapping[]
+  >([]);
+  const filteredShop2TopupProducts = useMemo(() => {
+    const query = shop2TopupProductSearch.trim().toLowerCase();
+    if (!query) return shop2TopupProducts;
+    return shop2TopupProducts.filter((product) =>
+      `${product.name} ${product.description ?? ""} ${product.category_name}`
+        .toLowerCase()
+        .includes(query),
+    );
+  }, [shop2TopupProductSearch, shop2TopupProducts]);
 
   function selectTab(next: Tab) {
     setTabState(next);
@@ -866,11 +936,16 @@ export function OperationsAdminPage() {
     };
 
     if (tab === "suppliers") {
-      const shopStatus = await apiRequest<Shop2TopupStatus>(
-        "/api/admin/shop2topup/status",
-      ).catch(() => null);
+      const shopResale = await apiRequest<{
+        status: Shop2TopupStatus;
+        categoryMappings: Shop2TopupCategoryMapping[];
+        imports: Shop2TopupImport[];
+      }>("/api/admin/shop2topup/resale").catch(() => null);
+      const shopStatus = shopResale?.status ?? null;
       setShop2Topup(shopStatus);
-      if (shopStatus?.configuration.configured && shopStatus.access.status === "ready") {
+      setShop2TopupCategoryMappings(shopResale?.categoryMappings ?? []);
+      setShop2TopupImports(shopResale?.imports ?? []);
+      if (shopStatus?.configuration.configured) {
         const catalog = await apiRequest<{ bigCategories: Shop2TopupBigCategory[] }>(
           "/api/admin/shop2topup/catalog/big-categories",
         ).catch(() => ({ bigCategories: [] }));
@@ -994,6 +1069,151 @@ export function OperationsAdminPage() {
       await load();
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "SHOP2TOPUP connection test failed.");
+    } finally {
+      setBusy("");
+    }
+  }
+
+  async function browseShop2TopupBigCategory(bigCategoryId: string) {
+    setShop2TopupBigCategoryId(bigCategoryId);
+    setShop2TopupCategoryId("");
+    setShop2TopupCategories([]);
+    setShop2TopupProducts([]);
+    setShop2TopupSelectedItemIds([]);
+    if (!bigCategoryId) return;
+    setBusy("shop2topup-categories");
+    setMessage("");
+    try {
+      const result = await apiRequest<{ categories: Shop2TopupCategory[] }>(
+        `/api/admin/shop2topup/catalog/categories?bigCategoryId=${encodeURIComponent(bigCategoryId)}`,
+      );
+      setShop2TopupCategories(result.categories ?? []);
+      if (!(result.categories ?? []).length) {
+        setMessage("SHOP2TOPUP returned no categories for this catalog group.");
+      }
+    } catch (error) {
+      setMessage(
+        error instanceof Error
+          ? error.message
+          : "SHOP2TOPUP categories could not be loaded.",
+      );
+    } finally {
+      setBusy("");
+    }
+  }
+
+  async function browseShop2TopupCategory(categoryId: string) {
+    setShop2TopupCategoryId(categoryId);
+    setShop2TopupProducts([]);
+    setShop2TopupSelectedItemIds([]);
+    if (!categoryId) return;
+    setBusy("shop2topup-products");
+    setMessage("");
+    try {
+      const result = await apiRequest<{ subcategories: Shop2TopupProduct[] }>(
+        `/api/admin/shop2topup/catalog/subcategories?categoryId=${encodeURIComponent(categoryId)}`,
+      );
+      setShop2TopupProducts(result.subcategories ?? []);
+      if (!(result.subcategories ?? []).length) {
+        setMessage("SHOP2TOPUP returned no purchasable products for this category.");
+      }
+    } catch (error) {
+      setMessage(
+        error instanceof Error
+          ? error.message
+          : "SHOP2TOPUP products could not be loaded.",
+      );
+    } finally {
+      setBusy("");
+    }
+  }
+
+  async function importShop2TopupCategory() {
+    if (!shop2TopupCategoryId) {
+      setMessage("Choose a SHOP2TOPUP category first.");
+      return;
+    }
+    setBusy("shop2topup-category-import");
+    setMessage("");
+    try {
+      const result = await apiRequest<{
+        category: { name: string };
+        imported: boolean;
+        reactivated: boolean;
+      }>("/api/admin/shop2topup/resale/categories/import", {
+        method: "POST",
+        body: { remoteCategoryId: Number(shop2TopupCategoryId) },
+      });
+      setMessage(
+        result.imported
+          ? `SHOP2TOPUP category “${result.category.name}” added to Ysello.`
+          : result.reactivated
+            ? `SHOP2TOPUP category “${result.category.name}” was restored in Ysello.`
+            : `SHOP2TOPUP category “${result.category.name}” is already mapped to Ysello.`,
+      );
+      await load();
+    } catch (error) {
+      setMessage(
+        error instanceof Error
+          ? error.message
+          : "SHOP2TOPUP category could not be imported.",
+      );
+    } finally {
+      setBusy("");
+    }
+  }
+
+  function toggleShop2TopupProduct(itemId: number) {
+    setShop2TopupSelectedItemIds((current) =>
+      current.includes(itemId)
+        ? current.filter((id) => id !== itemId)
+        : [...current, itemId],
+    );
+  }
+
+  async function importShop2TopupProducts() {
+    if (!shop2TopupCategoryId) {
+      setMessage("Choose a SHOP2TOPUP category first.");
+      return;
+    }
+    if (!shop2TopupSelectedItemIds.length) {
+      setMessage("Select at least one SHOP2TOPUP product to import.");
+      return;
+    }
+    if (!shop2TopupAutoCategory && !shop2TopupTargetCategoryId) {
+      setMessage("Choose a Ysello destination category or enable automatic mapping.");
+      return;
+    }
+    setBusy("shop2topup-import");
+    setMessage("");
+    try {
+      const result = await apiRequest<{
+        imported: Array<{ name: string; updated: boolean }>;
+        skipped: Array<{ reason: string }>;
+        publishBlocked: boolean;
+        publishBlockedReason: string;
+      }>("/api/admin/shop2topup/resale/import", {
+        method: "POST",
+        body: {
+          remoteCategoryId: Number(shop2TopupCategoryId),
+          remoteItemIds: shop2TopupSelectedItemIds,
+          categoryId: shop2TopupAutoCategory
+            ? undefined
+            : shop2TopupTargetCategoryId,
+          autoCategory: shop2TopupAutoCategory,
+        },
+      });
+      setMessage(
+        `SHOP2TOPUP import finished: ${result.imported.length} imported/updated${result.skipped.length ? `, ${result.skipped.length} skipped` : ""}. Products are kept as drafts until supplier-specific player/account fields are collected at checkout.`,
+      );
+      setShop2TopupSelectedItemIds([]);
+      await load();
+    } catch (error) {
+      setMessage(
+        error instanceof Error
+          ? error.message
+          : "SHOP2TOPUP products could not be imported.",
+      );
     } finally {
       setBusy("");
     }
@@ -2357,6 +2577,254 @@ export function OperationsAdminPage() {
                 ) : null}
               </div>
             </section>
+
+            <section className="shop2topup-importer">
+              <header>
+                <div>
+                  <span className="section-index">SHOP2TOPUP CATALOG IMPORT</span>
+                  <h2>Import SHOP2TOPUP categories and products</h2>
+                  <p>
+                    Browse the supplier catalog, map categories into Ysello and
+                    import selected top-ups or vouchers. Imported supplier
+                    products stay as drafts until checkout collects the required
+                    player/account fields.
+                  </p>
+                </div>
+                <div className="shop2topup-import-summary">
+                  <span>{shop2TopupCategoryMappings.length} mapped categories</span>
+                  <span>{shop2TopupImports.length} imported products</span>
+                </div>
+              </header>
+
+              <div className="shop2topup-import-grid">
+                <section className="shop2topup-import-controls">
+                  <label>
+                    <span>Supplier catalog group</span>
+                    <select
+                      value={shop2TopupBigCategoryId}
+                      disabled={Boolean(busy) || !shop2Topup?.configuration.configured}
+                      onChange={(event) =>
+                        void browseShop2TopupBigCategory(event.target.value)
+                      }
+                    >
+                      <option value="">Choose a group</option>
+                      {shop2TopupBigCategories.map((group) => (
+                        <option value={group.id} key={group.id}>
+                          {group.name}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+
+                  <label>
+                    <span>Supplier category / game</span>
+                    <select
+                      value={shop2TopupCategoryId}
+                      disabled={Boolean(busy) || !shop2TopupCategories.length}
+                      onChange={(event) =>
+                        void browseShop2TopupCategory(event.target.value)
+                      }
+                    >
+                      <option value="">
+                        {busy === "shop2topup-categories"
+                          ? "Loading categories…"
+                          : "Choose a category"}
+                      </option>
+                      {shop2TopupCategories.map((category) => (
+                        <option value={category.id} key={category.id}>
+                          {category.name}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+
+                  <button
+                    type="button"
+                    className="shop2topup-secondary-action"
+                    disabled={
+                      Boolean(busy) || !shop2TopupCategoryId
+                    }
+                    onClick={() => void importShop2TopupCategory()}
+                  >
+                    <FolderPlus size={16} />
+                    {busy === "shop2topup-category-import"
+                      ? "Importing category…"
+                      : "Import category into Ysello"}
+                  </button>
+
+                  <label>
+                    <span>Search loaded products</span>
+                    <input
+                      type="search"
+                      value={shop2TopupProductSearch}
+                      onChange={(event) => setShop2TopupProductSearch(event.target.value)}
+                      placeholder="Search denominations or vouchers"
+                    />
+                  </label>
+
+                  <label className="shop2topup-check-row">
+                    <input
+                      type="checkbox"
+                      checked={shop2TopupAutoCategory}
+                      onChange={(event) => setShop2TopupAutoCategory(event.target.checked)}
+                    />
+                    <span>
+                      <strong>Automatic category mapping</strong>
+                      <small>
+                        Keep the supplier game/category structure inside Ysello.
+                      </small>
+                    </span>
+                  </label>
+
+                  {!shop2TopupAutoCategory ? (
+                    <label>
+                      <span>Ysello destination category</span>
+                      <select
+                        value={shop2TopupTargetCategoryId}
+                        onChange={(event) => setShop2TopupTargetCategoryId(event.target.value)}
+                      >
+                        <option value="">Choose destination</option>
+                        {categories
+                          .filter((category) => category.isActive)
+                          .map((category) => (
+                            <option value={category.id} key={category.id}>
+                              {category.name}
+                            </option>
+                          ))}
+                      </select>
+                    </label>
+                  ) : null}
+
+                  <div className="shop2topup-import-actions">
+                    <button
+                      type="button"
+                      disabled={!filteredShop2TopupProducts.length || Boolean(busy)}
+                      onClick={() =>
+                        setShop2TopupSelectedItemIds(
+                          filteredShop2TopupProducts.map((product) => product.item_id),
+                        )
+                      }
+                    >
+                      Select shown
+                    </button>
+                    <button
+                      type="button"
+                      disabled={!shop2TopupSelectedItemIds.length || Boolean(busy)}
+                      onClick={() => setShop2TopupSelectedItemIds([])}
+                    >
+                      Clear
+                    </button>
+                    <button
+                      type="button"
+                      className="primary"
+                      disabled={!shop2TopupSelectedItemIds.length || Boolean(busy)}
+                      onClick={() => void importShop2TopupProducts()}
+                    >
+                      <PackagePlus size={16} />
+                      {busy === "shop2topup-import"
+                        ? "Importing…"
+                        : `Import ${shop2TopupSelectedItemIds.length || "selected"}`}
+                    </button>
+                  </div>
+
+                  <div className="shop2topup-safety-note">
+                    <ShieldCheck size={17} />
+                    <span>
+                      Imported SHOP2TOPUP products are saved as <strong>drafts</strong>.
+                      Their dynamic player/server/account requirements are preserved
+                      in product metadata so they can be wired safely into checkout.
+                    </span>
+                  </div>
+                </section>
+
+                <section className="shop2topup-product-browser">
+                  <div className="shop2topup-browser-head">
+                    <div>
+                      <strong>
+                        {shop2TopupCategoryId
+                          ? `${filteredShop2TopupProducts.length} products loaded`
+                          : "Choose a supplier category"}
+                      </strong>
+                      <small>
+                        {shop2TopupSelectedItemIds.length} selected · retail includes {shop2Topup?.configuration.marginPercent ?? 20}% markup
+                      </small>
+                    </div>
+                    {busy === "shop2topup-products" ? <RefreshCw className="spin" size={18} /> : null}
+                  </div>
+
+                  {filteredShop2TopupProducts.length ? (
+                    <div className="shop2topup-product-list">
+                      {filteredShop2TopupProducts.map((product) => {
+                        const selected = shop2TopupSelectedItemIds.includes(product.item_id);
+                        const supplierPrice = Number(product.price || 0);
+                        const retailPrice = supplierPrice * (1 + (shop2Topup?.configuration.marginPercent ?? 20) / 100);
+                        return (
+                          <label
+                            className={selected ? "selected" : ""}
+                            key={product.item_id}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={selected}
+                              disabled={Boolean(busy)}
+                              onChange={() => toggleShop2TopupProduct(product.item_id)}
+                            />
+                            <span className="shop2topup-product-mark">
+                              <PackageOpen size={18} />
+                            </span>
+                            <span className="shop2topup-product-copy">
+                              <strong>{product.name}</strong>
+                              <small>
+                                {product.returns_voucher ? "Voucher" : "Top-up"} · Supplier #{product.item_id}
+                              </small>
+                            </span>
+                            <span className="shop2topup-product-price">
+                              <small>Supplier ${supplierPrice.toFixed(2)}</small>
+                              <strong>${retailPrice.toFixed(2)}</strong>
+                            </span>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <EmptyState
+                      label={
+                        shop2TopupCategoryId
+                          ? "No SHOP2TOPUP products match this search."
+                          : "Choose a catalog group and category to load products."
+                      }
+                    />
+                  )}
+                </section>
+              </div>
+
+              {shop2TopupImports.length ? (
+                <section className="shop2topup-imported-list">
+                  <header>
+                    <div>
+                      <h3>Imported SHOP2TOPUP drafts</h3>
+                      <p>Recent products stored in Ysello with their supplier mapping.</p>
+                    </div>
+                  </header>
+                  <div>
+                    {shop2TopupImports.slice(0, 20).map((product) => (
+                      <article key={product.id}>
+                        <span>
+                          <strong>{product.name}</strong>
+                          <small>{product.category.name} · {product.sku}</small>
+                        </span>
+                        <span>
+                          <small>Retail</small>
+                          <strong>{money(product.priceUsdCents)}</strong>
+                        </span>
+                        <Status value={product.status} />
+                      </article>
+                    ))}
+                  </div>
+                </section>
+              ) : null}
+            </section>
+
             <header className="admin-workspace-toolbar dark-resale-heading">
               <div>
                 <span className="section-index">DARK SHOPPING SUPPLIER</span>

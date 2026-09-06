@@ -1,5 +1,5 @@
-import { lazy, Suspense } from "react";
-import { Navigate, Route, Routes } from "react-router-dom";
+import { lazy, Suspense, useEffect } from "react";
+import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { ProtectedRoute } from "./auth/ProtectedRoute";
 import { HomepageContentBanner } from "./components/HomepageContentBanner";
 import { MobileBottomNavigation } from "./components/MobileBottomNavigation";
@@ -120,9 +120,18 @@ const legalRoutes = publicPages
   .map((page) => page.path)
   .filter((path) => !["/", "/catalog", "/blog"].includes(path));
 
+function ScrollToTopOnRouteChange() {
+  const location = useLocation();
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+  }, [location.pathname, location.search]);
+  return null;
+}
+
 export function App() {
   return (
     <>
+      <ScrollToTopOnRouteChange />
       <a className="skip-link" href="#main-content">
         Skip to main content
       </a>

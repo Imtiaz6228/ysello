@@ -9,6 +9,7 @@ import {
   CreditCard,
   LockKeyhole,
   ShieldCheck,
+  Trash2,
   WalletCards,
 } from "lucide-react";
 import { Link, Navigate, useNavigate } from "react-router-dom";
@@ -45,7 +46,7 @@ const icons: Record<MethodId, typeof CreditCard> = {
 export function CheckoutPage() {
   const { formatMoney, formatProductMoney, t } = useLocale();
   const { user, setUser } = useAuth();
-  const { items, subtotalCents, clear, updateProductPrices } = useCart();
+  const { items, subtotalCents, clear, remove, updateProductPrices } = useCart();
   const navigate = useNavigate();
   const [methods, setMethods] = useState<Method[]>([]);
   const [balanceCents, setBalanceCents] = useState(user?.balanceCents ?? 0);
@@ -266,6 +267,13 @@ export function CheckoutPage() {
                 <small>
                   Qty {quantity} · {product.delivery}
                 </small>
+                <button
+                  type="button"
+                  className="checkout-remove-item"
+                  onClick={() => remove(product.id)}
+                >
+                  <Trash2 size={14} /> Remove
+                </button>
               </div>
               <b>{formatProductMoney(product, quantity)}</b>
             </div>
