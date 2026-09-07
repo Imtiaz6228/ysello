@@ -14,6 +14,7 @@ import {
   EarningsAnalyticsService,
   type Granularity,
 } from "../services/earnings-analytics.service.js";
+import { queueSupportTelegramNotification } from "../services/telegram-notify.service.js";
 
 export const nexusRouter = Router();
 const staff = requireRole(Role.MODERATOR, Role.ADMIN, Role.SUPER_ADMIN);
@@ -104,6 +105,13 @@ nexusRouter.post(
       where: { id: session.id },
       include: { messages: { orderBy: { createdAt: "asc" } } },
     });
+    queueSupportTelegramNotification({
+      sessionId: session.id,
+      name: req.auth ? undefined : updated.guestName,
+      email: req.auth ? undefined : updated.guestEmail,
+      body: input.message,
+      authenticatedUserId: req.auth?.id,
+    });
     res.status(201).json({
       session: updated,
       message: "Your message was sent to an administrator.",
@@ -168,6 +176,13 @@ nexusRouter.post(
         },
       }),
     ]);
+    queueSupportTelegramNotification({
+      sessionId: session.id,
+      name: session.guestName,
+      email: session.guestEmail,
+      body: input.body,
+      authenticatedUserId: req.auth?.id,
+    });
     res.status(201).json({ message });
   }),
 );

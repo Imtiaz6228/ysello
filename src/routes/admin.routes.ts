@@ -51,6 +51,11 @@ import {
   getTopupRequests,
   rejectTopup,
 } from "../services/topup.service.js";
+import {
+  sendTelegramMessage,
+  telegramBotStatus,
+  telegramRecentChats,
+} from "../services/telegram-notify.service.js";
 
 export const adminRouter = Router();
 
@@ -209,6 +214,45 @@ async function categoryDepth(categoryId: string) {
 }
 
 adminRouter.use(requireAuth, requireVerifiedUser);
+
+adminRouter.get(
+  "/telegram/status",
+  requireAdmin,
+  asyncHandler(async (_req, res) => {
+    res.json(await telegramBotStatus());
+  }),
+);
+
+adminRouter.get(
+  "/telegram/chats",
+  requireAdmin,
+  asyncHandler(async (_req, res) => {
+    const chats = await telegramRecentChats();
+    res.json({
+      chats: chats.map((chat) => ({
+        id: String(chat.id),
+        type: chat.type,
+        name:
+          chat.title ||
+          [chat.first_name, chat.last_name].filter(Boolean).join(" ") ||
+          chat.username ||
+          "Telegram chat",
+        username: chat.username || null,
+      })),
+    });
+  }),
+);
+
+adminRouter.post(
+  "/telegram/test",
+  requireAdmin,
+  asyncHandler(async (_req, res) => {
+    const result = await sendTelegramMessage(
+      `✅ Ysello Telegram notifications are working.\n${new Date().toISOString()}`,
+    );
+    res.json(result);
+  }),
+);
 
 adminRouter.get(
   "/seller-applications",

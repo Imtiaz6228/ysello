@@ -265,6 +265,26 @@ const envSchema = z.object({
       .refine((value) => new URL(value).protocol === "https:", "must use HTTPS")
       .optional(),
   ),
+  TELEGRAM_BOT_TOKEN: z.preprocess(
+    trimmedStringToUndefined,
+    z
+      .string()
+      .regex(/^\d+:[A-Za-z0-9_-]{20,}$/, "must be a Telegram Bot API token")
+      .optional(),
+  ),
+  TELEGRAM_CHAT_ID: z.preprocess(
+    trimmedStringToUndefined,
+    z.string().regex(/^-?\d+$/, "must be a numeric Telegram chat ID").optional(),
+  ),
+  VISITOR_NOTIFY_ENABLED: booleanFromEnv.default(true),
+  VISITOR_NOTIFY_INCLUDE_BOTS: booleanFromEnv.default(true),
+  VISITOR_NOTIFY_DEDUPE_MINUTES: z.coerce
+    .number()
+    .int()
+    .min(1)
+    .max(1440)
+    .default(30),
+  TELEGRAM_SUPPORT_FORWARDING_ENABLED: booleanFromEnv.default(true),
   DARK_SHOPPING_API_KEY: z.preprocess(
     trimmedStringToUndefined,
     z.string().min(1).max(255).optional(),

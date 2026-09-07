@@ -37,6 +37,7 @@ import { shop2TopupWebhookHandler, shop2TopupWebhookHealth } from "./routes/shop
 import { railwayReleaseMetadata } from "./config/release.js";
 import { prisma } from "./lib/prisma.js";
 import { INDEXNOW_KEY } from "./services/indexnow.service.js";
+import { queueVisitorTelegramNotification } from "./services/telegram-notify.service.js";
 import { blogPosts } from "./content/blog.js";
 import { publicPages, siteContentLastModified } from "./content/publicPages.js";
 import {
@@ -186,6 +187,18 @@ app.use(express.json({ limit: "1mb" }));
 app.use(express.urlencoded({ extended: false, limit: "1mb" }));
 app.use(cookieParser());
 app.use(generalLimiter);
+
+// Notify the configured Telegram destination once per visitor fingerprint
+// within the dedupe window. Work is queued after a successful public HTML
+// response so Telegram can never slow down the storefront request itself.
+app.use((req, res, next) => {
+  res.once("finish", () => {
+    if (res.statusCode >= 200 && res.statusCode < 400) {
+      queueVisitorTelegramNotification(req);
+    }
+  });
+  next();
+});
 
 app.use(
   "/uploads",

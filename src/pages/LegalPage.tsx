@@ -44,7 +44,7 @@ export const legalPages: Record<string, LegalPageContent> = {
     sections: [
       {
         title: "Data we collect",
-        body: "We collect account details, verification status, order and payment references, support messages, security logs, device information, and content you choose to upload. Payment providers handle full payment credentials; Ysello stores provider references and status.",
+        body: "We collect account details, verification status, order and payment references, support messages, security logs, IP address, approximate country, referrer, browser/device information, and content you choose to upload. These technical details may be used for fraud prevention, traffic diagnostics, and administrator visitor alerts. Payment providers handle full payment credentials; Ysello stores provider references and status.",
       },
       {
         title: "How data is used",
@@ -52,7 +52,7 @@ export const legalPages: Record<string, LegalPageContent> = {
       },
       {
         title: "Storage and sharing",
-        body: "We share only what is necessary with payment, email, hosting, analytics, fraud-prevention, and legal service providers under appropriate safeguards. Retention follows operational, security, dispute, tax, and legal needs.",
+        body: "We share only what is necessary with payment, email, hosting, analytics, fraud-prevention, administrator messaging, and legal service providers under appropriate safeguards. Visitor and support alerts may be delivered to the marketplace administrator through a configured messaging service such as Telegram. Retention follows operational, security, dispute, tax, and legal needs.",
       },
       {
         title: "Your choices",

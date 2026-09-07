@@ -159,15 +159,30 @@ function flattenTaxonomyBranch(
   });
 }
 
-const taxonomyCategories: CatalogCategory[] = marketplaceTaxonomy.flatMap(
-  (category, categoryIndex) => {
+function taxonomyCategoriesForLocale(locale = "en"): CatalogCategory[] {
+  return marketplaceTaxonomy.flatMap((category, categoryIndex) => {
     const rootOrder = (categoryIndex + 1) * 1000;
+    const branch = flattenTaxonomyBranch(
+      category.subcategories,
+      category.slug,
+      category.icon,
+      rootOrder,
+    ).map((item) => ({
+      ...item,
+      name: locale === "en" ? item.name : uiText(item.name, locale),
+      description:
+        locale === "en" ? item.description : uiText(item.description, locale),
+    }));
+
     return [
       {
         id: `taxonomy-${category.slug}`,
         slug: category.slug,
-        name: uiText(category.name, locale),
-        description: uiText(category.description, locale),
+        name: locale === "en" ? category.name : uiText(category.name, locale),
+        description:
+          locale === "en"
+            ? category.description
+            : uiText(category.description, locale),
         icon: category.icon,
         sortOrder: rootOrder,
         productCount: localProducts.filter(
@@ -176,28 +191,37 @@ const taxonomyCategories: CatalogCategory[] = marketplaceTaxonomy.flatMap(
         isFeatured: true,
         depth: 0,
       },
-      ...flattenTaxonomyBranch(
-        category.subcategories,
-        category.slug,
-        category.icon,
-        rootOrder,
-      ),
+      ...branch,
     ];
-  },
-);
+  });
+}
 
-const localCategories = [
-  ...new Map(
-    [...taxonomyCategories, ...catalogCategories].map((category) => [
-      category.slug,
-      category,
-    ]),
-  ).values(),
-];
+function localCategoriesForLocale(locale = "en") {
+  const localizedCatalogCategories = catalogCategories.map((category) => ({
+    ...category,
+    name: locale === "en" ? category.name : uiText(category.name, locale),
+    description:
+      locale === "en"
+        ? category.description
+        : uiText(category.description, locale),
+  }));
 
-function mergeWithLocalCategories(remoteCategories: CatalogCategory[]) {
+  return [
+    ...new Map(
+      [
+        ...taxonomyCategoriesForLocale(locale),
+        ...localizedCatalogCategories,
+      ].map((category) => [category.slug, category]),
+    ).values(),
+  ];
+}
+
+function mergeWithLocalCategories(
+  remoteCategories: CatalogCategory[],
+  locale = "en",
+) {
   const merged = new Map(
-    localCategories.map((category) => [category.slug, category]),
+    localCategoriesForLocale(locale).map((category) => [category.slug, category]),
   );
   remoteCategories.forEach((remote) => {
     const local = merged.get(remote.slug);
@@ -686,7 +710,7 @@ export function useMarketplaceStore(slug?: string) {
 export function useMarketplaceCategory(slug?: string) {
   const { locale } = useLocale();
   const localCategory = useMemo(() => {
-    const item = localCategories.find((entry) => entry.slug === slug);
+    const item = localCategoriesForLocale(locale).find((entry) => entry.slug === slug);
     return item
       ? {
           ...item,
@@ -707,7 +731,7 @@ export function useMarketplaceCategory(slug?: string) {
       return;
     }
 
-    const immediate = localCategories.find((item) => item.slug === slug);
+    const immediate = localCategoriesForLocale(locale).find((item) => item.slug === slug);
     if (immediate) {
       setCategory({
         ...immediate,
@@ -725,7 +749,10 @@ export function useMarketplaceCategory(slug?: string) {
     )
       .then((data) => {
         if (cancelled) return;
-        const merged = mergeWithLocalCategories(mapCategories(data.categories, locale));
+        const merged = mergeWithLocalCategories(
+          mapCategories(data.categories, locale),
+          locale,
+        );
         setCategory(merged.find((item) => item.slug === slug));
       })
       .catch(() => {
