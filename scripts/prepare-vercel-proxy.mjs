@@ -1,12 +1,15 @@
-import { mkdirSync, writeFileSync } from "node:fs";
+import { mkdirSync, rmSync, writeFileSync } from "node:fs";
 
-const html = `<!doctype html><html><head><meta charset="utf-8"><meta name="robots" content="noindex"><title>Ysello proxy</title></head><body>Ysello edge proxy</body></html>\n`;
+// Vercel is used only as the public edge/reverse-proxy in front of Railway.
+// IMPORTANT: do not create index.html here. A real static /index.html wins over
+// the external rewrite for `/` and would hide the actual Ysello storefront.
 for (const directory of ["vercel-dist", "dist"]) {
+  rmSync(directory, { recursive: true, force: true });
   mkdirSync(directory, { recursive: true });
   writeFileSync(
     `${directory}/deployment.txt`,
-    "Ysello Vercel edge proxy release 2026-09-07.4. Dynamic application is served by Railway.\n",
+    "Ysello Vercel reverse-proxy release 2026-09-07.6. Storefront and API are served by Railway.\n",
   );
-  writeFileSync(`${directory}/index.html`, html);
 }
-console.log("[ysello] Vercel proxy output prepared for vercel-dist and dist");
+
+console.log("[ysello] Vercel reverse-proxy output prepared; no static index.html generated");

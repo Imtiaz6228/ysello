@@ -50,6 +50,10 @@
   ],
   "rewrites": [
     {
+      "source": "/",
+      "destination": "https://hsello-production.up.railway.app/"
+    },
+    {
       "source": "/:path*",
       "destination": "https://hsello-production.up.railway.app/:path*"
     }
