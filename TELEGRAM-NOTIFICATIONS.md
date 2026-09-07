@@ -36,3 +36,16 @@ Telegram `getUpdates` cannot be used while an outgoing Telegram webhook is confi
 ## Important distinction
 
 A numeric Telegram `chat_id` is an internal Bot API routing identifier, not a public contact URL. Ysello uses it as the private destination for visitor notifications and website support messages. If visitors should message the bot directly inside Telegram, Telegram still requires the bot's public `t.me/<bot_username>` deep link.
+
+## Numeric chat ID — exact setup sequence
+
+1. Rotate the BotFather token if it has been shared anywhere outside Railway.
+2. Open `@VisitorNotify786_bot` in Telegram and press **Start** (or send `/start`).
+3. In Railway, set `TELEGRAM_BOT_TOKEN` to the new token and temporarily leave `TELEGRAM_CHAT_ID` empty.
+4. Deploy the API.
+5. Sign in to Ysello as an ADMIN/SUPER_ADMIN and request `GET /api/admin/telegram/chats` on the API origin. The response lists recent Telegram conversations received by the bot.
+6. Copy the numeric `id` for your private chat and set it in Railway as `TELEGRAM_CHAT_ID`.
+7. Redeploy, then call `POST /api/admin/telegram/test`. A success message should arrive in that Telegram conversation.
+8. Open a public Ysello page from another browser/device to verify the visitor alert.
+
+Private chat IDs are normally positive integers. Group/supergroup IDs are normally negative. A numeric `chat_id` is an internal Bot API destination; it is not a public URL or username. The Ysello support widget can forward visitors' messages to this chat ID so site visitors do not need to know your Telegram account.
