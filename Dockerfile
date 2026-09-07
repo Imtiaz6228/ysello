@@ -15,7 +15,7 @@ RUN npm ci --include=dev --no-audit --no-fund
 
 COPY . .
 
-RUN echo "[ysello] Docker build release 2026-09-07.3" \
+RUN echo "[ysello] Docker build release 2026-09-07.4" \
     && npm run build:railway
 
 ENV NODE_ENV=production

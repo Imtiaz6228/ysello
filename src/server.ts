@@ -20,6 +20,13 @@ const server = await (async () => {
       `Ysello API ${YSELLO_RELEASE_ID} listening on port ${env.PORT}`,
       railwayReleaseMetadata(),
     );
+    console.log("Telegram visitor notifications", {
+      enabled: env.VISITOR_NOTIFY_ENABLED,
+      botConfigured: Boolean(env.TELEGRAM_BOT_TOKEN),
+      chatConfigured: Boolean(env.TELEGRAM_CHAT_ID),
+      includeBots: env.VISITOR_NOTIFY_INCLUDE_BOTS,
+      dedupeMinutes: env.VISITOR_NOTIFY_DEDUPE_MINUTES,
+    });
   });
 })().catch(async (error) => {
   console.error("API startup failed", error);
