@@ -433,6 +433,7 @@ function sitemapVariantUrl(siteUrl: string, path: string, lang: string | null) {
 }
 
 function sitemapUrlEntries(siteUrl: string, items: SitemapItem[]) {
+  const sitewideSeoModifiedAt = new Date(`${siteContentLastModified}T00:00:00.000Z`);
   return items
     .flatMap((item) => {
       const locales = item.localize ? sitemapLocales : [sitemapLocales[0]];
@@ -450,7 +451,7 @@ function sitemapUrlEntries(siteUrl: string, items: SitemapItem[]) {
         return [
           "  <url>",
           `    <loc>${xmlEscape(loc)}</loc>`,
-          `    <lastmod>${item.updatedAt.toISOString()}</lastmod>`,
+          `    <lastmod>${(item.updatedAt > sitewideSeoModifiedAt ? item.updatedAt : sitewideSeoModifiedAt).toISOString()}</lastmod>`,
           alternates,
           "  </url>",
         ]
@@ -484,9 +485,10 @@ app.get("/sitemap.xml", (_req, res) => {
     "Cache-Control",
     "public, max-age=900, stale-while-revalidate=3600",
   );
+  const sitemapModifiedAt = `${siteContentLastModified}T00:00:00.000Z`;
   res.type("application/xml").send(
     `<?xml version="1.0" encoding="UTF-8"?>\n<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${names
-      .map((name) => `  <sitemap><loc>${xmlEscape(`${siteUrl}/${name}`)}</loc></sitemap>`)
+      .map((name) => `  <sitemap><loc>${xmlEscape(`${siteUrl}/${name}`)}</loc><lastmod>${sitemapModifiedAt}</lastmod></sitemap>`)
       .join("\n")}\n</sitemapindex>\n`,
   );
 });

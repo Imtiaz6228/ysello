@@ -553,10 +553,9 @@ await writeFile(
 const sitemapUrls = pages
   .filter((page) => page.path !== "/404")
   .map((page) => {
-    const lastModified =
-      page.product?.publishedAt?.slice(0, 10) ||
-      page.post?.publishedIso ||
-      siteContentLastModified;
+    // The shared SEO/locale template changed site-wide on this release, so every
+    // public fallback URL has genuinely changed on siteContentLastModified.
+    const lastModified = siteContentLastModified;
     return [
       "  <url>",
       `    <loc>${escapeHtml(absolutePath(page.path))}</loc>`,

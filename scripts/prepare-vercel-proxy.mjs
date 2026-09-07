@@ -8,7 +8,7 @@ for (const directory of ["vercel-dist", "dist"]) {
   mkdirSync(directory, { recursive: true });
   writeFileSync(
     `${directory}/deployment.txt`,
-    "Ysello Vercel reverse-proxy release 2026-09-07.6. Storefront and API are served by Railway.\n",
+    "Ysello Vercel reverse-proxy release 2026-09-07.7. Storefront and API are served by Railway.\n",
   );
 }
 
