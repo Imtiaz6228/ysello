@@ -8,6 +8,7 @@ import {
 } from "../data/catalog";
 import { g2aDemoProducts } from "../data/g2aDemoCatalog";
 import { useLocale } from "../i18n/LocaleContext";
+import { uiText } from "../i18n/marketplaceCopy";
 import {
   marketplaceTaxonomy,
   retiredSocialMediaCategorySlugs,
@@ -165,8 +166,8 @@ const taxonomyCategories: CatalogCategory[] = marketplaceTaxonomy.flatMap(
       {
         id: `taxonomy-${category.slug}`,
         slug: category.slug,
-        name: category.name,
-        description: category.description,
+        name: uiText(category.name, locale),
+        description: uiText(category.description, locale),
         icon: category.icon,
         sortOrder: rootOrder,
         productCount: localProducts.filter(
@@ -203,8 +204,8 @@ function mergeWithLocalCategories(remoteCategories: CatalogCategory[]) {
     merged.set(remote.slug, {
       ...local,
       ...remote,
-      name: local?.name ?? remote.name,
-      description: local?.description || remote.description,
+      name: remote.name || local?.name || remote.slug,
+      description: remote.description || local?.description || "",
       parentSlug: local?.parentSlug ?? remote.parentSlug,
       icon: remote.icon || local?.icon || "◉",
       sortOrder: local?.sortOrder ?? remote.sortOrder,
@@ -276,9 +277,18 @@ function mapProduct(
     slug: product.slug,
     category: marketplaceCategoryPath,
     categorySlug: marketplaceCategorySlug,
-    title: translation?.title ?? translation?.name ?? product.name,
-    description: translation?.shortDescription ?? product.shortDescription,
-    longDescription: translation?.description ?? product.description,
+    title:
+      translation?.title ??
+      translation?.name ??
+      (locale === "en" ? product.name : uiText(product.name, locale)),
+    description:
+      translation?.shortDescription ??
+      (locale === "en"
+        ? product.shortDescription
+        : uiText(product.shortDescription, locale)),
+    longDescription:
+      translation?.description ??
+      (locale === "en" ? product.description : uiText(product.description, locale)),
     seller:
       (product.isOfficial ? product.officialStoreName : null) ??
       product.seller.sellerProfile?.storeName ??
@@ -360,7 +370,7 @@ function mapProduct(
   };
 }
 
-function mapCategories(categories: ApiCategory[]): CatalogCategory[] {
+function mapCategories(categories: ApiCategory[], locale = "en"): CatalogCategory[] {
   const byId = new Map(categories.map((category) => [category.id, category]));
   return categories
     .map((category, index) => {
@@ -370,8 +380,8 @@ function mapCategories(categories: ApiCategory[]): CatalogCategory[] {
       return {
         id: category.id,
         slug: category.slug,
-        name: category.name,
-        description: category.description,
+        name: uiText(category.name, locale),
+        description: uiText(category.description, locale),
         parentId: category.parentId ?? null,
         parentSlug: parent?.slug ?? null,
         icon:
@@ -433,16 +443,17 @@ export function useMarketplaceProducts() {
 }
 
 export function useMarketplaceCategories() {
+  const { locale } = useLocale();
   const [categories, setCategories] = useState<CatalogCategory[]>([]);
   useEffect(() => {
     void apiRequest<{ categories: ApiCategory[] }>(
       "/api/marketplace/categories",
     )
       .then((data) => {
-        setCategories(mapCategories(data.categories));
+        setCategories(mapCategories(data.categories, locale));
       })
       .catch(() => undefined);
-  }, []);
+  }, [locale]);
   return categories;
 }
 
@@ -673,10 +684,17 @@ export function useMarketplaceStore(slug?: string) {
 }
 
 export function useMarketplaceCategory(slug?: string) {
-  const localCategory = useMemo(
-    () => localCategories.find((item) => item.slug === slug),
-    [slug],
-  );
+  const { locale } = useLocale();
+  const localCategory = useMemo(() => {
+    const item = localCategories.find((entry) => entry.slug === slug);
+    return item
+      ? {
+          ...item,
+          name: uiText(item.name, locale),
+          description: uiText(item.description, locale),
+        }
+      : undefined;
+  }, [locale, slug]);
   const [category, setCategory] = useState<CatalogCategory | undefined>(
     localCategory,
   );
@@ -691,7 +709,11 @@ export function useMarketplaceCategory(slug?: string) {
 
     const immediate = localCategories.find((item) => item.slug === slug);
     if (immediate) {
-      setCategory(immediate);
+      setCategory({
+        ...immediate,
+        name: uiText(immediate.name, locale),
+        description: uiText(immediate.description, locale),
+      });
       setLoading(false);
       return;
     }
@@ -703,7 +725,7 @@ export function useMarketplaceCategory(slug?: string) {
     )
       .then((data) => {
         if (cancelled) return;
-        const merged = mergeWithLocalCategories(mapCategories(data.categories));
+        const merged = mergeWithLocalCategories(mapCategories(data.categories, locale));
         setCategory(merged.find((item) => item.slug === slug));
       })
       .catch(() => {
@@ -716,7 +738,7 @@ export function useMarketplaceCategory(slug?: string) {
     return () => {
       cancelled = true;
     };
-  }, [slug]);
+  }, [locale, slug]);
 
   return { category, loading };
 }

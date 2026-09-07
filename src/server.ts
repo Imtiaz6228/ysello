@@ -4,6 +4,7 @@ import { env } from "./config/env.js";
 import { YSELLO_RELEASE_ID, railwayReleaseMetadata } from "./config/release.js";
 import { prisma } from "./lib/prisma.js";
 import { ensureDefaultMarketplaceCategories } from "./services/category.service.js";
+import { submitFreshMarketplaceToIndexNow } from "./services/indexnow.service.js";
 import {
   processPendingDarkShoppingFulfillments,
   syncDarkShoppingListings,
@@ -27,6 +28,24 @@ const server = await (async () => {
 });
 
 startCatalogTranslations();
+
+
+// Notify IndexNow after a production deployment so Bing and other participating
+// engines can discover newly changed public marketplace URLs quickly. XML
+// sitemaps remain the complete source of canonical URLs for every crawler.
+if (env.NODE_ENV === "production") {
+  const indexNowTimer = setTimeout(() => {
+    void submitFreshMarketplaceToIndexNow(30)
+      .then((result) => console.log("IndexNow submission", result))
+      .catch((error) =>
+        console.warn(
+          "IndexNow submission skipped:",
+          error instanceof Error ? error.message : error,
+        ),
+      );
+  }, 60_000);
+  indexNowTimer.unref();
+}
 
 let supplierFulfillmentRunning = false;
 const supplierFulfillmentTimer = env.DARK_SHOPPING_API_KEY

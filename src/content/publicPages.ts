@@ -9,7 +9,7 @@ export type PublicPage = {
   priority: number;
 };
 
-export const siteContentLastModified = "2026-09-06";
+export const siteContentLastModified = "2026-09-07";
 
 export const publicPages: PublicPage[] = [
   {

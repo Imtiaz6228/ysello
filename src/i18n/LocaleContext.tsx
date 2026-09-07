@@ -504,7 +504,20 @@ function storedLocale(): LocaleCode {
   ) as LocaleCode | null;
   if (queryLocale && validLocales.has(queryLocale)) return queryLocale;
   const value = localStorage.getItem("ysello-locale") as LocaleCode | null;
-  return value && validLocales.has(value) ? value : "en";
+  if (value && validLocales.has(value)) return value;
+
+  // First-visit locale selection follows the visitor's browser languages.
+  // We deliberately do not IP-redirect crawlers or users: each language keeps
+  // its own crawlable URL and hreflang annotations for search engines.
+  const browserLanguages = [
+    ...(navigator.languages || []),
+    navigator.language,
+  ]
+    .filter(Boolean)
+    .map((item) => String(item).toLowerCase());
+  if (browserLanguages.some((item) => item.startsWith("zh"))) return "zh-CN";
+  if (browserLanguages.some((item) => item.startsWith("ru"))) return "ru";
+  return "en";
 }
 
 function storedCurrency(): CurrencyCode {
@@ -562,7 +575,6 @@ export function LocaleProvider({ children }: { children: ReactNode }) {
         const url = new URL(window.location.href);
         if (nextLocale === "en") url.searchParams.delete("lang");
         else url.searchParams.set("lang", nextLocale);
-        url.searchParams.set("lang", nextLocale);
         navigate(`${url.pathname}${url.search}${url.hash}`, { replace: true });
       },
       setCurrency: setCurrencyState,

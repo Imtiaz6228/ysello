@@ -36,6 +36,7 @@ import { shop2TopupRouter } from "./routes/shop2topup.routes.js";
 import { shop2TopupWebhookHandler, shop2TopupWebhookHealth } from "./routes/shop2topup-webhook.js";
 import { railwayReleaseMetadata } from "./config/release.js";
 import { prisma } from "./lib/prisma.js";
+import { INDEXNOW_KEY } from "./services/indexnow.service.js";
 import { blogPosts } from "./content/blog.js";
 import { publicPages, siteContentLastModified } from "./content/publicPages.js";
 import {
@@ -288,6 +289,25 @@ app.use((req, res, next) => {
   next();
 });
 
+const privateCrawlerRules = [
+  "Disallow: /api/",
+  "Disallow: /admin",
+  "Disallow: /dashboard",
+  "Disallow: /checkout",
+  "Disallow: /orders",
+  "Disallow: /seller/",
+  "Disallow: /support",
+  "Disallow: /cart",
+  "Disallow: /sign-in",
+  "Disallow: /sign-out",
+  "Disallow: /register",
+  "Disallow: /verify-email",
+  "Disallow: /verify-required",
+  "Disallow: /forgot-password",
+  "Disallow: /reset-password",
+  "Disallow: /*?*token=",
+];
+
 app.get("/robots.txt", (_req, res) => {
   const siteUrl = env.APP_URL.replace(/\/+$/, "");
   res.setHeader(
@@ -298,60 +318,200 @@ app.get("/robots.txt", (_req, res) => {
     .type("text/plain")
     .send(
       [
+        "# Ysello public marketplace crawling policy",
+        "# Search and AI discovery crawlers are welcome on public storefront pages.",
+        "User-agent: OAI-SearchBot",
+        "User-agent: ChatGPT-User",
+        "User-agent: GPTBot",
+        "User-agent: Claude-SearchBot",
+        "User-agent: Claude-User",
+        "User-agent: ClaudeBot",
+        "User-agent: PerplexityBot",
+        "User-agent: Perplexity-User",
+        "User-agent: Baiduspider",
+        "User-agent: YandexBot",
+        "User-agent: Googlebot",
+        "User-agent: Bingbot",
+        "Allow: /",
+        ...privateCrawlerRules,
+        "",
         "User-agent: *",
         "Allow: /",
-        "Disallow: /api/",
-        "Disallow: /admin",
-        "Disallow: /dashboard",
-        "Disallow: /checkout",
-        "Disallow: /orders",
-        "Disallow: /seller/",
-        "Disallow: /support",
-        "Disallow: /cart",
-        "Disallow: /sign-in",
-        "Disallow: /sign-out",
-        "Disallow: /register",
-        "Disallow: /verify-email",
-        "Disallow: /verify-required",
-        "Disallow: /forgot-password",
-        "Disallow: /reset-password",
-        "Disallow: /*?*token=",
+        ...privateCrawlerRules,
+        "",
         `Sitemap: ${siteUrl}/sitemap.xml`,
+        `Sitemap: ${siteUrl}/sitemap-pages.xml`,
+        `Sitemap: ${siteUrl}/sitemap-categories.xml`,
+        `Sitemap: ${siteUrl}/sitemap-products.xml`,
+        `Sitemap: ${siteUrl}/sitemap-stores.xml`,
         "",
       ].join("\n"),
     );
 });
 
+app.get("/llms.txt", (_req, res) => {
+  const siteUrl = env.APP_URL.replace(/\/+$/, "");
+  res.setHeader(
+    "Cache-Control",
+    "public, max-age=3600, stale-while-revalidate=86400",
+  );
+  res.type("text/plain").send(
+    [
+      "# Ysello",
+      "",
+      "> Ysello is a digital marketplace for social and email accounts, game top-ups, gift cards, software, subscriptions and other digital products. Public product and category pages include seller, price, stock and delivery information.",
+      "",
+      "## Canonical site",
+      `- ${siteUrl}/`,
+      "",
+      "## Primary discovery pages",
+      `- ${siteUrl}/catalog — full marketplace catalog`,
+      `- ${siteUrl}/games — games and gaming products`,
+      `- ${siteUrl}/gift-cards — digital gift cards and vouchers`,
+      `- ${siteUrl}/topups — game and digital top-ups`,
+      `- ${siteUrl}/blog — marketplace guides`,
+      "",
+      "## Trust and marketplace policies",
+      `- ${siteUrl}/buyer-protection`,
+      `- ${siteUrl}/refund-policy`,
+      `- ${siteUrl}/seller-policy`,
+      `- ${siteUrl}/prohibited-products`,
+      `- ${siteUrl}/terms`,
+      `- ${siteUrl}/privacy`,
+      `- ${siteUrl}/about`,
+      `- ${siteUrl}/contact`,
+      "",
+      "## Machine-readable discovery",
+      `- ${siteUrl}/sitemap.xml`,
+      `- ${siteUrl}/robots.txt`,
+      "",
+      "## Language variants",
+      "- English: canonical URL without a lang parameter",
+      "- Simplified Chinese: ?lang=zh-CN",
+      "- Russian: ?lang=ru",
+      "",
+      "Only public storefront and policy pages are intended for indexing. Account, checkout, seller, admin and API routes are private/noindex.",
+      "",
+    ].join("\n"),
+  );
+});
+
+app.get("/indexnow-key.txt", (_req, res) => {
+  res.setHeader("Cache-Control", "public, max-age=86400");
+  res.type("text/plain").send(`${INDEXNOW_KEY}\n`);
+});
+
+type SitemapItem = {
+  path: string;
+  updatedAt: Date;
+  localize?: boolean;
+};
+
+const sitemapLocales = [
+  { hreflang: "en", lang: null },
+  { hreflang: "zh-CN", lang: "zh-CN" },
+  { hreflang: "ru", lang: "ru" },
+] as const;
+
+function sitemapVariantUrl(siteUrl: string, path: string, lang: string | null) {
+  const url = new URL(path === "/" ? "/" : path, `${siteUrl}/`);
+  if (lang) url.searchParams.set("lang", lang);
+  return url.toString();
+}
+
+function sitemapUrlEntries(siteUrl: string, items: SitemapItem[]) {
+  return items
+    .flatMap((item) => {
+      const locales = item.localize ? sitemapLocales : [sitemapLocales[0]];
+      return locales.map((current) => {
+        const loc = sitemapVariantUrl(siteUrl, item.path, current.lang);
+        const alternates = item.localize
+          ? [
+              ...sitemapLocales.map(
+                (alternate) =>
+                  `    <xhtml:link rel="alternate" hreflang="${alternate.hreflang}" href="${xmlEscape(sitemapVariantUrl(siteUrl, item.path, alternate.lang))}" />`,
+              ),
+              `    <xhtml:link rel="alternate" hreflang="x-default" href="${xmlEscape(sitemapVariantUrl(siteUrl, item.path, null))}" />`,
+            ].join("\n")
+          : "";
+        return [
+          "  <url>",
+          `    <loc>${xmlEscape(loc)}</loc>`,
+          `    <lastmod>${item.updatedAt.toISOString()}</lastmod>`,
+          alternates,
+          "  </url>",
+        ]
+          .filter(Boolean)
+          .join("\n");
+      });
+    })
+    .join("\n");
+}
+
+function sendSitemap(res: express.Response, siteUrl: string, items: SitemapItem[]) {
+  const xml = sitemapUrlEntries(siteUrl, items);
+  res.setHeader(
+    "Cache-Control",
+    "public, max-age=900, stale-while-revalidate=3600",
+  );
+  res.type("application/xml").send(
+    `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">\n${xml}\n</urlset>\n`,
+  );
+}
+
+app.get("/sitemap.xml", (_req, res) => {
+  const siteUrl = env.APP_URL.replace(/\/+$/, "");
+  const names = [
+    "sitemap-pages.xml",
+    "sitemap-categories.xml",
+    "sitemap-products.xml",
+    "sitemap-stores.xml",
+  ];
+  res.setHeader(
+    "Cache-Control",
+    "public, max-age=900, stale-while-revalidate=3600",
+  );
+  res.type("application/xml").send(
+    `<?xml version="1.0" encoding="UTF-8"?>\n<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${names
+      .map((name) => `  <sitemap><loc>${xmlEscape(`${siteUrl}/${name}`)}</loc></sitemap>`)
+      .join("\n")}\n</sitemapindex>\n`,
+  );
+});
+
+app.get("/sitemap-pages.xml", (_req, res) => {
+  const siteUrl = env.APP_URL.replace(/\/+$/, "");
+  const contentModifiedAt = new Date(`${siteContentLastModified}T00:00:00.000Z`);
+  const localizedCore = new Set(["/", "/catalog", "/games", "/gift-cards", "/topups"]);
+  const items: SitemapItem[] = [
+    ...publicPages.map((page) => ({
+      path: page.path,
+      updatedAt: contentModifiedAt,
+      localize: localizedCore.has(page.path),
+    })),
+    ...blogPosts.map((post) => ({
+      path: `/blog/${post.slug}`,
+      updatedAt: new Date(`${post.publishedIso}T00:00:00.000Z`),
+      localize: false,
+    })),
+  ];
+  sendSitemap(res, siteUrl, items);
+});
+
 app.get(
-  "/sitemap.xml",
-  asyncHandler(async (req, res) => {
+  "/sitemap-categories.xml",
+  asyncHandler(async (_req, res) => {
     const publicSellerFilter = {
       isSuspended: false,
       sellerProfile: { isSuspended: false },
     };
-    const [products, categories, stores] = await Promise.all([
+    const [products, categories] = await Promise.all([
       prisma.product.findMany({
         where: {
           status: ProductStatus.APPROVED,
           category: { isActive: true },
           seller: publicSellerFilter,
         },
-        select: {
-          slug: true,
-          updatedAt: true,
-          categoryId: true,
-          category: {
-            select: {
-              slug: true,
-              parent: {
-                select: {
-                  slug: true,
-                  parent: { select: { slug: true } },
-                },
-              },
-            },
-          },
-        },
+        select: { categoryId: true },
       }),
       prisma.category.findMany({
         where: { isActive: true },
@@ -368,14 +528,6 @@ app.get(
           },
         },
       }),
-      prisma.sellerProfile.findMany({
-        where: {
-          isVerified: true,
-          isSuspended: false,
-          user: { isSuspended: false },
-        },
-        select: { slug: true, updatedAt: true },
-      }),
     ]);
     const publishedCategoryIds = new Set(products.map((product) => product.categoryId));
     const categoryById = new Map(categories.map((category) => [category.id, category]));
@@ -388,94 +540,77 @@ app.get(
         parentId = categoryById.get(parentId)?.parentId ?? null;
       }
     }
-    const sitemapCategories = categories.filter((category) =>
-      publishedCategoryIds.has(category.id),
+    const items = categories
+      .filter((category) => publishedCategoryIds.has(category.id))
+      .map((category) => ({
+        path: categorySeoPath(category),
+        updatedAt: category.updatedAt,
+        localize: true,
+      }));
+    sendSitemap(res, env.APP_URL.replace(/\/+$/, ""), items);
+  }),
+);
+
+app.get(
+  "/sitemap-products.xml",
+  asyncHandler(async (_req, res) => {
+    const products = await prisma.product.findMany({
+      where: {
+        status: ProductStatus.APPROVED,
+        category: { isActive: true },
+        seller: {
+          isSuspended: false,
+          sellerProfile: { isSuspended: false },
+        },
+      },
+      select: {
+        slug: true,
+        updatedAt: true,
+        category: {
+          select: {
+            slug: true,
+            parent: {
+              select: {
+                slug: true,
+                parent: { select: { slug: true } },
+              },
+            },
+          },
+        },
+      },
+    });
+    sendSitemap(
+      res,
+      env.APP_URL.replace(/\/+$/, ""),
+      products.map((product) => ({
+        path: productSeoPath(product),
+        updatedAt: product.updatedAt,
+        localize: true,
+      })),
     );
-    const contentModifiedAt = new Date(
-      `${siteContentLastModified}T00:00:00.000Z`,
+  }),
+);
+
+app.get(
+  "/sitemap-stores.xml",
+  asyncHandler(async (_req, res) => {
+    const stores = await prisma.sellerProfile.findMany({
+      where: {
+        isVerified: true,
+        isSuspended: false,
+        user: { isSuspended: false },
+      },
+      select: { slug: true, updatedAt: true },
+    });
+    sendSitemap(
+      res,
+      env.APP_URL.replace(/\/+$/, ""),
+      stores.map((store) => ({
+        path: `/stores/${store.slug}`,
+        updatedAt: store.updatedAt,
+        localize: false,
+      })),
     );
-    const urls = [
-      ...publicPages.map((page) => ({
-        path: page.path,
-        updatedAt: contentModifiedAt,
-        changeFrequency: page.changeFrequency,
-        priority: page.priority,
-      })),
-      ...blogPosts.map((post) => ({
-        path: `/blog/${post.slug}`,
-        updatedAt: new Date(`${post.publishedIso}T00:00:00.000Z`),
-        changeFrequency: "yearly",
-        priority: 0.6,
-      })),
-      ...products.map((item) => ({
-        path: productSeoPath(item),
-        updatedAt: item.updatedAt,
-        changeFrequency: "weekly",
-        priority: 0.8,
-      })),
-      ...sitemapCategories.map((item) => ({
-        path: categorySeoPath(item),
-        updatedAt: item.updatedAt,
-        changeFrequency: "weekly",
-        priority: 0.7,
-      })),
-      ...stores.map((item) => ({
-        path: `/stores/${item.slug}`,
-        updatedAt: item.updatedAt,
-        changeFrequency: "weekly",
-        priority: 0.7,
-      })),
-    ];
-    const siteUrl = env.APP_URL.replace(/\/+$/, "");
-    const localizedUrls = urls.flatMap((item) =>
-      item.path === "/" ||
-      item.path === "/catalog" ||
-      item.path === "/games" ||
-      item.path === "/gift-cards" ||
-      item.path === "/topups" ||
-      /^\/(product|category|stores)\//.test(item.path)
-        ? [
-            item,
-            { ...item, path: item.path + "?lang=zh-CN" },
-            { ...item, path: item.path + "?lang=ru" },
-          ]
-        : [item],
-    );
-    const chunks = Math.ceil(localizedUrls.length / 45000);
-    const sitemapPage = Number(req.query.page || 0);
-    if (chunks > 1 && !sitemapPage) {
-      res
-        .type("application/xml")
-        .send(
-          `<?xml version="1.0" encoding="UTF-8"?><sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${Array.from({ length: chunks }, (_, i) => `<sitemap><loc>${xmlEscape(siteUrl + "/sitemap.xml?page=" + (i + 1))}</loc></sitemap>`).join("")}</sitemapindex>`,
-        );
-      return;
-    }
-    const xml = localizedUrls
-      .slice(
-        Math.max(0, sitemapPage - 1) * 45000,
-        Math.max(1, sitemapPage) * 45000,
-      )
-      .map((item) =>
-        [
-          "  <url>",
-          `    <loc>${xmlEscape(`${siteUrl}${item.path === "/" ? "" : item.path}`)}</loc>`,
-          `    <lastmod>${item.updatedAt.toISOString()}</lastmod>`,
-          `    <changefreq>${item.changeFrequency}</changefreq>`,
-          `    <priority>${item.priority.toFixed(1)}</priority>`,
-          "  </url>",
-        ].join("\n"),
-      )
-      .join("\n");
-    res.setHeader(
-      "Cache-Control",
-      "public, max-age=900, stale-while-revalidate=3600",
-    );
-    res
-      .type("application/xml")
-      .send(
-        `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${xml}\n</urlset>\n`,
-      );
   }),
 );
 
@@ -509,6 +644,11 @@ if (isProduction && fs.existsSync(frontendIndex)) {
       : undefined;
   const canonicalUrl = (pathname: string) =>
     `${siteUrl}${pathname === "/" ? "" : pathname}`;
+  const localizedCanonicalUrl = (pathname: string, locale: string) => {
+    const url = new URL(canonicalUrl(pathname));
+    if (locale !== "en") url.searchParams.set("lang", locale);
+    return url.toString();
+  };
   const shell = (heading: string, intro: string, content = "") =>
     `<main class="seo-static-shell">${crawlableHeader()}<article><h1>${escapeHtml(heading)}</h1><p>${escapeHtml(intro)}</p>${content}</article></main>`;
   const links = (
@@ -714,14 +854,43 @@ if (isProduction && fs.existsSync(frontendIndex)) {
             "Compare approved listings with clear delivery, seller, licensing, and support details.",
             content,
           ),
-          schema: {
-            "@context": "https://schema.org",
-            "@type": "CollectionPage",
-            name: "Ysello digital marketplace catalog",
-            description:
-              "Approved digital products and expert services on Ysello.",
-            url,
-          },
+          schema:
+            req.path === "/"
+              ? [
+                  {
+                    "@context": "https://schema.org",
+                    "@type": "Organization",
+                    name: "Ysello",
+                    url: canonicalUrl("/"),
+                  },
+                  {
+                    "@context": "https://schema.org",
+                    "@type": "WebSite",
+                    name: "Ysello",
+                    url: canonicalUrl("/"),
+                    potentialAction: {
+                      "@type": "SearchAction",
+                      target: `${canonicalUrl("/catalog")}?q={search_term_string}`,
+                      "query-input": "required name=search_term_string",
+                    },
+                  },
+                  {
+                    "@context": "https://schema.org",
+                    "@type": "CollectionPage",
+                    name: "Ysello digital marketplace catalog",
+                    description:
+                      "Approved digital products and expert services on Ysello.",
+                    url,
+                  },
+                ]
+              : {
+                  "@context": "https://schema.org",
+                  "@type": "CollectionPage",
+                  name: "Ysello digital marketplace catalog",
+                  description:
+                    "Approved digital products and expert services on Ysello.",
+                  url,
+                },
         }),
       );
     }),
@@ -827,35 +996,46 @@ if (isProduction && fs.existsSync(frontendIndex)) {
         (item) => item.parentId === category.id,
       );
       const canonicalPath = categorySeoPathFromFlat(category, categories);
-
-      const url = canonicalUrl(canonicalPath);
+      const locale = requestLocale(req.query.lang);
+      const url = localizedCanonicalUrl(canonicalPath, locale);
+      const localizedCategoryName = uiText(category.name, locale);
+      const localizedCategoryDescription = uiText(category.description, locale);
       const customTitle = category.seoTitle?.trim();
-      const title = customTitle
-        ? customTitle.toLowerCase().includes("ysello")
-          ? customTitle
-          : `${customTitle} · Ysello`
-        : `${category.name} digital products and services · Ysello`;
+      const title =
+        locale === "zh-CN"
+          ? `购买${localizedCategoryName} | 数字商品与账号 · Ysello`
+          : locale === "ru"
+            ? `Купить ${localizedCategoryName} | цифровые товары · Ysello`
+            : customTitle
+              ? customTitle.toLowerCase().includes("ysello")
+                ? customTitle
+                : `${customTitle} · Ysello`
+              : `${category.name} digital products and services · Ysello`;
       const description =
-        category.seoDescription?.trim() || category.description;
+        locale === "zh-CN"
+          ? `在 Ysello 浏览${localizedCategoryName}，比较价格、库存、卖家和数字交付条款。`
+          : locale === "ru"
+            ? `Смотрите ${localizedCategoryName} на Ysello: сравнивайте цены, наличие, продавцов и условия цифровой доставки.`
+            : category.seoDescription?.trim() || category.description;
       const itemList = products.map((item, index) => ({
         "@type": "ListItem",
         position: index + 1,
-        url: canonicalUrl(productSeoPath(item)),
-        name: localizedProduct(item, requestLocale(req.query.lang)).name,
+        url: localizedCanonicalUrl(productSeoPath(item), locale),
+        name: localizedProduct(item, locale).name,
       }));
-      const content = `${pageLinks(req, total)}${childLinks.length ? `<section><h2>${escapeHtml(category.name)} specialties</h2>${links(childLinks.map((item) => ({ path: categorySeoPathFromFlat(item, categories), title: item.name, description: item.description })))}</section>` : ""}<section><h2>Available listings</h2>${products.length ? links(products.map((item) => ({ path: productSeoPath(item), title: localizedProduct(item, requestLocale(req.query.lang)).name, description: localizedProduct(item, requestLocale(req.query.lang)).shortDescription }))) : "<p>No approved listings are available in this exact category yet.</p>"}</section>`;
+      const content = `${pageLinks(req, total)}${childLinks.length ? `<section><h2>${escapeHtml(locale === "zh-CN" ? `${localizedCategoryName}分类` : locale === "ru" ? `Разделы: ${localizedCategoryName}` : `${category.name} specialties`)}</h2>${links(childLinks.map((item) => ({ path: categorySeoPathFromFlat(item, categories), title: uiText(item.name, locale), description: uiText(item.description, locale) })))}</section>` : ""}<section><h2>${escapeHtml(uiText("Available listings", locale))}</h2>${products.length ? links(products.map((item) => ({ path: productSeoPath(item), title: localizedProduct(item, locale).name, description: localizedProduct(item, locale).shortDescription }))) : `<p>${escapeHtml(uiText("No approved listings are available in this exact category yet.", locale))}</p>`}</section>`;
       sendHtml(
         res,
         renderSeoDocument(frontendTemplate, {
           title,
           description,
           canonicalUrl: url,
-          body: shell(category.name, category.description, content),
+          body: shell(localizedCategoryName, localizedCategoryDescription, content),
           schema: [
             {
               "@context": "https://schema.org",
               "@type": "CollectionPage",
-              name: category.name,
+              name: localizedCategoryName,
               description,
               url,
             },
@@ -863,6 +1043,24 @@ if (isProduction && fs.existsSync(frontendIndex)) {
               "@context": "https://schema.org",
               "@type": "ItemList",
               itemListElement: itemList,
+            },
+            {
+              "@context": "https://schema.org",
+              "@type": "BreadcrumbList",
+              itemListElement: [
+                {
+                  "@type": "ListItem",
+                  position: 1,
+                  name: uiText("Marketplace", locale),
+                  item: localizedCanonicalUrl("/catalog", locale),
+                },
+                {
+                  "@type": "ListItem",
+                  position: 2,
+                  name: localizedCategoryName,
+                  item: url,
+                },
+              ],
             },
           ],
         }),
@@ -929,6 +1127,7 @@ if (isProduction && fs.existsSync(frontendIndex)) {
         return;
       }
       product = localizedProduct(product, requestLocale(req.query.lang));
+      const locale = requestLocale(req.query.lang);
       const priceCents =
         product.salePriceCents && product.salePriceCents > 0
           ? Math.min(product.priceCents, product.salePriceCents)
@@ -944,8 +1143,14 @@ if (isProduction && fs.existsSync(frontendIndex)) {
         product._count.files > 0 ||
         product._count.inventoryItems > 0;
       const canonicalPath = productSeoPath(product);
+      const localizedPrice =
+        locale === "zh-CN" && product.priceCnyCents > 0
+          ? { cents: product.priceCnyCents, currency: "CNY", symbol: "¥" }
+          : locale === "ru" && product.priceRubCents > 0
+            ? { cents: product.priceRubCents, currency: "RUB", symbol: "₽" }
+            : { cents: priceCents, currency: "USD", symbol: "$" };
 
-      const url = canonicalUrl(canonicalPath);
+      const url = localizedCanonicalUrl(canonicalPath, locale);
       const imageUrl = absolutePublicUrl(siteUrl, product.coverImageUrl);
       const seller = product.seller.sellerProfile!;
       const sellerName =
@@ -967,13 +1172,13 @@ if (isProduction && fs.existsSync(frontendIndex)) {
         description,
         url,
         sku: product.sku || product.id,
-        category: product.category.name,
+        category: uiText(product.category.name, locale),
         ...(imageUrl ? { image: [imageUrl] } : {}),
         offers: {
           "@type": "Offer",
           url,
-          price: (priceCents / 100).toFixed(2),
-          priceCurrency: "USD",
+          price: (localizedPrice.cents / 100).toFixed(2),
+          priceCurrency: localizedPrice.currency,
           availability: inStock
             ? "https://schema.org/InStock"
             : "https://schema.org/OutOfStock",
@@ -993,19 +1198,20 @@ if (isProduction && fs.existsSync(frontendIndex)) {
       }
       const facts = [
         product.deliveryNote
-          ? `<li><strong>Delivery:</strong> ${escapeHtml(product.deliveryNote)}</li>`
+          ? `<li><strong>${escapeHtml(uiText("Delivery", locale))}:</strong> ${escapeHtml(product.deliveryNote)}</li>`
           : "",
         product.type
-          ? `<li><strong>Type:</strong> ${escapeHtml(product.type === "DOWNLOAD" ? "Digital download" : "Expert service")}</li>`
+          ? `<li><strong>${escapeHtml(uiText("Type", locale))}:</strong> ${escapeHtml(uiText(product.type === "DOWNLOAD" ? "Digital download" : "Expert service", locale))}</li>`
           : "",
         product.sku
           ? `<li><strong>SKU:</strong> ${escapeHtml(product.sku)}</li>`
           : "",
-        `<li><strong>Availability:</strong> ${inStock ? "Available" : "Currently unavailable"}</li>`,
+        `<li><strong>${escapeHtml(uiText("Availability", locale))}:</strong> ${escapeHtml(uiText(inStock ? "Available" : "Currently unavailable", locale))}</li>`,
       ]
         .filter(Boolean)
         .join("");
-      const content = `<section><h2>Product details</h2><p>${escapeHtml(product.description)}</p><ul>${facts}</ul></section><section><h2>Seller and category</h2><p>Sold by <a href="/stores/${escapeHtml(seller.slug)}">${escapeHtml(sellerName)}</a> in <a href="${escapeHtml(categorySeoPath(product.category))}">${escapeHtml(product.category.name)}</a>.</p><p><strong>Price:</strong> $${(priceCents / 100).toFixed(2)} USD</p></section>`;
+      const localizedCategoryName = uiText(product.category.name, locale);
+      const content = `<section><h2>${escapeHtml(uiText("Product details", locale))}</h2><p>${escapeHtml(product.description)}</p><ul>${facts}</ul></section><section><h2>${escapeHtml(uiText("Seller and category", locale))}</h2><p>${escapeHtml(uiText("Sold by", locale))} <a href="/stores/${escapeHtml(seller.slug)}">${escapeHtml(sellerName)}</a> · <a href="${escapeHtml(categorySeoPath(product.category))}">${escapeHtml(localizedCategoryName)}</a>.</p><p><strong>${escapeHtml(uiText("Price", locale))}:</strong> ${localizedPrice.symbol}${(localizedPrice.cents / 100).toFixed(2)} ${localizedPrice.currency}</p></section>`;
       sendHtml(
         res,
         renderSeoDocument(frontendTemplate, {
@@ -1016,7 +1222,36 @@ if (isProduction && fs.existsSync(frontendIndex)) {
           imageAlt: product.name,
           type: "product",
           body: shell(product.name, product.shortDescription, content),
-          schema,
+          schema: [
+            schema,
+            {
+              "@context": "https://schema.org",
+              "@type": "BreadcrumbList",
+              itemListElement: [
+                {
+                  "@type": "ListItem",
+                  position: 1,
+                  name: uiText("Marketplace", locale),
+                  item: localizedCanonicalUrl("/catalog", locale),
+                },
+                {
+                  "@type": "ListItem",
+                  position: 2,
+                  name: localizedCategoryName,
+                  item: localizedCanonicalUrl(
+                    categorySeoPath(product.category),
+                    locale,
+                  ),
+                },
+                {
+                  "@type": "ListItem",
+                  position: 3,
+                  name: product.name,
+                  item: url,
+                },
+              ],
+            },
+          ],
         }),
       );
     }),

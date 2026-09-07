@@ -149,6 +149,30 @@
       "destination": "https://api.ysello.com/sitemap.xml"
     },
     {
+      "source": "/sitemap-pages.xml",
+      "destination": "https://api.ysello.com/sitemap-pages.xml"
+    },
+    {
+      "source": "/sitemap-categories.xml",
+      "destination": "https://api.ysello.com/sitemap-categories.xml"
+    },
+    {
+      "source": "/sitemap-products.xml",
+      "destination": "https://api.ysello.com/sitemap-products.xml"
+    },
+    {
+      "source": "/sitemap-stores.xml",
+      "destination": "https://api.ysello.com/sitemap-stores.xml"
+    },
+    {
+      "source": "/llms.txt",
+      "destination": "https://api.ysello.com/llms.txt"
+    },
+    {
+      "source": "/indexnow-key.txt",
+      "destination": "https://api.ysello.com/indexnow-key.txt"
+    },
+    {
       "source": "/api/:path*",
       "destination": "https://api.ysello.com/api/:path*"
     },

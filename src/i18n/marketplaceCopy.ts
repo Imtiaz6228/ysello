@@ -232,6 +232,21 @@ Browse by category|按分类浏览|Поиск по категориям
 Approved marketplace listings|已审核商品|Проверенные товары
 Available listings|在售商品|Доступные товары
 Verified seller stores|已验证卖家店铺|Магазины проверенных продавцов
+Product details|商品详情|Описание товара
+Seller and category|卖家与分类|Продавец и категория
+Delivery|交付|Доставка
+Type|类型|Тип
+Digital download|数字下载|Цифровая загрузка
+Expert service|专业服务|Услуга специалиста
+Availability|库存状态|Наличие
+Available|有货|В наличии
+Currently unavailable|暂时无货|Сейчас недоступно
+Price|价格|Цена
+Sold by|卖家|Продавец
+Marketplace|商城|Маркетплейс
+No approved listings are available in this exact category yet.|此分类暂时没有已审核商品。|В этой категории пока нет одобренных товаров.
+No public listings are available yet.|暂时没有公开商品。|Публичные товары пока отсутствуют.
+Compare approved listings with clear delivery, seller, licensing, and support details.|比较已审核商品的交付、卖家、授权和支持信息。|Сравнивайте проверенные товары по доставке, продавцу, лицензии и поддержке.
 Browse digital products and services|浏览数字商品与服务|Цифровые товары и услуги
 Browse digital products and expert services|浏览数字商品与专业服务|Цифровые товары и услуги специалистов
 Ysello digital marketplace|Ysello 数字商城|Цифровой маркетплейс Ysello
@@ -367,7 +382,27 @@ export function localizedProduct<
   > | null;
   const text =
     all?.[locale] || (locale.startsWith("zh") ? all?.["zh-CN"] : undefined);
-  if (!text) return product;
+  if (!text) {
+    if (locale === "en") return product;
+    return {
+      ...product,
+      name: uiText(product.name, locale),
+      shortDescription: product.shortDescription
+        ? uiText(product.shortDescription, locale)
+        : product.shortDescription,
+      description: product.description
+        ? uiText(product.description, locale)
+        : product.description,
+      seoTitle: product.seoTitle
+        ? uiText(product.seoTitle, locale)
+        : uiText(product.name, locale),
+      seoDescription: product.seoDescription
+        ? uiText(product.seoDescription, locale)
+        : product.shortDescription
+          ? uiText(product.shortDescription, locale)
+          : product.seoDescription,
+    };
+  }
   return {
     ...product,
     name: text.title || product.name,
