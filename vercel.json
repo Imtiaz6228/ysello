@@ -1,76 +1,14 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "framework": "vite",
   "cleanUrls": true,
   "trailingSlash": false,
-  "installCommand": "npm ci",
-  "buildCommand": "npm run build:web",
-  "outputDirectory": "dist",
+  "installCommand": "node -e \"console.log(\\\"[ysello] proxy deployment: npm install skipped\\\")\"",
+  "buildCommand": "node scripts/prepare-vercel-proxy.mjs",
+  "outputDirectory": "vercel-dist",
   "headers": [
-    {
-      "source": "/assets/:path*",
-      "headers": [
-        {
-          "key": "Cache-Control",
-          "value": "public, max-age=31536000, immutable"
-        }
-      ]
-    },
-    {
-      "source": "/:file(favicon.svg|favicon-32x32.png|apple-touch-icon.png|icon-192.png|icon-512.png|icon-maskable-512.png|og-default.png|site.webmanifest)",
-      "headers": [
-        {
-          "key": "Cache-Control",
-          "value": "public, max-age=86400, stale-while-revalidate=604800"
-        }
-      ]
-    },
-    {
-      "source": "/:page(cart|sign-in|sign-out|register|forgot-password|reset-password|verify-email|verify-required|dashboard|support|admin|seller|checkout)",
-      "headers": [
-        {
-          "key": "X-Robots-Tag",
-          "value": "noindex, nofollow, noarchive"
-        },
-        {
-          "key": "Cache-Control",
-          "value": "private, no-store"
-        }
-      ]
-    },
-    {
-      "source": "/:area(admin|seller|checkout|orders)/:path*",
-      "headers": [
-        {
-          "key": "X-Robots-Tag",
-          "value": "noindex, nofollow, noarchive"
-        },
-        {
-          "key": "Cache-Control",
-          "value": "private, no-store"
-        }
-      ]
-    },
-    {
-      "source": "/google-callback.php",
-      "headers": [
-        {
-          "key": "X-Robots-Tag",
-          "value": "noindex, nofollow, noarchive"
-        },
-        {
-          "key": "Cache-Control",
-          "value": "private, no-store"
-        }
-      ]
-    },
     {
       "source": "/:path*",
       "headers": [
-        {
-          "key": "Content-Security-Policy",
-          "value": "default-src 'self'; script-src 'self' https://challenges.cloudflare.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self' https://api.ysello.com https://challenges.cloudflare.com; frame-src https://challenges.cloudflare.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests"
-        },
         {
           "key": "Referrer-Policy",
           "value": "strict-origin-when-cross-origin"
@@ -78,18 +16,6 @@
         {
           "key": "Permissions-Policy",
           "value": "camera=(), microphone=(), geolocation=(), payment=(self)"
-        },
-        {
-          "key": "Cross-Origin-Opener-Policy",
-          "value": "same-origin"
-        },
-        {
-          "key": "Cross-Origin-Resource-Policy",
-          "value": "same-site"
-        },
-        {
-          "key": "X-DNS-Prefetch-Control",
-          "value": "on"
         },
         {
           "key": "X-Content-Type-Options",
@@ -102,16 +28,15 @@
         {
           "key": "Strict-Transport-Security",
           "value": "max-age=63072000; includeSubDomains; preload"
+        },
+        {
+          "key": "x-vercel-enable-rewrite-caching",
+          "value": "1"
         }
       ]
     }
   ],
   "redirects": [
-    {
-      "source": "/index.html",
-      "destination": "/",
-      "permanent": true
-    },
     {
       "source": "/categories/:slug",
       "destination": "/category/:slug",
@@ -125,140 +50,8 @@
   ],
   "rewrites": [
     {
-      "source": "/assets/:path*",
-      "destination": "https://api.ysello.com/assets/:path*"
-    },
-    {
-      "source": "/catalog",
-      "destination": "https://api.ysello.com/catalog"
-    },
-    {
-      "source": "/category/:path*",
-      "destination": "https://api.ysello.com/category/:path*"
-    },
-    {
-      "source": "/product/:path*",
-      "destination": "https://api.ysello.com/product/:path*"
-    },
-    {
-      "source": "/robots.txt",
-      "destination": "https://api.ysello.com/robots.txt"
-    },
-    {
-      "source": "/sitemap.xml",
-      "destination": "https://api.ysello.com/sitemap.xml"
-    },
-    {
-      "source": "/sitemap-pages.xml",
-      "destination": "https://api.ysello.com/sitemap-pages.xml"
-    },
-    {
-      "source": "/sitemap-categories.xml",
-      "destination": "https://api.ysello.com/sitemap-categories.xml"
-    },
-    {
-      "source": "/sitemap-products.xml",
-      "destination": "https://api.ysello.com/sitemap-products.xml"
-    },
-    {
-      "source": "/sitemap-stores.xml",
-      "destination": "https://api.ysello.com/sitemap-stores.xml"
-    },
-    {
-      "source": "/llms.txt",
-      "destination": "https://api.ysello.com/llms.txt"
-    },
-    {
-      "source": "/indexnow-key.txt",
-      "destination": "https://api.ysello.com/indexnow-key.txt"
-    },
-    {
-      "source": "/api/:path*",
-      "destination": "https://api.ysello.com/api/:path*"
-    },
-    {
-      "source": "/uploads/:path*",
-      "destination": "https://api.ysello.com/uploads/:path*"
-    },
-    {
-      "source": "/google-callback.php",
-      "destination": "https://api.ysello.com/api/auth/google/callback"
-    },
-    {
-      "source": "/stores/:slug",
-      "destination": "https://api.ysello.com/stores/:slug"
-    },
-    {
-      "source": "/cart",
-      "destination": "https://api.ysello.com/"
-    },
-    {
-      "source": "/sign-in",
-      "destination": "https://api.ysello.com/"
-    },
-    {
-      "source": "/sign-out",
-      "destination": "https://api.ysello.com/"
-    },
-    {
-      "source": "/register",
-      "destination": "https://api.ysello.com/"
-    },
-    {
-      "source": "/forgot-password",
-      "destination": "https://api.ysello.com/"
-    },
-    {
-      "source": "/reset-password",
-      "destination": "https://api.ysello.com/"
-    },
-    {
-      "source": "/verify-email",
-      "destination": "https://api.ysello.com/"
-    },
-    {
-      "source": "/verify-required",
-      "destination": "https://api.ysello.com/"
-    },
-    {
-      "source": "/dashboard",
-      "destination": "https://api.ysello.com/"
-    },
-    {
-      "source": "/support",
-      "destination": "https://api.ysello.com/"
-    },
-    {
-      "source": "/checkout",
-      "destination": "https://api.ysello.com/"
-    },
-    {
-      "source": "/checkout/:path*",
-      "destination": "https://api.ysello.com/"
-    },
-    {
-      "source": "/orders/:path*",
-      "destination": "https://api.ysello.com/"
-    },
-    {
-      "source": "/seller",
-      "destination": "https://api.ysello.com/"
-    },
-    {
-      "source": "/seller/:path*",
-      "destination": "https://api.ysello.com/"
-    },
-    {
-      "source": "/admin",
-      "destination": "https://api.ysello.com/"
-    },
-    {
-      "source": "/admin/:path*",
-      "destination": "https://api.ysello.com/"
-    },
-    {
-      "source": "/",
-      "destination": "https://api.ysello.com/"
+      "source": "/:path*",
+      "destination": "https://hsello-production.up.railway.app/:path*"
     }
   ]
 }
