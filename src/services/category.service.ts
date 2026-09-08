@@ -793,6 +793,87 @@ export const defaultMarketplaceCategories: DefaultCategory[] =
     ];
   });
 
+
+type CategoryIdMap = Map<string, { id: string }>;
+
+const socialPlatformCategoryAliases: Record<string, string[]> = {
+  instagram: ["instagram-accounts", "instagram", "instagram-creator-tools", "social-media-marketplace-instagram", "instagram-new", "instagram-old", "instagram-with-followers", "instagram-with-posts"],
+  facebook: ["facebook-accounts", "facebook", "facebook-social-products", "social-media-marketplace-facebook", "facebook-new", "facebook-old", "facebook-with-followers", "facebook-with-posts"],
+  x: ["x-accounts", "x", "twitter", "twitter-x", "x-social-products", "social-media-marketplace-x-twitter", "x-new", "x-old", "twitter-x-new", "twitter-x-old", "x-with-followers", "x-with-posts", "twitter-x-with-followers", "twitter-x-with-posts"],
+  tiktok: ["tiktok-accounts", "tiktok", "tiktok-creator-tools", "social-media-marketplace-tiktok", "tiktok-new", "tiktok-old", "tiktok-with-followers", "tiktok-with-posts"],
+  threads: ["threads-accounts", "threads", "threads-social-products", "social-media-marketplace-threads"],
+  telegram: ["telegram-accounts", "telegram", "telegram-social-products", "social-media-marketplace-telegram"],
+  discord: ["discord-accounts", "discord", "discord-social-products", "social-media-marketplace-discord"],
+  whatsapp: ["whatsapp-accounts", "whatsapp", "whatsapp-social-products", "social-media-marketplace-whatsapp"],
+  youtube: ["youtube-accounts", "youtube", "youtube-creator-tools", "social-media-marketplace-youtube"],
+  snapchat: ["snapchat-accounts", "snapchat", "snapchat-social-products", "social-media-marketplace-snapchat"],
+  linkedin: ["linkedin-accounts", "linkedin", "linkedin-social-products", "social-media-marketplace-linkedin"],
+  pinterest: ["pinterest-accounts", "pinterest", "pinterest-social-products", "social-media-marketplace-pinterest"],
+  reddit: ["reddit-accounts", "reddit", "social-media-marketplace-reddit"],
+};
+
+function socialInventorySegment(product: {
+  name: string;
+  shortDescription: string;
+  tags: string[];
+  productAttributes: unknown;
+  category?: { slug: string } | null;
+}) {
+  const text = [
+    product.category?.slug ?? "",
+    product.name,
+    product.shortDescription,
+    ...(product.tags ?? []),
+    product.productAttributes ? JSON.stringify(product.productAttributes) : "",
+  ].join(" ").toLowerCase();
+  if (/followers?|fans?|subscribers?|members?|audience/.test(text)) return "accounts-with-followers";
+  if (/\bposts?\b|posted|content\s+history/.test(text)) return "accounts-with-posts";
+  if (/\b(old|aged|vintage)\b|created\s+(?:in\s+)?20\d{2}|\b20(?:0\d|1\d|2[0-5])\b/.test(text)) return "old-accounts";
+  return "new-accounts";
+}
+
+async function organizeSocialAccountProducts(bySlug: CategoryIdMap) {
+  for (const [platform, aliases] of Object.entries(socialPlatformCategoryAliases)) {
+    const targets = {
+      "new-accounts": bySlug.get(`${platform}-new-accounts`)?.id,
+      "old-accounts": bySlug.get(`${platform}-old-accounts`)?.id,
+      "accounts-with-followers": bySlug.get(`${platform}-accounts-with-followers`)?.id,
+      "accounts-with-posts": bySlug.get(`${platform}-accounts-with-posts`)?.id,
+    } as const;
+    if (!targets["new-accounts"] || !targets["old-accounts"] || !targets["accounts-with-followers"] || !targets["accounts-with-posts"]) continue;
+
+    const legacyAliases = [
+      ...aliases,
+      `${platform}-new`, `${platform}-old`, `${platform}-with-followers`, `${platform}-with-posts`,
+    ];
+    const products = await prisma.product.findMany({
+      where: { category: { slug: { in: [...new Set(legacyAliases)] } } },
+      select: {
+        id: true,
+        name: true,
+        shortDescription: true,
+        tags: true,
+        productAttributes: true,
+        category: { select: { slug: true } },
+      },
+      take: 5000,
+    });
+    const grouped = new Map<keyof typeof targets, string[]>();
+    for (const product of products) {
+      const segment = socialInventorySegment(product) as keyof typeof targets;
+      grouped.set(segment, [...(grouped.get(segment) ?? []), product.id]);
+    }
+    for (const [segment, ids] of grouped) {
+      const categoryId = targets[segment];
+      if (!categoryId || !ids.length) continue;
+      await prisma.product.updateMany({
+        where: { id: { in: ids } },
+        data: { categoryId },
+      });
+    }
+  }
+}
+
 let ensuredCategoriesAt = 0;
 
 const retiredCategoryPrefixes = [
@@ -883,4 +964,6 @@ export async function ensureDefaultMarketplaceCategories(force = false) {
 
     if (!progressed) break;
   }
+
+  await organizeSocialAccountProducts(bySlug);
 }

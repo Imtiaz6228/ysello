@@ -43,6 +43,7 @@ import "./ysello-company.css";
 import "./ysello-workspace.css";
 import "./ysello-ux-fixes-2026-09-06.css";
 import "./ysello-performance-2026-09-08.css";
+import "./ysello-checkout-taxonomy-2026-09-08.css";
 import { LocaleProvider } from "./i18n/LocaleContext";
 import { AppErrorBoundary } from "./components/AppErrorBoundary";
 

@@ -3457,6 +3457,8 @@ type Deposit = {
   depositAddress?: string;
   txHash?: string | null;
   screenshotUrl?: string | null;
+  proofSubmittedAt?: string | null;
+  approvedAt?: string | null;
   adminNotes?: string | null;
   expiresAt?: string;
   createdAt: string;
@@ -3534,6 +3536,7 @@ function WalletTabContent({
   const [activeTopup, setActiveTopup] = useState<Deposit | null>(null);
   const [proofTx, setProofTx] = useState("");
   const [proofFile, setProofFile] = useState<File | null>(null);
+  const [proofPreviewUrl, setProofPreviewUrl] = useState<string | null>(null);
   const [withdrawBlockchain, setWithdrawBlockchain] = useState("USDT TRC20");
   const [withdrawAddress, setWithdrawAddress] = useState("");
   const [withdrawAmount, setWithdrawAmount] = useState("");
@@ -3563,6 +3566,16 @@ function WalletTabContent({
   }, [topupTelegram]);
 
   useEffect(() => {
+    if (!proofFile) {
+      setProofPreviewUrl(null);
+      return;
+    }
+    const url = URL.createObjectURL(proofFile);
+    setProofPreviewUrl(url);
+    return () => URL.revokeObjectURL(url);
+  }, [proofFile]);
+
+  useEffect(() => {
     if (!activeTopup) return;
     window.requestAnimationFrame(() =>
       document
@@ -3589,6 +3602,11 @@ function WalletTabContent({
     setWithdrawals(summary.withdrawals ?? []);
     onBalanceChange(summary.availableBalanceCents ?? summary.balanceCents);
     setDeposits(depositHistory.deposits);
+    setActiveTopup((current) =>
+      current
+        ? (depositHistory.deposits.find((deposit) => deposit.id === current.id) ?? current)
+        : current,
+    );
     setTopupMethods(methodData.methods);
     setTransactions(ledger.transactions);
     setDepositMethod((current) =>
@@ -3602,7 +3620,7 @@ function WalletTabContent({
     void refreshWallet().catch(() => undefined);
     const interval = window.setInterval(
       () => void refreshWallet().catch(() => undefined),
-      12000,
+      6000,
     );
     return () => window.clearInterval(interval);
   }, [refreshWallet]);
@@ -3614,6 +3632,12 @@ function WalletTabContent({
     ) {
       const text =
         "Top-up methods are not configured yet. No payment has been created.";
+      setTopupFeedback({ kind: "error", text });
+      setMessage(text);
+      return;
+    }
+    if (!topupTelegram.trim()) {
+      const text = "Enter your Telegram username so the payment can be matched to your top-up request.";
       setTopupFeedback({ kind: "error", text });
       setMessage(text);
       return;
@@ -3634,14 +3658,14 @@ function WalletTabContent({
           body: {
             amountCents: cents,
             method: depositMethod,
-            telegramContact: topupTelegram.trim() || undefined,
+            telegramContact: topupTelegram.trim(),
           },
         },
       );
       setMessage(data.message);
       setTopupFeedback({
         kind: "success",
-        text: "Payment request created. Send the exact amount, then add your TXID and screenshot below.",
+        text: `Payment request created. Send exactly ${formatMoney(data.topup.totalPayableCents)}, then upload the TXID and screenshot below.`,
       });
       setActiveTopup(data.topup);
       setProofTx("");
@@ -3660,6 +3684,12 @@ function WalletTabContent({
   }
 
   async function submitProof() {
+    if (!topupTelegram.trim()) {
+      const text = "Enter your Telegram username before submitting payment proof.";
+      setTopupFeedback({ kind: "error", text });
+      setMessage(text);
+      return;
+    }
     if (!activeTopup || !proofTx.trim() || !proofFile) {
       const text =
         "Add the transaction ID and payment screenshot before sending your proof.";
@@ -3686,17 +3716,19 @@ function WalletTabContent({
     try {
       const payload = new FormData();
       payload.append("txHash", proofTx.trim());
-      if (topupTelegram.trim()) payload.append("telegramContact", topupTelegram.trim());
+      payload.append("telegramContact", topupTelegram.trim());
       payload.append("screenshot", proofFile);
-      const data = await apiRequest<{ message: string }>(
+      const data = await apiRequest<{ message: string; topup: Deposit; autoVerified?: boolean }>(
         `/api/wallet/topups/${activeTopup.id}/proof`,
         { method: "POST", body: payload },
       );
       setMessage(data.message);
-      setTopupFeedback({ kind: "success", text: data.message });
+      setTopupFeedback({
+        kind: "success",
+        text: "Screenshot uploaded successfully. Your top-up is awaiting verification and will be credited automatically when an admin approves it.",
+      });
       setDepositAmount("");
-      setActiveTopup(null);
-      setProofTx("");
+      setActiveTopup(data.topup);
       setProofFile(null);
       await refreshWallet();
     } catch (error) {
@@ -3768,6 +3800,9 @@ function WalletTabContent({
     : 0;
   const quotedFeeCents = selectedMethod?.networkFeeCents ?? 0;
   const quotedTotalCents = quotedAmountCents + quotedFeeCents;
+  const activeProofSubmitted = Boolean(activeTopup?.proofSubmittedAt || activeTopup?.txHash);
+  const activeApproved = activeTopup?.status === "APPROVED";
+  const activeRejected = activeTopup?.status === "REJECTED";
   const chains = [
     "USDT TRC20",
     "USDT ERC20",
@@ -3955,10 +3990,11 @@ function WalletTabContent({
               </div>
             ) : null}
             <label className="field topup-telegram-contact">
-              <span>Telegram contact <small>optional · shown to admin with your payment request</small></span>
+              <span>Telegram username * <small>required · included with your payment request</small></span>
               <input
                 type="text"
                 placeholder="@username"
+                required
                 maxLength={80}
                 value={topupTelegram}
                 onChange={(event) => setTopupTelegram(event.target.value)}
@@ -3977,13 +4013,9 @@ function WalletTabContent({
                   onChange={(e) => setDepositAmount(e.target.value)}
                 />
               </div>
-              <button type="submit" className="primary-button" disabled={busy}>
-                <PlusCircle size={16} />{" "}
-                {busy ? t("creatingPayment") : t("createPayment")}
-              </button>
             </div>
             {selectedMethod && quotedAmountCents > 0 ? (
-              <dl className="topup-fee-breakdown" aria-label="Top-up quote">
+              <dl className="topup-fee-breakdown exact-total" aria-label="Top-up quote">
                 <div>
                   <dt>
                     <UiText value="Wallet credit" />
@@ -3991,21 +4023,31 @@ function WalletTabContent({
                   <dd>{formatMoney(quotedAmountCents)}</dd>
                 </div>
                 <div>
-                  <dt>Estimated blockchain fee (buyer pays)</dt>
+                  <dt>Ysello processing / network allowance</dt>
                   <dd>{formatMoney(quotedFeeCents)}</dd>
                 </div>
                 <div>
-                  <dt>Estimated total buyer cost</dt>
+                  <dt>Send exactly</dt>
                   <dd>{formatMoney(quotedTotalCents)}</dd>
                 </div>
               </dl>
             ) : null}
+            <button
+              type="submit"
+              className="primary-button topup-continue-button"
+              disabled={busy || !selectedMethod || quotedTotalCents <= 0 || !topupTelegram.trim()}
+            >
+              <PlusCircle size={16} />{" "}
+              {busy
+                ? t("creatingPayment")
+                : quotedTotalCents > 0
+                  ? `Continue · send exactly ${formatMoney(quotedTotalCents)}`
+                  : "Enter an amount to continue"}
+            </button>
             <div className="wallet-safety-note">
               <ShieldAlert size={16} />
               <span>
-                Transfer the exact wallet-credit amount. Your wallet or exchange
-                charges the network fee in addition; live fees may vary from
-                this estimate.
+                Ysello calculates the payment total before you continue. Send exactly the displayed total to the shown address. If your exchange charges its own withdrawal fee, make sure that fee does not reduce the amount received by Ysello.
               </span>
             </div>
           </form>
@@ -4079,8 +4121,14 @@ function WalletTabContent({
                 {activeTopup.reference}
               </p>
             </div>
-            <span className="status-pill pending">
-              {t("awaitingPayment").toUpperCase()}
+            <span className={`status-pill ${activeApproved ? "approved" : activeRejected ? "rejected" : "pending"}`}>
+              {activeApproved
+                ? "APPROVED & CREDITED"
+                : activeRejected
+                  ? "REJECTED"
+                  : activeProofSubmitted
+                    ? "AWAITING VERIFICATION"
+                    : t("awaitingPayment").toUpperCase()}
             </span>
           </header>
           <dl className="topup-fee-breakdown" aria-label="Saved top-up quote">
@@ -4091,11 +4139,11 @@ function WalletTabContent({
               <dd>{formatMoney(activeTopup.amountCents)}</dd>
             </div>
             <div>
-              <dt>Estimated blockchain fee (buyer pays)</dt>
+              <dt>Ysello processing / network allowance</dt>
               <dd>{formatMoney(activeTopup.networkFeeCents)}</dd>
             </div>
             <div>
-              <dt>Estimated total buyer cost</dt>
+              <dt>Send exactly</dt>
               <dd>{formatMoney(activeTopup.totalPayableCents)}</dd>
             </div>
           </dl>
@@ -4113,6 +4161,39 @@ function WalletTabContent({
               <ClipboardCopy size={15} /> {t("copyAddress")}
             </button>
           </div>
+          {activeApproved ? (
+            <div className="topup-state-card approved">
+              <CheckCircle2 />
+              <div>
+                <small>TOP-UP COMPLETE</small>
+                <strong>{formatMoney(activeTopup.amountCents)} credited to your Ysello balance</strong>
+                <p>Your payment was approved. Your available balance is now {formatMoney(balance)}.</p>
+              </div>
+            </div>
+          ) : activeRejected ? (
+            <div className="topup-state-card rejected">
+              <ShieldAlert />
+              <div>
+                <small>TOP-UP NOT APPROVED</small>
+                <strong>This top-up was rejected</strong>
+                <p>{activeTopup.adminNotes || "Review the transaction details or contact support before creating another payment."}</p>
+              </div>
+            </div>
+          ) : activeProofSubmitted ? (
+            <div className="topup-state-card pending">
+              <Clock3 />
+              <div>
+                <small>PROOF RECEIVED</small>
+                <strong>Top-up is awaiting verification</strong>
+                <p>Your TXID and screenshot were uploaded successfully. The balance will update automatically after admin approval.</p>
+                {activeTopup.txHash ? <code>{activeTopup.txHash}</code> : null}
+                {activeTopup.screenshotUrl ? (
+                  <img src={apiDownloadUrl(activeTopup.screenshotUrl)} alt="Uploaded payment screenshot" />
+                ) : null}
+              </div>
+            </div>
+          ) : null}
+          {!activeProofSubmitted && !activeApproved && !activeRejected ? (
           <div className="topup-proof-grid">
             <label>
               <span>{t("transactionId")} *</span>
@@ -4133,7 +4214,8 @@ function WalletTabContent({
               <span>
                 {proofFile ? proofFile.name : `${t("uploadScreenshot")} *`}
               </span>
-              <small>{t("proofFileRules")}</small>
+              <small>{proofFile ? "Screenshot uploaded and ready to submit." : t("proofFileRules")}</small>
+              {proofPreviewUrl ? <img src={proofPreviewUrl} alt="Payment screenshot preview" /> : null}
               <input
                 type="file"
                 accept="image/jpeg,image/png,image/webp"
@@ -4172,19 +4254,28 @@ function WalletTabContent({
               />
             </label>
           </div>
+          ) : null}
           <footer>
             <small>
               <Clock3 size={17} /> {t("approvalProofNote")}
             </small>
-            <button
-              type="button"
-              className="primary-button"
-              disabled={busy}
-              onClick={() => void submitProof()}
-            >
-              <CheckCircle2 size={18} />{" "}
-              {busy ? t("confirming") : t("confirmPayment")}
-            </button>
+            {!activeProofSubmitted && !activeApproved && !activeRejected ? (
+              <button
+                type="button"
+                className="primary-button"
+                disabled={busy || !proofFile || !proofTx.trim()}
+                onClick={() => void submitProof()}
+              >
+                <CheckCircle2 size={18} />{" "}
+                {busy ? t("confirming") : "Complete top-up submission"}
+              </button>
+            ) : activeApproved ? (
+              <strong className="topup-footer-status approved"><CheckCircle2 size={18} /> Approved and credited</strong>
+            ) : activeRejected ? (
+              <strong className="topup-footer-status rejected"><ShieldAlert size={18} /> Review required</strong>
+            ) : (
+              <strong className="topup-footer-status pending"><Clock3 size={18} /> Awaiting admin verification</strong>
+            )}
           </footer>
         </section>
       ) : null}
@@ -4321,11 +4412,13 @@ function WalletTabContent({
                   <span
                     className={`status-pill ${deposit.status.toLowerCase()}`}
                   >
-                    {deposit.status === "PENDING"
-                      ? deposit.txHash && deposit.screenshotUrl
-                        ? "PENDING APPROVAL"
-                        : "AWAITING PROOF"
-                      : deposit.status}
+                    {deposit.status === "APPROVED"
+                      ? "APPROVED & CREDITED"
+                      : deposit.status === "PENDING"
+                        ? deposit.txHash && deposit.screenshotUrl
+                          ? "AWAITING VERIFICATION"
+                          : "AWAITING PROOF"
+                        : deposit.status}
                   </span>
                   <small>
                     {new Date(deposit.createdAt).toLocaleDateString()}

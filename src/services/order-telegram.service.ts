@@ -183,6 +183,38 @@ export async function orderTelegramStatus() {
   }
 }
 
+
+function integerFromUnknown(value: unknown) {
+  if (typeof value === "number" && Number.isFinite(value)) return Math.max(0, Math.round(value));
+  if (typeof value === "string" && /^\d{1,7}$/.test(value.trim())) return Number(value.trim());
+  return 0;
+}
+
+function accountsPerPackage(product: {
+  name: string;
+  shortDescription?: string | null;
+  tags?: string[];
+  productAttributes?: unknown;
+}) {
+  const attrs = product.productAttributes && typeof product.productAttributes === "object"
+    ? product.productAttributes as Record<string, unknown>
+    : {};
+  for (const key of ["accountCount", "accounts", "packageSize", "quantity", "units", "qty", "profiles"]) {
+    const parsed = integerFromUnknown(attrs[key]);
+    if (parsed > 0) return parsed;
+  }
+  const haystack = [product.name, product.shortDescription ?? "", ...(product.tags ?? [])].join(" ");
+  const matches = [...haystack.matchAll(/\b(\d{1,7})\s*(?:x\s*)?(accounts?|accs?|profiles?|pcs?|pieces?|units?)\b/gi)];
+  if (matches.length) return Math.max(...matches.map((match) => Number(match[1]) || 0));
+  if (/accounts?|accs?|profiles?/i.test(haystack)) {
+    const candidates = [...haystack.matchAll(/\b(\d{1,7})\b/g)]
+      .map((match) => Number(match[1]) || 0)
+      .filter((value) => value > 2 && !(value >= 1990 && value <= 2035));
+    if (candidates.length) return Math.max(...candidates);
+  }
+  return 0;
+}
+
 export function queueOrderCreatedTelegram(input: { orderId: string; req: Request; telegramContact?: string | null; event?: string }) {
   void (async () => {
     if (!env.ORDER_TELEGRAM_NOTIFICATIONS_ENABLED || !token()) return;
@@ -191,14 +223,32 @@ export function queueOrderCreatedTelegram(input: { orderId: string; req: Request
       include: {
         buyer: { select: { firstName: true, lastName: true, email: true, username: true, phone: true, country: true, city: true } },
         payment: true,
-        items: { include: { product: { select: { slug: true } } } },
+        items: { include: { product: { select: {
+          slug: true,
+          name: true,
+          shortDescription: true,
+          tags: true,
+          productAttributes: true,
+          category: { select: { name: true } },
+        } } } },
       },
     });
     if (!order) return;
     const ctx = await contextFromRequest(input.req, order.buyer.country, order.buyer.city);
-    const items = order.items.map((item, index) =>
-      `${index + 1}. ${item.productName} × ${item.quantity} — ${money(item.totalCents, order.currency)}`,
-    );
+    let totalAccounts = 0;
+    const items = order.items.flatMap((item, index) => {
+      const perPackage = accountsPerPackage(item.product);
+      const accountTotal = perPackage > 0 ? perPackage * item.quantity : 0;
+      totalAccounts += accountTotal;
+      return [
+        `${index + 1}. ${item.productName}`,
+        `   Package quantity: ${item.quantity}`,
+        perPackage > 0 ? `   Accounts per package: ${perPackage.toLocaleString()}` : null,
+        accountTotal > 0 ? `   Total accounts: ${accountTotal.toLocaleString()}` : null,
+        `   Amount: ${money(item.totalCents, order.currency)}`,
+        item.product.category?.name ? `   Category: ${item.product.category.name}` : null,
+      ].filter((line): line is string => Boolean(line));
+    });
     const providerPayload = order.payment?.providerPayload && typeof order.payment.providerPayload === "object"
       ? order.payment.providerPayload as Record<string, unknown>
       : null;
@@ -222,7 +272,8 @@ export function queueOrderCreatedTelegram(input: { orderId: string; req: Request
       "Products / packages:",
       ...items,
       "",
-      `Total quantity: ${order.items.reduce((sum, item) => sum + item.quantity, 0)}`,
+      `Total package quantity: ${order.items.reduce((sum, item) => sum + item.quantity, 0)}`,
+      totalAccounts > 0 ? `Total accounts: ${totalAccounts.toLocaleString()}` : null,
       `Created: ${order.createdAt.toISOString()}`,
       `Order ID: ${order.id}`,
     ].filter((line): line is string => line !== null).join("\n");
@@ -242,15 +293,15 @@ export function queueTopupCreatedTelegram(input: { topupId: string; req: Request
     await sendOrderTelegramMessage([
       "💰 NEW YSELLO WALLET TOP-UP",
       `Reference: ${topup.reference}`,
+      `Telegram: ${normalizeTelegram(input.telegramContact)}`,
       `Buyer: ${topup.user.firstName} ${topup.user.lastName} (@${topup.user.username})`,
       `Email: ${topup.user.email}`,
-      `Telegram: ${normalizeTelegram(input.telegramContact || savedTelegram)}`,
       topup.user.phone ? `Phone: ${topup.user.phone}` : null,
       `Country: ${ctx.country}${ctx.city ? ` · ${ctx.city}` : ""}`,
       `IP: ${ctx.ip}`,
       `Wallet credit: ${money(topup.amountCents)}`,
-      `Network fee estimate: ${money(topup.networkFeeCents)}`,
-      `Total buyer cost: ${money(topup.totalPayableCents)}`,
+      `Ysello processing/network allowance: ${money(topup.networkFeeCents)}`,
+      `SEND EXACTLY: ${money(topup.totalPayableCents)}`,
       `Network: ${topup.method.replaceAll("_", " ")}`,
       `Deposit address: ${topup.depositAddress}`,
       "TXID: Waiting for buyer proof",
@@ -272,15 +323,15 @@ export function queueTopupProofTelegram(input: { topupId: string; req: Request; 
     const text = [
       "🧾 TOP-UP PAYMENT PROOF SUBMITTED",
       `Reference: ${topup.reference}`,
+      `Telegram: ${normalizeTelegram(input.telegramContact)}`,
       `Status: ${topup.status.replaceAll("_", " ")}`,
       `Buyer: ${topup.user.firstName} ${topup.user.lastName} (@${topup.user.username})`,
       `Email: ${topup.user.email}`,
-      `Telegram: ${normalizeTelegram(input.telegramContact || savedTelegram)}`,
       topup.user.phone ? `Phone: ${topup.user.phone}` : null,
       `Country: ${ctx.country}${ctx.city ? ` · ${ctx.city}` : ""}`,
       `IP: ${ctx.ip}`,
       `Amount: ${money(topup.amountCents)}`,
-      `Total buyer cost: ${money(topup.totalPayableCents)}`,
+      `SEND EXACTLY: ${money(topup.totalPayableCents)}`,
       `Network: ${topup.method.replaceAll("_", " ")}`,
       `TXID: ${topup.txHash || "Not provided"}`,
       `Proof submitted: ${topup.proofSubmittedAt?.toISOString() ?? new Date().toISOString()}`,

@@ -110,7 +110,7 @@ walletRouter.post(
 
 const cryptoTopupSchema = z.object({
   amountCents: z.number().int().min(100).max(10_000_000),
-  telegramContact: z.string().trim().max(80).optional(),
+  telegramContact: z.string().trim().min(2, "Telegram username is required for top-up verification.").max(80),
   method: z.enum([
     TopupMethod.CRYPTO_TRC20,
     TopupMethod.CRYPTO_BEP20,
@@ -136,7 +136,7 @@ walletRouter.post(
     });
     res.status(201).json({
       message:
-        "Payment request created. Transfer the exact wallet-credit amount on the selected network; your wallet or exchange charges the displayed buyer-paid network fee in addition. Then submit the TXID and screenshot.",
+        "Payment request created. Send the exact total shown for this request to the selected Ysello address, then upload the TXID and payment screenshot on the same page.",
       ...result,
     });
   }),
@@ -151,7 +151,7 @@ walletRouter.post(
       const input = z
         .object({
           txHash: z.string().trim().min(64).max(66),
-          telegramContact: z.string().trim().max(80).optional(),
+          telegramContact: z.string().trim().min(2, "Telegram username is required for top-up verification.").max(80),
         })
         .parse(req.body);
       if (!req.file)

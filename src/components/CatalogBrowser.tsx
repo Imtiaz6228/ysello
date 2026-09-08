@@ -35,6 +35,15 @@ export function CatalogBrowser({
   const top = useRef<HTMLElement>(null);
   const selected = categorySlug || params.get("category") || "all";
   const currentCategory = categories.find((item) => item.slug === selected);
+  const childCategories = currentCategory
+    ? categories
+        .filter(
+          (category) =>
+            category.parentId === currentCategory.id ||
+            category.parentSlug === currentCategory.slug,
+        )
+        .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))
+    : [];
   const title =
     currentCategory?.name ||
     identifyProductPlatform(selected)?.name ||
@@ -45,7 +54,7 @@ export function CatalogBrowser({
     params.get("sort") || "",
   )
     ? params.get("sort")!
-    : embedded
+    : embedded || Boolean(categorySlug)
       ? "popular"
       : "newest";
   const page = Math.max(1, Number.parseInt(params.get("page") || "1", 10) || 1);
@@ -115,6 +124,30 @@ export function CatalogBrowser({
             : `${data.pagination.total.toLocaleString(locale)} ${local("products", "件商品", "товаров")}`}
         </span>
       </header>
+      {!embedded && currentCategory && childCategories.length ? (
+        <section className="ys-popular-subcategories" aria-label={`${title} subcategories`}>
+          <header>
+            <div>
+              <span className="ys-eyebrow">POPULAR TYPES</span>
+              <h2>{local(`Shop ${title} by type`, `按类型选购${uiText(title, locale)}`, `${uiText(title, locale)} по типу`)}</h2>
+              <p>{local("Start with the most useful account types, then compare the most popular products inside each group.", "先选择常用账号类型，再比较每个分类中的热门商品。", "Сначала выберите тип аккаунта, затем сравните самые популярные товары внутри категории.")}</p>
+            </div>
+            <small>{local("Most popular products shown first", "优先显示热门商品", "Сначала популярные товары")}</small>
+          </header>
+          <div>
+            {childCategories.slice(0, 12).map((category) => (
+              <Link key={category.slug} to={categoryPath(category, categories)}>
+                <CategoryArtwork category={category} className="ys-subcategory-artwork" />
+                <span>
+                  <strong><UiText value={category.name} /></strong>
+                  <small>{category.productCount ?? 0} {local("products", "件商品", "товаров")}</small>
+                </span>
+                <ArrowRight />
+              </Link>
+            ))}
+          </div>
+        </section>
+      ) : null}
       <div className="ys-catalog-layout">
         {!embedded ? (
           <aside className="ys-catalog-categories">

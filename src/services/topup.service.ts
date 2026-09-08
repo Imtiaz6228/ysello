@@ -105,11 +105,11 @@ export function getTopupMethods() {
     .map(([method, details]) => ({
       method: method as TopupMethod,
       ...details!,
-      feePolicy: "Network and exchange fees are paid by the buyer.",
+      feePolicy: "Ysello shows the exact requested payment total before the request is created. Any separate exchange withdrawal fee must not reduce the amount received by Ysello.",
       amountPolicy:
         details!.asset === "USDT"
-          ? "Send the exact USDT amount shown."
-          : "Send the USD-equivalent crypto value shown at payment time.",
+          ? "Send the exact USDT payment total shown on the top-up page."
+          : "Send the exact crypto payment total shown at payment time.",
     }));
 }
 
@@ -163,7 +163,7 @@ function getTopupInstructions(topup: any): string {
     TopupMethod.CRYPTO_ERC20,
   ]);
   const stablecoin = stablecoinMethods.has(topup.method);
-  return `${stablecoin ? `The wallet credit is ${amount} in USDT` : `The wallet credit is crypto worth ${amount}`} via ${methodLabel}. The estimated blockchain fee is ${fee}, so the buyer's estimated total cost is ${total}. Fees are paid in addition to the wallet credit and can vary with network conditions. After sending, submit the TXID and a screenshot that visibly contains the same TXID. Never send on another network. Funds are credited only after admin approval.`;
+  return `${stablecoin ? `The wallet credit is ${amount} in USDT` : `The wallet credit is crypto worth ${amount}`} via ${methodLabel}. Ysello's configured payment allowance is ${fee}. Send exactly ${total} to the displayed Ysello address; any separate exchange withdrawal fee must not reduce that received amount. After sending, submit the TXID and a screenshot that visibly contains the same TXID. Never send on another network. Funds are credited only after admin approval.`;
 }
 
 function normalizeTxHash(method: TopupMethod, raw: string) {

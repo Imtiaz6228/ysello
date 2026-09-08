@@ -26,13 +26,13 @@ const socialAccountInventory = (
 ): MarketplaceTaxonomyNode[] => [
   {
     slug: `${platformSlug}-accounts`,
-    name: "Accounts",
-    description: `${platformName} account inventory with clear age, audience and posting-history details.`,
+    name: `${platformName} Accounts`,
+    description: `${platformName} account inventory organized by account age, audience and posting history.`,
     children: nodes(`${platformName} accounts in this inventory group.`, [
-      [`${platformSlug}-new-accounts`, "New accounts"],
-      [`${platformSlug}-old-accounts`, "Old accounts"],
-      [`${platformSlug}-accounts-with-followers`, "Accounts with followers"],
-      [`${platformSlug}-accounts-with-posts`, "Accounts with posts"],
+      [`${platformSlug}-new-accounts`, `New ${platformName} Accounts`],
+      [`${platformSlug}-old-accounts`, `Old ${platformName} Accounts`],
+      [`${platformSlug}-accounts-with-followers`, `${platformName} Accounts with Followers`],
+      [`${platformSlug}-accounts-with-posts`, `${platformName} Accounts with Posts`],
     ]),
   },
 ];
@@ -489,6 +489,12 @@ export const marketplaceTaxonomy: MarketplaceTaxonomyItem[] = [
         name: "Pinterest",
         description: "Pinterest account inventory.",
         children: socialAccountInventory("pinterest", "Pinterest"),
+      },
+      {
+        slug: "reddit-social-products",
+        name: "Reddit",
+        description: "Reddit account inventory.",
+        children: socialAccountInventory("reddit", "Reddit"),
       },
     ],
   },
