@@ -16,7 +16,9 @@ import { Link, Navigate, useNavigate } from "react-router-dom";
 import { ApiError, apiRequest } from "../api/client";
 import { useAuth } from "../auth/AuthContext";
 import { useCart } from "../commerce/CartContext";
+import { cartPath } from "../commerce/marketplaceUrls";
 import { MarketFooter, MarketHeader } from "../components/MarketHeader";
+import { ProductArtwork } from "../components/ProductArtwork";
 import { Seo } from "../components/Seo";
 import { useLocale } from "../i18n/LocaleContext";
 
@@ -46,7 +48,7 @@ const icons: Record<MethodId, typeof CreditCard> = {
 export function CheckoutPage() {
   const { formatMoney, formatProductMoney, t } = useLocale();
   const { user, setUser } = useAuth();
-  const { items, subtotalCents, clear, remove, updateProductPrices } = useCart();
+  const { items, subtotalCents, remove, updateProductPrices } = useCart();
   const navigate = useNavigate();
   const [methods, setMethods] = useState<Method[]>([]);
   const [balanceCents, setBalanceCents] = useState(user?.balanceCents ?? 0);
@@ -103,8 +105,8 @@ export function CheckoutPage() {
         });
         setBalanceCents(data.balanceCents);
         if (user) setUser({ ...user, balanceCents: data.balanceCents });
-        clear();
-        navigate(`/checkout/confirmation?order=${data.order.id}`, {
+        const slug = items[0]?.product.slug;
+        navigate(`${slug ? `/checkout/${encodeURIComponent(slug)}` : "/checkout"}/confirmation?order=${data.order.id}`, {
           state: { paid: true, instructions: data.message },
         });
         return;
@@ -124,8 +126,9 @@ export function CheckoutPage() {
         return;
       }
       if (data.cryptoPayment) {
+        const slug = items[0]?.product.slug;
         navigate(
-          `/checkout/confirmation?order=${data.order.id}&provider=crypto`,
+          `${slug ? `/checkout/${encodeURIComponent(slug)}` : "/checkout"}/confirmation?order=${data.order.id}&provider=crypto`,
           {
             state: {
               instructions: data.instructions,
@@ -135,7 +138,8 @@ export function CheckoutPage() {
         );
         return;
       }
-      navigate(`/checkout/confirmation?order=${data.order.id}`, {
+      const slug = items[0]?.product.slug;
+      navigate(`${slug ? `/checkout/${encodeURIComponent(slug)}` : "/checkout"}/confirmation?order=${data.order.id}`, {
         state: { instructions: data.instructions },
       });
     } catch (caught) {
@@ -180,7 +184,7 @@ export function CheckoutPage() {
       <MarketHeader />
       <form className="checkout-layout" onSubmit={placeOrder}>
         <section className="checkout-main">
-          <Link className="back-link" to="/cart">
+          <Link className="back-link" to={cartPath(items[0]?.product)}>
             <ArrowLeft /> Back to cart
           </Link>
           <span className="section-index">
@@ -261,7 +265,7 @@ export function CheckoutPage() {
           <span className="section-index">ORDER SUMMARY</span>
           {items.map(({ product, quantity }) => (
             <div className="checkout-line" key={product.id}>
-              <span>{product.icon}</span>
+              <div className="checkout-product-art"><ProductArtwork product={product} /></div>
               <div>
                 <strong>{product.title}</strong>
                 <small>

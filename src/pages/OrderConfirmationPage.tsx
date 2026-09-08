@@ -6,10 +6,11 @@ import {
   FileText,
   LoaderCircle,
   MessageCircle,
+  ShieldAlert,
   Timer,
 } from "lucide-react";
 import { Link, useLocation, useSearchParams } from "react-router-dom";
-import { ApiError, apiRequest } from "../api/client";
+import { ApiError, apiDownloadUrl, apiRequest } from "../api/client";
 import { useCart } from "../commerce/CartContext";
 import { MarketFooter, MarketHeader } from "../components/MarketHeader";
 import { Seo } from "../components/Seo";
@@ -25,6 +26,25 @@ type CryptoPayment = {
   instructions: string;
   status: string;
   txHash?: string;
+};
+
+
+type ConfirmationOrder = {
+  id: string;
+  orderNumber: string;
+  status: string;
+  totalCents: number;
+  currency: string;
+  canOpenDispute?: boolean;
+  items: Array<{
+    id: string;
+    productName: string;
+    quantity: number;
+    deliveredAt?: string | null;
+    product: { name: string; slug: string; coverImageUrl?: string | null; type: string };
+    downloadGrants: Array<{ id: string; downloadCount: number; maxDownloads: number; productFile: { displayName: string } }>;
+    inventoryItems?: Array<{ id: string; content: string }>;
+  }>;
 };
 
 type PaymentStatusResponse = {
@@ -74,6 +94,7 @@ export function OrderConfirmationPage() {
     routeState?.cryptoPayment,
   );
   const [checking, setChecking] = useState(false);
+  const [order, setOrder] = useState<ConfirmationOrder | null>(null);
   const [tick, setTick] = useState(Date.now());
 
   const secondsLeft = useMemo(() => {
@@ -92,7 +113,7 @@ export function OrderConfirmationPage() {
       .then(() => {
         setState("paid");
         setMessage(
-          "Payment confirmed. Your downloads and invoice are ready in your dashboard, and a confirmation email is on its way.",
+          "Payment confirmed. Your order is completed and the available downloads are ready on this page. A confirmation email is also on its way.",
         );
         clear();
       })
@@ -119,7 +140,7 @@ export function OrderConfirmationPage() {
         ) {
           setState("paid");
           setMessage(
-            "Crypto payment detected. Your ZIP/download delivery is ready in your dashboard.",
+            "Crypto payment detected. Your order is completed and the available ZIP/download delivery is ready on this page.",
           );
           clear();
         }
@@ -154,6 +175,22 @@ export function OrderConfirmationPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isCrypto, orderId, state]);
 
+  useEffect(() => {
+    if (!orderId) return;
+    const loadOrder = () =>
+      apiRequest<{ order: ConfirmationOrder }>(`/api/commerce/orders/${orderId}`)
+        .then((data) => setOrder(data.order))
+        .catch(() => undefined);
+    void loadOrder();
+    if (state !== "paid") return;
+    const timer = window.setInterval(() => void loadOrder(), 5000);
+    return () => window.clearInterval(timer);
+  }, [orderId, state]);
+
+  useEffect(() => {
+    if (routeState?.paid) clear();
+  }, [clear, routeState?.paid]);
+
   async function checkCrypto(showLoading = true) {
     if (!orderId) return;
     if (showLoading) setChecking(true);
@@ -169,7 +206,7 @@ export function OrderConfirmationPage() {
       ) {
         setState("paid");
         setMessage(
-          "Crypto payment detected. Your ZIP/download delivery is ready in your dashboard.",
+          "Crypto payment detected. Your order is completed and the available ZIP/download delivery is ready on this page.",
         );
         clear();
         return;
@@ -220,7 +257,7 @@ export function OrderConfirmationPage() {
         </span>
         <h1>
           {state === "paid"
-            ? "It’s yours."
+            ? "Order completed."
             : state === "confirming"
               ? "Confirming payment…"
               : isCrypto
@@ -279,16 +316,77 @@ export function OrderConfirmationPage() {
           </div>
         ) : null}
 
+        {state === "paid" && order ? (
+          <section className="confirmation-delivery-panel">
+            <header>
+              <div>
+                <small>ORDER #{order.orderNumber}</small>
+                <h2>Your delivery is available here.</h2>
+              </div>
+              <span>{order.status.replaceAll("_", " ")}</span>
+            </header>
+            <div className="confirmation-order-items">
+              {order.items.map((item) => (
+                <article key={item.id}>
+                  <div className="confirmation-product-image">
+                    {item.product.coverImageUrl ? (
+                      <img src={item.product.coverImageUrl} alt={item.productName} />
+                    ) : (
+                      <span>{item.productName.slice(0, 2).toUpperCase()}</span>
+                    )}
+                  </div>
+                  <div className="confirmation-product-copy">
+                    <small>Qty {item.quantity}</small>
+                    <strong>{item.productName}</strong>
+                    <span>{item.deliveredAt ? "Delivered" : "Processing delivery"}</span>
+                  </div>
+                  <div className="confirmation-download-actions">
+                    {item.downloadGrants.length ? (
+                      <a className="primary-link" href={apiDownloadUrl(`/api/commerce/order-items/${item.id}/download.zip`)}>
+                        <Download /> Download all ZIP
+                      </a>
+                    ) : null}
+                    {item.downloadGrants.map((grant) => (
+                      <a key={grant.id} href={apiDownloadUrl(`/api/commerce/downloads/${grant.id}`)}>
+                        <Download /> {grant.productFile.displayName}
+                      </a>
+                    ))}
+                    {item.inventoryItems?.length ? (
+                      <>
+                        <a href={apiDownloadUrl(`/api/commerce/order-items/${item.id}/delivery?format=zip`)}>
+                          <Download /> Download delivered accounts ZIP
+                        </a>
+                        <a href={apiDownloadUrl(`/api/commerce/order-items/${item.id}/delivery?format=csv`)}>
+                          <Download /> Download CSV
+                        </a>
+                      </>
+                    ) : null}
+                    {!item.downloadGrants.length && !item.inventoryItems?.length ? (
+                      <Link to={`/orders/${order.id}`}>Open delivery workspace</Link>
+                    ) : null}
+                  </div>
+                </article>
+              ))}
+            </div>
+          </section>
+        ) : null}
+
         <div>
-          <Link className="primary-link" to="/dashboard">
-            <Download /> Purchases & downloads
-          </Link>
-          <Link to="/dashboard">
-            <FileText /> View invoice
-          </Link>
-          <Link to="/support">
-            <MessageCircle /> Get support
-          </Link>
+          {orderId ? (
+            <a href={apiDownloadUrl(`/api/commerce/orders/${orderId}/invoice`)} target="_blank" rel="noreferrer">
+              <FileText /> View invoice
+            </a>
+          ) : null}
+          {orderId ? (
+            <Link className="primary-link" to={`/orders/${orderId}#chat`}>
+              <MessageCircle /> Chat with seller
+            </Link>
+          ) : null}
+          {orderId && order?.canOpenDispute ? (
+            <Link to={`/orders/${orderId}#dispute`}>
+              <ShieldAlert /> Open dispute
+            </Link>
+          ) : null}
         </div>
       </section>
       <MarketFooter />

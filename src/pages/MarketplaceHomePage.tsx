@@ -15,7 +15,7 @@ import {
 import { useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useCart } from "../commerce/CartContext";
-import { categoryPath, productPath } from "../commerce/marketplaceUrls";
+import { cartPath, categoryPath, productPath } from "../commerce/marketplaceUrls";
 import { storefrontCategories } from "../commerce/storefrontCategories";
 import {
   useMarketplaceCategories,
@@ -141,7 +141,7 @@ export function MarketplaceHomePage() {
     )
       return;
     add(product);
-    navigate("/cart");
+    navigate(cartPath(product));
   }
   return (
     <main className="market-home-page ys-company-home">

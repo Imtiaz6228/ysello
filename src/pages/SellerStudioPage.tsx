@@ -542,7 +542,7 @@ export function SellerStudioPage() {
     mergeSellerTaxonomy([] as Category[]),
   );
   const [profile, setProfile] = useState<SellerProfile | null>(null);
-  const [profileForm, setProfileForm] = useState({ about: "", policy: "" });
+  const [profileForm, setProfileForm] = useState({ storeName: "", about: "", policy: "" });
   const [open, setOpen] = useState(false);
   const [message, setMessage] = useState("");
   const [messageType, setMessageType] = useState<"success" | "error" | "info">(
@@ -851,6 +851,7 @@ export function SellerStudioPage() {
         (data) => {
           setProfile(data.profile);
           setProfileForm({
+            storeName: data.profile?.storeName ?? "",
             about: data.profile?.about ?? "",
             policy: data.profile?.policy ?? "",
           });
@@ -4047,6 +4048,20 @@ export function SellerStudioPage() {
                   />
                 </label>
               </div>
+              <label>
+                <span>Store name</span>
+                <input
+                  required
+                  minLength={3}
+                  maxLength={80}
+                  value={profileForm.storeName}
+                  onChange={(event) =>
+                    setProfileForm({ ...profileForm, storeName: event.target.value })
+                  }
+                  placeholder="Your public store name"
+                />
+                <small>Changing the store name also updates the public store URL slug safely.</small>
+              </label>
               <label>
                 <span>About your store</span>
                 <textarea

@@ -23,7 +23,14 @@ type VisitorClientContext = {
   language?: string;
   timezone?: string;
   screen?: string;
+  dwellSeconds?: number;
+  pagesViewed?: number;
+  interactions?: number;
+  visibilitySeconds?: number;
 };
+
+type GeoRecord = { countryCode?: string; country?: string; city?: string };
+const geoCache = new Map<string, { value: GeoRecord; expiresAt: number }>();
 
 function cleanHeader(value: string | string[] | undefined) {
   return Array.isArray(value) ? value[0] : value;
@@ -55,6 +62,59 @@ function countryLabel(code: string) {
     return `${new Intl.DisplayNames(["en"], { type: "region" }).of(code) || code} (${code})`;
   } catch {
     return code;
+  }
+}
+
+function isPublicIp(ip: string) {
+  if (!ip || ip === "Unknown" || ip === "127.0.0.1" || ip === "::1") return false;
+  if (/^10\.|^192\.168\.|^169\.254\./.test(ip)) return false;
+  const m = ip.match(/^172\.(\d+)\./);
+  if (m && Number(m[1]) >= 16 && Number(m[1]) <= 31) return false;
+  return true;
+}
+
+async function geoFromIp(ip: string): Promise<GeoRecord> {
+  if (!isPublicIp(ip)) return {};
+  const cached = geoCache.get(ip);
+  if (cached && cached.expiresAt > Date.now()) return cached.value;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 2500);
+  try {
+    const response = await fetch(`https://ipwho.is/${encodeURIComponent(ip)}?fields=success,country,country_code,city`, { signal: controller.signal });
+    const data = await response.json().catch(() => null) as null | { success?: boolean; country?: string; country_code?: string; city?: string };
+    const value: GeoRecord = response.ok && data?.success !== false ? {
+      countryCode: data?.country_code?.toUpperCase(),
+      country: data?.country,
+      city: data?.city,
+    } : {};
+    geoCache.set(ip, { value, expiresAt: Date.now() + 6 * 60 * 60_000 });
+    if (geoCache.size > 5000) {
+      const oldest = geoCache.keys().next().value;
+      if (oldest) geoCache.delete(oldest);
+    }
+    return value;
+  } catch {
+    return {};
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+function searchEngineFromReferrer(referrer: string) {
+  if (!referrer || referrer === "Direct / none") return "Direct / none";
+  try {
+    const host = new URL(referrer).hostname.toLowerCase();
+    if (host.includes("google.")) return "Google";
+    if (host.includes("bing.com")) return "Bing";
+    if (host.includes("yandex.")) return "Yandex";
+    if (host.includes("baidu.com")) return "Baidu";
+    if (host.includes("duckduckgo.com")) return "DuckDuckGo";
+    if (host.includes("yahoo.")) return "Yahoo";
+    if (host.includes("chatgpt.com") || host.includes("openai.com")) return "ChatGPT / OpenAI";
+    if (host.includes("perplexity.ai")) return "Perplexity";
+    return host.replace(/^www\./, "");
+  } catch {
+    return "Other / unknown";
   }
 }
 
@@ -135,7 +195,8 @@ function shouldNotifyPath(req: Request) {
     path === "/health" ||
     path === "/robots.txt" ||
     path.endsWith(".xml") ||
-    path.endsWith(".txt")
+    path.endsWith(".txt") ||
+    /\.(?:svg|png|jpe?g|webp|gif|ico|css|js|map|woff2?|ttf|eot|pdf|zip|csv)$/i.test(path)
   ) {
     return false;
   }
@@ -148,13 +209,14 @@ function fingerprint(req: Request) {
     .digest("hex");
 }
 
+function duplicateKey(req: Request) {
+  return fingerprint(req);
+}
+
 function isDuplicate(req: Request) {
   const now = Date.now();
   const ttl = env.VISITOR_NOTIFY_DEDUPE_MINUTES * 60_000;
-  const key = fingerprint(req);
-  const previous = dedupe.get(key) || 0;
-  dedupe.set(key, now);
-
+  const previous = dedupe.get(duplicateKey(req)) || 0;
   if (dedupe.size > 10_000) {
     for (const [entry, timestamp] of dedupe) {
       if (now - timestamp > ttl) dedupe.delete(entry);
@@ -162,6 +224,10 @@ function isDuplicate(req: Request) {
     }
   }
   return now - previous < ttl;
+}
+
+function markNotified(req: Request) {
+  dedupe.set(duplicateKey(req), Date.now());
 }
 
 export function telegramDestinationChatId() {
@@ -305,22 +371,35 @@ export async function telegramRecentChats() {
   return [...chats.values()];
 }
 
-function visitorMessage(req: Request, client: VisitorClientContext = {}) {
+async function visitorMessage(req: Request, client: VisitorClientContext = {}) {
   const ua = req.get("user-agent") || "";
-  const type = visitorType(ua);
+  const baseType = visitorType(ua);
+  const engaged = (client.dwellSeconds ?? 0) >= 30 && (client.visibilitySeconds ?? client.dwellSeconds ?? 0) >= 25;
+  const type = baseType === "Bot / crawler" ? baseType : engaged ? "Real engaged visitor" : "Likely human";
   const ip = firstForwardedIp(req);
-  const code = countryCode(req);
-  const city = cityLabel(req);
+  const headerCode = countryCode(req);
+  const headerCity = cityLabel(req);
+  const geo = headerCode ? {} : await geoFromIp(ip);
+  const code = headerCode || geo.countryCode || "";
+  const country = geo.country ? `${geo.country}${code ? ` (${code})` : ""}` : countryLabel(code);
+  const city = headerCity || geo.city || "";
   const referrer = client.referrer || req.get("referer") || "Direct / none";
   const language = client.language || req.get("accept-language") || "Unknown";
-  const host = req.get("host") || "ysello.com";
-  const url = client.page || `${req.protocol}://${host}${req.originalUrl}`;
+  let page = client.page || `${req.protocol}://${req.get("host") || "ysello.com"}${req.originalUrl}`;
+  try {
+    const parsed = new URL(page);
+    parsed.protocol = "https:";
+    parsed.host = "ysello.com";
+    page = parsed.toString();
+  } catch {
+    page = `https://ysello.com${req.path || "/"}`;
+  }
   return {
     type,
     text: [
-      "🛎 New Ysello visitor",
+      baseType === "Bot / crawler" ? "🤖 Ysello crawler" : "🛎 Ysello engaged visitor",
       `Type: ${type}`,
-      `Country: ${countryLabel(code)}${city ? ` · ${city}` : ""}`,
+      `Country: ${country}${city ? ` · ${city}` : ""}`,
       `IP: ${ip}`,
       `Browser: ${browserFromUa(ua)}`,
       `Device: ${deviceFromUa(ua)}`,
@@ -329,44 +408,44 @@ function visitorMessage(req: Request, client: VisitorClientContext = {}) {
       client.timezone ? `Timezone: ${client.timezone}` : null,
       client.screen ? `Screen: ${client.screen}` : null,
       `Referrer: ${referrer}`,
-      `Page: ${url}`,
+      `Search / source: ${searchEngineFromReferrer(referrer)}`,
+      client.dwellSeconds ? `Time on site: ${Math.round(client.dwellSeconds)} seconds` : null,
+      client.pagesViewed ? `Pages viewed: ${client.pagesViewed}` : null,
+      typeof client.interactions === "number" ? `Interactions: ${client.interactions}` : null,
+      `Page: ${page}`,
       `Time: ${new Date().toISOString()}`,
-    ]
-      .filter((line): line is string => Boolean(line))
-      .join("\n"),
+    ].filter((line): line is string => Boolean(line)).join("\n"),
   };
 }
 
-function queueVisitor(req: Request, client: VisitorClientContext, force: boolean) {
+async function queueVisitor(req: Request, client: VisitorClientContext, force: boolean) {
   if (!env.VISITOR_NOTIFY_ENABLED || !env.TELEGRAM_BOT_TOKEN) return false;
   if (!force && !shouldNotifyPath(req)) return false;
+  const ua = req.get("user-agent") || "";
+  const baseType = visitorType(ua);
+  // Normal humans are notified only by the browser engagement beacon after 30-40 seconds.
+  if (!force && baseType !== "Bot / crawler") return false;
+  if (force && baseType !== "Bot / crawler" && (client.dwellSeconds ?? 0) < 30) return false;
   if (isDuplicate(req)) return false;
-
-  const message = visitorMessage(req, client);
-  if (message.type === "Bot / crawler" && !env.VISITOR_NOTIFY_INCLUDE_BOTS) {
+  const message = await visitorMessage(req, client);
+  if (message.type === "Bot / crawler" && !env.VISITOR_NOTIFY_INCLUDE_BOTS) return false;
+  try {
+    const result = await sendTelegramMessage(message.text);
+    if (!result.sent) return false;
+    markNotified(req);
+    return true;
+  } catch (error) {
+    console.warn("Telegram visitor notification failed:", error instanceof Error ? error.message : error);
     return false;
   }
-
-  void sendTelegramMessage(message.text).catch((error) => {
-    console.warn(
-      "Telegram visitor notification failed:",
-      error instanceof Error ? error.message : error,
-    );
-  });
-  return true;
 }
 
 export function queueVisitorTelegramNotification(req: Request) {
-  return queueVisitor(req, {}, false);
+  void queueVisitor(req, {}, false);
+  return true;
 }
 
-// Browser beacon path. This is intentionally separate from the HTML-response
-// hook so visitor alerts still fire when a CDN/proxy serves cached storefront
-// HTML without touching the Railway origin request path.
-export function queueVisitorTelegramBeacon(
-  req: Request,
-  client: VisitorClientContext = {},
-) {
+export async function queueVisitorTelegramBeacon(req: Request, client: VisitorClientContext = {}) {
   return queueVisitor(req, client, true);
 }
 

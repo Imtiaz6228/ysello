@@ -435,6 +435,7 @@ export function OrderDeliveryPage() {
               </button>
             ) : user?.role === "CUSTOMER" && order.canOpenDispute ? (
               <button
+                id="dispute"
                 className="secondary-button"
                 onClick={() => void openDispute()}
               >
@@ -608,6 +609,13 @@ export function OrderDeliveryPage() {
             <div className="order-product-details">
               {order.items.map((item) => (
                 <article key={item.id}>
+                  <div className="order-record-product-art">
+                    {item.product.coverImageUrl ? (
+                      <img src={item.product.coverImageUrl} alt={item.productName} />
+                    ) : (
+                      <span>{item.productName.slice(0, 2).toUpperCase()}</span>
+                    )}
+                  </div>
                   <div>
                     <small>Product</small>
                     <strong>{item.productName}</strong>
@@ -648,6 +656,13 @@ export function OrderDeliveryPage() {
               className="order-delivery-item order-record-item"
               key={item.id}
             >
+              <div className="order-delivery-product-art">
+                {item.product.coverImageUrl ? (
+                  <img src={item.product.coverImageUrl} alt={item.productName} />
+                ) : (
+                  <span>{item.productName.slice(0, 2).toUpperCase()}</span>
+                )}
+              </div>
               <div>
                 <strong>{item.productName}</strong>
                 {item.product.deliveryNote ? (
@@ -728,7 +743,7 @@ export function OrderDeliveryPage() {
         </section>
       ) : null}
 
-      <div className="order-chat order-chat-pro">
+      <div id="chat" className="order-chat order-chat-pro">
         <header className="order-chat-heading">
           <div className="order-chat-identity">
             <span>{conversationPartner.slice(0, 1).toUpperCase()}</span>

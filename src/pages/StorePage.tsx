@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { useCart } from "../commerce/CartContext";
+import { cartPath } from "../commerce/marketplaceUrls";
 import { MarketFooter, MarketHeader } from "../components/MarketHeader";
 import { Seo } from "../components/Seo";
 import { SellerContactDialog } from "../components/SellerContactDialog";
@@ -122,7 +123,7 @@ export function StorePage() {
                   product={product}
                   onBuy={(selected) => {
                     add(selected);
-                    navigate("/cart");
+                    navigate(cartPath(product));
                   }}
                 />
               ))}

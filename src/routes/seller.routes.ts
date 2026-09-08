@@ -495,6 +495,23 @@ sellerRouter.get(
   }),
 );
 
+async function uniqueSellerSlug(storeName: string, currentUserId: string) {
+  const base = storeName
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 70) || "store";
+  let slug = base;
+  for (let index = 0; index < 20; index += 1) {
+    const existing = await prisma.sellerProfile.findUnique({ where: { slug }, select: { userId: true } });
+    if (!existing || existing.userId === currentUserId) return slug;
+    slug = `${base}-${index + 2}`;
+  }
+  return `${base}-${crypto.randomUUID().replaceAll("-", "").slice(0, 8)}`;
+}
+
 sellerRouter.get(
   "/profile",
   requireSeller,
@@ -512,15 +529,21 @@ sellerRouter.patch(
   asyncHandler(async (req, res) => {
     const input = z
       .object({
+        storeName: z.string().trim().min(3).max(80).optional(),
         about: z.string().trim().min(20).max(5000).optional(),
         logoUrl: z.string().url().nullable().optional(),
         bannerUrl: z.string().url().nullable().optional(),
         policy: z.string().trim().max(5000).nullable().optional(),
       })
       .parse(req.body);
+    const data: Prisma.SellerProfileUpdateInput = { ...input };
+    if (input.storeName) {
+      data.storeName = input.storeName;
+      data.slug = await uniqueSellerSlug(input.storeName, req.auth!.id);
+    }
     const profile = await prisma.sellerProfile.update({
       where: { userId: req.auth!.id },
-      data: input,
+      data,
     });
     res.json({ profile });
   }),

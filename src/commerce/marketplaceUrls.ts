@@ -48,3 +48,11 @@ export function productCategoryPath(product: CatalogProduct) {
     product.categoryPathSlugs ?? [product.categorySlug],
   ).join("/")}`;
 }
+
+export function cartPath(product?: CatalogProduct) {
+  return product?.slug ? `/cart/${encodeURIComponent(product.slug)}` : "/cart";
+}
+
+export function checkoutPath(product?: CatalogProduct) {
+  return product?.slug ? `/checkout/${encodeURIComponent(product.slug)}` : "/checkout";
+}

@@ -5,7 +5,7 @@ import { Search, Store, ArrowRight } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useCart } from "../commerce/CartContext";
-import { categoryPath } from "../commerce/marketplaceUrls";
+import { cartPath, categoryPath } from "../commerce/marketplaceUrls";
 import { storefrontCategories } from "../commerce/storefrontCategories";
 import {
   useMarketplaceCategories,
@@ -264,7 +264,7 @@ export function CatalogBrowser({
                     product={product}
                     onBuy={(item) => {
                       add(item);
-                      navigate("/cart");
+                      navigate(cartPath(product));
                     }}
                   />
                 ))}

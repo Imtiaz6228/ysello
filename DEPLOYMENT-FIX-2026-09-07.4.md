@@ -1,4 +1,4 @@
-# Ysello deployment fix — 2026-09-07.4
+# Ysello deployment fix — 2026-09-07.6
 
 This release fixes the `TS2304: Cannot find name locale` failure in `src/commerce/useMarketplace.ts` and includes the Telegram visitor notifier.
 
@@ -17,13 +17,13 @@ Railway uses `npm run build:railway`, which generates Prisma and builds the stor
 Expected build marker:
 
 ```text
-[ysello] building release 2026-09-07.4
+[ysello] building release 2026-09-07.6
 ```
 
 Expected runtime marker:
 
 ```text
-Ysello API 2026-09-07.4 listening on port ...
+Ysello API 2026-09-07.6 listening on port ...
 ```
 
 ## Telegram

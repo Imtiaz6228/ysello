@@ -22,7 +22,7 @@ import {
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 import { useCart } from "../commerce/CartContext";
-import { productCategoryPath, productPath } from "../commerce/marketplaceUrls";
+import { cartPath, productCategoryPath, productPath } from "../commerce/marketplaceUrls";
 import { MarketFooter, MarketHeader } from "../components/MarketHeader";
 import { Seo } from "../components/Seo";
 import { SellerContactDialog } from "../components/SellerContactDialog";
@@ -117,12 +117,12 @@ export function ProductPage() {
   function addToCart() {
     add(product!, effectiveQuantity);
     setAdded(true);
-    navigate("/cart");
+    navigate(cartPath(product!));
   }
 
   function addRelatedToCart(item: CatalogProduct) {
     add(item);
-    navigate("/cart");
+    navigate(cartPath(item));
   }
 
   const included =
@@ -430,8 +430,8 @@ export function ProductPage() {
             {added ? <Check /> : <ShoppingBag />}
             {available
               ? added
-                ? t("cart")
-                : t("addToCart")
+                ? "Added — continue order"
+                : "Order now"
               : t("unavailable")}
           </button>
           <Link to="/cart">View cart</Link>

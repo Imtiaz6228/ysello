@@ -8,7 +8,7 @@ import {
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useCart } from "../commerce/CartContext";
-import { productPath } from "../commerce/marketplaceUrls";
+import { checkoutPath, productPath } from "../commerce/marketplaceUrls";
 import { MarketFooter, MarketHeader } from "../components/MarketHeader";
 import { ProductArtwork } from "../components/ProductArtwork";
 import { Seo } from "../components/Seo";
@@ -114,7 +114,7 @@ export function CartPage() {
               <span>Total</span>
               <strong>{formatMoney(subtotalCents)}</strong>
             </div>
-            <Link className="checkout-button" to="/checkout">
+            <Link className="checkout-button" to={checkoutPath(items[0]?.product)}>
               {t("secureCheckout")} <ArrowRight />
             </Link>
             <p>

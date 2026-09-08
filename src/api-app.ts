@@ -271,20 +271,21 @@ app.get("/api/session/bootstrap", sendRequestToken);
 // Public browser beacon for visitor notifications. This is mounted before the
 // global /api CSRF middleware because it does not mutate user/account data and
 // is protected by server-side visitor deduplication/rate limiting.
-app.post("/api/visitor/notify", (req, res) => {
+app.post("/api/visitor/notify", asyncHandler(async (req, res) => {
   const body = req.body && typeof req.body === "object" ? req.body : {};
-  const accepted = queueVisitorTelegramBeacon(req, {
+  const accepted = await queueVisitorTelegramBeacon(req, {
     page: typeof body.page === "string" ? body.page.slice(0, 2048) : undefined,
-    referrer:
-      typeof body.referrer === "string" ? body.referrer.slice(0, 2048) : undefined,
-    language:
-      typeof body.language === "string" ? body.language.slice(0, 128) : undefined,
-    timezone:
-      typeof body.timezone === "string" ? body.timezone.slice(0, 128) : undefined,
+    referrer: typeof body.referrer === "string" ? body.referrer.slice(0, 2048) : undefined,
+    language: typeof body.language === "string" ? body.language.slice(0, 128) : undefined,
+    timezone: typeof body.timezone === "string" ? body.timezone.slice(0, 128) : undefined,
     screen: typeof body.screen === "string" ? body.screen.slice(0, 64) : undefined,
+    dwellSeconds: Number.isFinite(Number(body.dwellSeconds)) ? Math.max(0, Math.min(3600, Number(body.dwellSeconds))) : undefined,
+    visibilitySeconds: Number.isFinite(Number(body.visibilitySeconds)) ? Math.max(0, Math.min(3600, Number(body.visibilitySeconds))) : undefined,
+    pagesViewed: Number.isFinite(Number(body.pagesViewed)) ? Math.max(1, Math.min(100, Number(body.pagesViewed))) : undefined,
+    interactions: Number.isFinite(Number(body.interactions)) ? Math.max(0, Math.min(1000, Number(body.interactions))) : undefined,
   });
   res.status(202).json({ accepted });
-});
+}));
 // Google is configured to return to the public API domain. Relay the browser
 // to the canonical app callback so the host-only OAuth state cookie set through
 // the frontend /api proxy is available before the server exchanges the code.
@@ -1442,6 +1443,11 @@ if (isProduction && fs.existsSync(frontendIndex)) {
     "/admin/kb/editor",
   ];
   app.get(privateSpaPaths, (req, res) => {
+    res.setHeader("X-Robots-Tag", noIndexRobots);
+    res.setHeader("Cache-Control", "private, no-store");
+    res.sendFile(frontendIndex);
+  });
+  app.get(["/cart/:productSlug", "/checkout/:productSlug", "/checkout/:productSlug/confirmation"], (_req, res) => {
     res.setHeader("X-Robots-Tag", noIndexRobots);
     res.setHeader("Cache-Control", "private, no-store");
     res.sendFile(frontendIndex);

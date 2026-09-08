@@ -139,50 +139,67 @@ function VisitorNotificationBeacon() {
   useEffect(() => {
     const path = location.pathname;
     const privatePrefixes = [
-      "/admin",
-      "/dashboard",
-      "/seller",
-      "/checkout",
-      "/orders",
-      "/support",
-      "/cart",
-      "/sign-in",
-      "/sign-out",
-      "/register",
+      "/admin", "/dashboard", "/seller", "/checkout", "/orders", "/support",
+      "/cart", "/sign-in", "/sign-out", "/register",
     ];
-    if (privatePrefixes.some((prefix) => path === prefix || path.startsWith(`${prefix}/`))) {
-      return;
-    }
+    if (privatePrefixes.some((prefix) => path === prefix || path.startsWith(`${prefix}/`))) return;
 
-    const key = "ysello-visitor-notified";
-    try {
-      if (sessionStorage.getItem(key)) return;
-      sessionStorage.setItem(key, String(Date.now()));
-    } catch {
-      // Storage can be unavailable in hardened/private browser contexts.
-      // Server-side fingerprint deduplication still prevents notification spam.
-    }
+    const sessionKey = "ysello-engaged-visitor-v2";
+    const firstSeenKey = "ysello-engaged-first-seen-v2";
+    const pagesKey = "ysello-engaged-pages-v2";
+    const interactionsKey = "ysello-engaged-interactions-v2";
+    const firstSeen = Number(sessionStorage.getItem(firstSeenKey) || Date.now());
+    if (!sessionStorage.getItem(firstSeenKey)) sessionStorage.setItem(firstSeenKey, String(firstSeen));
+    const visited = new Set<string>(JSON.parse(sessionStorage.getItem(pagesKey) || "[]"));
+    visited.add(`${location.pathname}${location.search}`);
+    sessionStorage.setItem(pagesKey, JSON.stringify([...visited].slice(-50)));
+    let interactions = Number(sessionStorage.getItem(interactionsKey) || 0);
+    let visibleSeconds = 0;
+    let sent = sessionStorage.getItem(sessionKey) === "sent";
 
-    const payload = {
-      page: window.location.href,
-      referrer: document.referrer || "Direct / none",
-      language: navigator.language || "Unknown",
-      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || "Unknown",
-      screen: `${window.screen?.width || 0}x${window.screen?.height || 0}`,
+    const onInteraction = () => {
+      interactions += 1;
+      sessionStorage.setItem(interactionsKey, String(interactions));
     };
+    window.addEventListener("pointerdown", onInteraction, { passive: true });
+    window.addEventListener("keydown", onInteraction);
+    window.addEventListener("scroll", onInteraction, { passive: true });
 
-    const timer = window.setTimeout(() => {
+    const interval = window.setInterval(() => {
+      if (!document.hidden) visibleSeconds += 1;
+      const dwellSeconds = Math.floor((Date.now() - firstSeen) / 1000);
+      if (sent || dwellSeconds < 35 || visibleSeconds < 30) return;
+      sent = true;
+      const payload = {
+        page: `https://ysello.com${window.location.pathname}${window.location.search}`,
+        referrer: document.referrer || "Direct / none",
+        language: navigator.language || "Unknown",
+        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || "Unknown",
+        screen: `${window.screen?.width || 0}x${window.screen?.height || 0}`,
+        dwellSeconds,
+        visibilitySeconds: visibleSeconds,
+        pagesViewed: visited.size,
+        interactions,
+      };
       void fetch("/api/visitor/notify", {
         method: "POST",
         credentials: "include",
         headers: { "content-type": "application/json" },
         body: JSON.stringify(payload),
         keepalive: true,
-      }).catch(() => undefined);
-    }, 500);
+      }).then((response) => {
+        if (response.ok) sessionStorage.setItem(sessionKey, "sent");
+        else sent = false;
+      }).catch(() => { sent = false; });
+    }, 1000);
 
-    return () => window.clearTimeout(timer);
-  }, [location.pathname]);
+    return () => {
+      window.clearInterval(interval);
+      window.removeEventListener("pointerdown", onInteraction);
+      window.removeEventListener("keydown", onInteraction);
+      window.removeEventListener("scroll", onInteraction);
+    };
+  }, [location.pathname, location.search]);
 
   return null;
 }
@@ -223,6 +240,7 @@ export function App() {
             <Route path="/categories/:slug" element={<CategoryPage />} />
             <Route path="/products/:slug" element={<ProductPage />} />
             <Route path="/stores/:slug" element={<StorePage />} />
+            <Route path="/cart/:productSlug" element={<CartPage />} />
             <Route path="/cart" element={<CartPage />} />
             <Route path="/blog" element={<BlogPage />} />
             <Route path="/blog/:slug" element={<BlogArticlePage />} />
@@ -241,7 +259,12 @@ export function App() {
                 element={<Navigate to="/dashboard#wallet" replace />}
               />
               <Route path="/orders/:id" element={<OrderDeliveryPage />} />
+              <Route path="/checkout/:productSlug" element={<CheckoutPage />} />
               <Route path="/checkout" element={<CheckoutPage />} />
+              <Route
+                path="/checkout/:productSlug/confirmation"
+                element={<OrderConfirmationPage />}
+              />
               <Route
                 path="/checkout/confirmation"
                 element={<OrderConfirmationPage />}

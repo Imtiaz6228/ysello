@@ -8,6 +8,7 @@ import { useMarketplaceCategories, useMarketplaceProductFeed } from "../commerce
 import { categoryPath } from "../commerce/marketplaceUrls";
 import { YselloReferenceProductCard } from "../components/YselloReferenceLayout";
 import { useCart } from "../commerce/CartContext";
+import { cartPath } from "../commerce/marketplaceUrls";
 import { useNavigate } from "react-router-dom";
 
 export type DiscoveryKind = "games" | "gift-cards" | "topups";
@@ -126,7 +127,7 @@ export function DiscoveryLandingPage({ kind }: { kind: DiscoveryKind }) {
               <YselloReferenceProductCard
                 key={product.id}
                 product={product}
-                onBuy={(item) => { add(item); navigate("/cart"); }}
+                onBuy={(item) => { add(item); navigate(cartPath(item)); }}
               />
             ))}
           </div>
