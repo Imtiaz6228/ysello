@@ -11,6 +11,31 @@ export const marketplaceRouter = Router();
 
 const DARK_SHOPPING_CATEGORY_TAG = "supplier:dark-shopping";
 
+const PUBLIC_CATEGORY_CACHE_SECONDS = 120;
+const PUBLIC_PRODUCT_CACHE_SECONDS = 30;
+
+function setPublicCache(res: import("express").Response, seconds: number) {
+  res.setHeader(
+    "Cache-Control",
+    `public, max-age=${Math.min(10, seconds)}, s-maxage=${seconds}, stale-while-revalidate=${seconds * 5}`,
+  );
+}
+
+type CategoryTreeRow = { id: string; parentId: string | null; slug: string };
+let categoryTreeCache: { expiresAt: number; rows: CategoryTreeRow[] } | null = null;
+
+async function activeCategoryTree() {
+  if (categoryTreeCache && categoryTreeCache.expiresAt > Date.now()) {
+    return categoryTreeCache.rows;
+  }
+  const rows = await prisma.category.findMany({
+    where: { isActive: true },
+    select: { id: true, parentId: true, slug: true },
+  });
+  categoryTreeCache = { expiresAt: Date.now() + 60_000, rows };
+  return rows;
+}
+
 // Any active admin-created category is eligible for the public catalog. Whether
 // it appears in navigation is decided by its descendant-aware published count.
 function publicCategoryPolicyWhere() {
@@ -22,10 +47,7 @@ function publicListingPolicyWhere() {
 }
 
 export async function categoryAndDescendantIds(slug: string) {
-  const categories = await prisma.category.findMany({
-    where: { isActive: true },
-    select: { id: true, parentId: true, slug: true },
-  });
+  const categories = await activeCategoryTree();
   const equivalentSlugs = equivalentCategorySlugs(slug);
   const targets = categories.filter((category) =>
     equivalentSlugs.has(category.slug),
@@ -52,6 +74,7 @@ export async function categoryAndDescendantIds(slug: string) {
 marketplaceRouter.get(
   "/categories",
   asyncHandler(async (_req, res) => {
+    setPublicCache(res, PUBLIC_CATEGORY_CACHE_SECONDS);
     const categories = await prisma.category.findMany({
       where: publicCategoryPolicyWhere(),
       orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
@@ -103,6 +126,7 @@ marketplaceRouter.get(
 marketplaceRouter.get(
   "/products",
   asyncHandler(async (req, res) => {
+    setPublicCache(res, PUBLIC_PRODUCT_CACHE_SECONDS);
     const query = z
       .object({
         q: z.string().trim().max(100).optional(),
@@ -213,6 +237,7 @@ marketplaceRouter.get(
 marketplaceRouter.get(
   "/products/:slug",
   asyncHandler(async (req, res) => {
+    setPublicCache(res, PUBLIC_PRODUCT_CACHE_SECONDS);
     const slug = z.string().min(1).max(160).parse(req.params.slug);
     const product = await prisma.product.findFirst({
       where: {

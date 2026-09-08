@@ -25,10 +25,7 @@ import { useCart } from "../commerce/CartContext";
 import { useMarketplaceCategories } from "../commerce/useMarketplace";
 import { categoryPath } from "../commerce/marketplaceUrls";
 import { storefrontCategories } from "../commerce/storefrontCategories";
-import {
-  MarketplaceBrandArtwork,
-  detectMarketplaceBrandSlug,
-} from "./MarketplaceBrandIcon";
+import { CategoryArtwork } from "./CategoryArtwork";
 import { useLocale } from "../i18n/LocaleContext";
 import { LocaleSwitcher } from "./LocaleSwitcher";
 
@@ -54,14 +51,9 @@ export function MarketHeader() {
     if (mobileMenu.current) mobileMenu.current.open = false;
   }, [location.pathname, location.search]);
   function categoryLink(category: (typeof categories)[number]) {
-    const brandSlug = detectMarketplaceBrandSlug(category.name, category.slug);
     return (
       <Link key={category.slug} to={categoryPath(category, categories)}>
-        {brandSlug ? (
-          <MarketplaceBrandArtwork brandSlug={brandSlug} className="ys-category-brand-icon" compact />
-        ) : (
-          <Store />
-        )}
+        <CategoryArtwork category={category} className="ys-category-brand-icon" />
         <span>
           <UiText value={category.name} />
         </span>

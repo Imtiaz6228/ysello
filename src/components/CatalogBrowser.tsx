@@ -14,10 +14,7 @@ import {
 import { YselloReferenceProductCard } from "./YselloReferenceLayout";
 import { CatalogPagination } from "./CatalogPagination";
 import { identifyProductPlatform } from "../data/platformIdentity";
-import {
-  MarketplaceBrandArtwork,
-  detectMarketplaceBrandSlug,
-} from "./MarketplaceBrandIcon";
+import { CategoryArtwork } from "./CategoryArtwork";
 import { Seo } from "./Seo";
 
 export function CatalogBrowser({
@@ -128,29 +125,19 @@ export function CatalogBrowser({
               <Store />
               <UiText value="All products" />
             </Link>
-            {available.map((category) => {
-              const brandSlug = detectMarketplaceBrandSlug(
-                category.name,
-                category.slug,
-              );
-              return (
-                <Link
-                  key={category.slug}
-                  to={categoryPath(category, categories)}
-                  className={selected === category.slug ? "active" : ""}
-                >
-                  {brandSlug ? (
-                    <MarketplaceBrandArtwork brandSlug={brandSlug} className="ys-category-brand-icon" compact />
-                  ) : (
-                    <Store />
-                  )}
-                  <span>
-                    <UiText value={category.name} />
-                  </span>
-                  <small>{category.productCount}</small>
-                </Link>
-              );
-            })}
+            {available.map((category) => (
+              <Link
+                key={category.slug}
+                to={categoryPath(category, categories)}
+                className={selected === category.slug ? "active" : ""}
+              >
+                <CategoryArtwork category={category} className="ys-category-brand-icon" />
+                <span>
+                  <UiText value={category.name} />
+                </span>
+                <small>{category.productCount}</small>
+              </Link>
+            ))}
           </aside>
         ) : null}
         <div className="ys-catalog-results">

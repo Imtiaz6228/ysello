@@ -24,12 +24,7 @@ import {
   type FeaturedStore,
 } from "../commerce/useMarketplace";
 import { MarketFooter, MarketHeader } from "../components/MarketHeader";
-import {
-  MarketplaceBrandArtwork,
-  YselloMarketplaceArtwork,
-  MarketplaceCategoryIcon,
-  detectMarketplaceBrandSlug,
-} from "../components/MarketplaceBrandIcon";
+import { CategoryArtwork } from "../components/CategoryArtwork";
 import { Seo } from "../components/Seo";
 import { YselloReferenceProductCard } from "../components/YselloReferenceLayout";
 import { marketplaceTaxonomy } from "../data/marketplaceTaxonomy";
@@ -210,31 +205,18 @@ export function MarketplaceHomePage() {
                 : accountCategories
               )
                 .slice(0, 6)
-                .map((category) => {
-                  const brand = detectMarketplaceBrandSlug(
-                    category.name,
-                    category.slug,
-                  );
-                  return (
-                    <Link
-                      to={categoryPath(category, categories)}
-                      key={category.slug}
-                    >
-                      {brand ? (
-                        <MarketplaceBrandArtwork brandSlug={brand} compact />
-                      ) : (
-                        <YselloMarketplaceArtwork
-                          label={category.name}
-                          compact
-                        />
-                      )}
-                      <span>
-                        <UiText value={category.name} />
-                      </span>
-                      <ArrowRight />
-                    </Link>
-                  );
-                })}
+                .map((category) => (
+                  <Link
+                    to={categoryPath(category, categories)}
+                    key={category.slug}
+                  >
+                    <CategoryArtwork category={category} />
+                    <span>
+                      <UiText value={category.name} />
+                    </span>
+                    <ArrowRight />
+                  </Link>
+                ))}
             </div>
             <Link className="ys-hero-platform-footer" to="/catalog">
               <UiText value="Discover your next digital essential" /> <ArrowRight />
@@ -290,31 +272,21 @@ export function MarketplaceHomePage() {
             </Link>
           </header>
           <div className="ys-company-categories">
-            {accountCategories.map((category) => {
-              const brand = detectMarketplaceBrandSlug(
-                category.name,
-                category.slug,
-              );
-              return (
-                <Link
-                  key={category.slug}
-                  to={categoryPath(category, categories)}
-                >
-                  {brand ? (
-                    <MarketplaceBrandArtwork brandSlug={brand} compact />
-                  ) : (
-                    <YselloMarketplaceArtwork label={category.name} compact />
-                  )}
-                  <span>
-                    <strong>
-                      <UiText value={category.name} />
-                    </strong>
-                    <small>{category.productCount ?? 0} <UiText value="products" /></small>
-                  </span>
-                  <ArrowRight />
-                </Link>
-              );
-            })}
+            {accountCategories.map((category) => (
+              <Link
+                key={category.slug}
+                to={categoryPath(category, categories)}
+              >
+                <CategoryArtwork category={category} />
+                <span>
+                  <strong>
+                    <UiText value={category.name} />
+                  </strong>
+                  <small>{category.productCount ?? 0} <UiText value="products" /></small>
+                </span>
+                <ArrowRight />
+              </Link>
+            ))}
           </div>
         </section>
 

@@ -425,25 +425,84 @@ function mapCategories(categories: ApiCategory[], locale = "en"): CatalogCategor
     );
 }
 
+const MARKETPLACE_CACHE_TTL_MS = 120_000;
+type TimedCache<T> = { value: T; expiresAt: number };
+const productFeedCache = new Map<string, TimedCache<CatalogProduct[]>>();
+const productFeedInflight = new Map<string, Promise<CatalogProduct[]>>();
+const categoryCache = new Map<string, TimedCache<CatalogCategory[]>>();
+const categoryInflight = new Map<string, Promise<CatalogCategory[]>>();
+
+function cachedValue<T>(cache: Map<string, TimedCache<T>>, key: string) {
+  const entry = cache.get(key);
+  if (!entry || entry.expiresAt <= Date.now()) return undefined;
+  return entry.value;
+}
+
+function loadProductFeed(locale: string) {
+  const cached = cachedValue(productFeedCache, locale);
+  if (cached) return Promise.resolve(cached);
+  const running = productFeedInflight.get(locale);
+  if (running) return running;
+  const request = apiRequest<{ products: ApiProduct[] }>(
+    "/api/marketplace/products?take=50&page=1&sort=popular",
+  )
+    .then((data) => {
+      const products = data.products.map((product, index) =>
+        mapProduct(product, index, locale),
+      );
+      productFeedCache.set(locale, {
+        value: products,
+        expiresAt: Date.now() + MARKETPLACE_CACHE_TTL_MS,
+      });
+      return products;
+    })
+    .finally(() => productFeedInflight.delete(locale));
+  productFeedInflight.set(locale, request);
+  return request;
+}
+
+function loadMarketplaceCategories(locale: string) {
+  const cached = cachedValue(categoryCache, locale);
+  if (cached) return Promise.resolve(cached);
+  const running = categoryInflight.get(locale);
+  if (running) return running;
+  const request = apiRequest<{ categories: ApiCategory[] }>(
+    "/api/marketplace/categories",
+  )
+    .then((data) => {
+      const categories = mapCategories(data.categories, locale);
+      categoryCache.set(locale, {
+        value: categories,
+        expiresAt: Date.now() + MARKETPLACE_CACHE_TTL_MS,
+      });
+      return categories;
+    })
+    .finally(() => categoryInflight.delete(locale));
+  categoryInflight.set(locale, request);
+  return request;
+}
+
 export function useMarketplaceProductFeed() {
   const { locale } = useLocale();
-  const [products, setProducts] = useState<CatalogProduct[]>([]);
-  const [loading, setLoading] = useState(true);
+  const cached = cachedValue(productFeedCache, locale);
+  const [products, setProducts] = useState<CatalogProduct[]>(cached ?? []);
+  const [loading, setLoading] = useState(!cached);
   const [error, setError] = useState(false);
   useEffect(() => {
     let active = true;
+    const immediate = cachedValue(productFeedCache, locale);
+    if (immediate) {
+      setProducts(immediate);
+      setLoading(false);
+      setError(false);
+      return () => {
+        active = false;
+      };
+    }
     setLoading(true);
     setError(false);
-    void apiRequest<{ products: ApiProduct[] }>(
-      "/api/marketplace/products?take=500&sort=newest",
-    )
-      .then((data) => {
-        const remoteProducts = data.products.map((product, index) =>
-          mapProduct(product, index, locale),
-        );
-        // A successful API response is authoritative, including an empty
-        // catalog. Local examples are visual fallbacks for static previews
-        // only and must never be mixed into a live, purchasable catalog.
+    void loadProductFeed(locale)
+      .then((remoteProducts) => {
         if (active) setProducts(remoteProducts);
       })
       .catch(() => {
@@ -468,15 +527,25 @@ export function useMarketplaceProducts() {
 
 export function useMarketplaceCategories() {
   const { locale } = useLocale();
-  const [categories, setCategories] = useState<CatalogCategory[]>([]);
+  const cached = cachedValue(categoryCache, locale);
+  const [categories, setCategories] = useState<CatalogCategory[]>(cached ?? []);
   useEffect(() => {
-    void apiRequest<{ categories: ApiCategory[] }>(
-      "/api/marketplace/categories",
-    )
-      .then((data) => {
-        setCategories(mapCategories(data.categories, locale));
+    let active = true;
+    const immediate = cachedValue(categoryCache, locale);
+    if (immediate) {
+      setCategories(immediate);
+      return () => {
+        active = false;
+      };
+    }
+    void loadMarketplaceCategories(locale)
+      .then((items) => {
+        if (active) setCategories(items);
       })
       .catch(() => undefined);
+    return () => {
+      active = false;
+    };
   }, [locale]);
   return categories;
 }
@@ -507,6 +576,48 @@ export function useMarketplaceProduct(slug?: string) {
       .finally(() => setLoading(false));
   }, [locale, slug]);
   return { product, loading };
+}
+
+export function useMarketplaceRelatedProducts(
+  categorySlug?: string,
+  excludeProductId?: string,
+) {
+  const { locale } = useLocale();
+  const [products, setProducts] = useState<CatalogProduct[]>([]);
+  useEffect(() => {
+    let active = true;
+    if (!categorySlug) {
+      setProducts([]);
+      return () => {
+        active = false;
+      };
+    }
+    const query = new URLSearchParams({
+      category: categorySlug,
+      take: "6",
+      page: "1",
+      sort: "popular",
+    });
+    void apiRequest<{ products: ApiProduct[] }>(
+      `/api/marketplace/products?${query.toString()}`,
+    )
+      .then((data) => {
+        if (!active) return;
+        setProducts(
+          data.products
+            .map((item, index) => mapProduct(item, index, locale))
+            .filter((item) => item.id !== excludeProductId)
+            .slice(0, 4),
+        );
+      })
+      .catch(() => {
+        if (active) setProducts([]);
+      });
+    return () => {
+      active = false;
+    };
+  }, [categorySlug, excludeProductId, locale]);
+  return products;
 }
 
 export type PublicStore = {

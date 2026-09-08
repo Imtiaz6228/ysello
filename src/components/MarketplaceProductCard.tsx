@@ -1,11 +1,9 @@
 import {
   BadgeCheck,
   BarChart3,
-  BriefcaseBusiness,
   Clock3,
   Eye,
   PackageCheck,
-  PackageOpen,
   ShoppingCart,
   Star,
   Zap,
@@ -17,10 +15,7 @@ import {
   productCategoryPath,
   productPath,
 } from "../commerce/marketplaceUrls";
-import {
-  MarketplaceBrandArtwork,
-  detectMarketplaceBrandSlug,
-} from "./MarketplaceBrandIcon";
+import { ProductArtwork } from "./ProductArtwork";
 
 type Props = {
   product: CatalogProduct;
@@ -42,16 +37,9 @@ export function MarketplaceProductCard({
         : "Sold out";
   const canPurchase =
     product.type === "SERVICE" || (product.stockCount ?? 0) > 0;
-  const ProductIcon =
-    product.type === "SERVICE" ? BriefcaseBusiness : PackageOpen;
   const categoryParts = product.category.split(" / ");
   const categoryLabel =
     categoryParts[categoryParts.length - 1] ?? product.category;
-  const brandSlug = detectMarketplaceBrandSlug(
-    typeof product.facts?.platform === "string" ? product.facts.platform : "",
-    product.category,
-    product.title,
-  );
 
   return (
     <article
@@ -64,18 +52,7 @@ export function MarketplaceProductCard({
           to={productPath(product)}
           aria-label={`View ${product.title}`}
         >
-          {brandSlug ? (
-            <MarketplaceBrandArtwork brandSlug={brandSlug} className="ys-product-native-brand" />
-          ) : product.imageUrl ? (
-            <span
-              className="ys-product-image"
-              role="img"
-              aria-label={product.title}
-              style={{ backgroundImage: `url(${product.imageUrl})` }}
-            />
-          ) : (
-            <ProductIcon aria-hidden="true" />
-          )}
+          <ProductArtwork product={product} />
         </Link>
         <div className="ys-product-badges">
           <span className="ys-product-kind">

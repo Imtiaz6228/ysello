@@ -28,7 +28,7 @@ import { Seo } from "../components/Seo";
 import { SellerContactDialog } from "../components/SellerContactDialog";
 import {
   useMarketplaceProduct,
-  useMarketplaceProducts,
+  useMarketplaceRelatedProducts,
 } from "../commerce/useMarketplace";
 import { useLocale } from "../i18n/LocaleContext";
 import { MarketplaceProductCard } from "../components/MarketplaceProductCard";
@@ -48,17 +48,9 @@ export function ProductPage() {
   );
   const [quantity, setQuantity] = useState(1);
   const { product, loading } = useMarketplaceProduct(slug);
-  const marketplaceProducts = useMarketplaceProducts();
-  const relatedProducts = useMemo(
-    () =>
-      marketplaceProducts
-        .filter(
-          (item) =>
-            item.id !== product?.id &&
-            item.categorySlug === product?.categorySlug,
-        )
-        .slice(0, 4),
-    [marketplaceProducts, product],
+  const relatedProducts = useMarketplaceRelatedProducts(
+    product?.categorySlug,
+    product?.id,
   );
   const schema = useMemo(() => {
     if (!product) return undefined;
