@@ -1,0 +1,963 @@
+import { useEffect, useMemo, useState } from "react";
+import { ApiError, apiRequest, mediaUrl } from "../api/client";
+import {
+  catalogCategories,
+  catalogProducts,
+  type CatalogCategory,
+  type CatalogProduct,
+} from "../data/catalog";
+import { g2aDemoProducts } from "../data/g2aDemoCatalog";
+import { useLocale } from "../i18n/LocaleContext";
+import { uiText } from "../i18n/marketplaceCopy";
+import {
+  marketplaceTaxonomy,
+  retiredSocialMediaCategorySlugs,
+  type MarketplaceTaxonomyNode,
+} from "../data/marketplaceTaxonomy";
+
+type ApiCategory = {
+  id: string;
+  parentId?: string | null;
+  name: string;
+  slug: string;
+  description: string;
+  sortOrder?: number;
+  _count?: { products?: number };
+  imageUrl?: string | null;
+  bannerUrl?: string | null;
+  icon?: string | null;
+  isFeatured?: boolean;
+  isTrending?: boolean;
+  isSupplierCategory?: boolean;
+};
+
+type ApiProduct = {
+  id: string;
+  slug: string;
+  name: string;
+  shortDescription: string;
+  description: string;
+  type: "DOWNLOAD" | "SERVICE";
+  priceCents: number;
+  priceCnyCents?: number;
+  priceRubCents?: number;
+  afterSalesServiceHours?: number;
+  averageRating: number | string;
+  reviewCount: number;
+  salesCount: number;
+  deliveryNote?: string | null;
+  isOfficial?: boolean;
+  officialStoreName?: string | null;
+  coverImageUrl?: string | null;
+  category: {
+    name: string;
+    slug: string;
+    parent?: {
+      name: string;
+      slug: string;
+      parent?: { name: string; slug: string } | null;
+    } | null;
+  };
+  seller: { sellerProfile?: { storeName: string; slug: string } | null };
+  _count?: { inventoryItems?: number; files?: number };
+  stockQuantity?: number;
+  galleryUrls?: string[];
+  videoUrl?: string | null;
+  productAttributes?: Record<string, unknown>;
+  translations?: Record<
+    string,
+    {
+      title?: string;
+      name?: string;
+      shortDescription?: string;
+      description?: string;
+      seoTitle?: string;
+      seoDescription?: string;
+    }
+  >;
+  brand?: string | null;
+  platform?: string | null;
+  region?: string | null;
+  country?: string | null;
+  server?: string | null;
+  language?: string | null;
+  deliveryMethod?: string | null;
+  productKind?: string | null;
+  condition?: string | null;
+  stockType?: string | null;
+  duration?: string | null;
+  warranty?: string | null;
+  refundPolicy?: string | null;
+  salePriceCents?: number | null;
+  minimumOrder?: number;
+  maximumOrder?: number | null;
+  sku?: string | null;
+  tags?: string[];
+  publishedAt?: string | null;
+  reviews?: Array<{
+    id: string;
+    rating: number;
+    body: string;
+    createdAt: string;
+    buyer: { firstName: string };
+  }>;
+};
+
+function iconForSlug(slug: string, index = 0) {
+  return (
+    catalogCategories.find((category) => category.slug === slug)?.icon ??
+    ["◉", "f", "𝕏", "☯", "✈", "♪", "G", "◎", "✉"][index % 9]
+  );
+}
+
+const localProducts = [
+  ...new Map(
+    [...g2aDemoProducts, ...catalogProducts].map((product) => [
+      product.slug,
+      product,
+    ]),
+  ).values(),
+].filter(
+  (product) =>
+    !retiredSocialMediaCategorySlugs.has(product.categorySlug) &&
+    !product.category.toLowerCase().startsWith("social media /"),
+);
+
+function flattenTaxonomyBranch(
+  nodes: MarketplaceTaxonomyNode[],
+  parentSlug: string,
+  rootIcon: string,
+  rootOrder: number,
+  depth = 1,
+): CatalogCategory[] {
+  return nodes.flatMap((node, index) => {
+    const sortOrder = rootOrder + depth * 10 + index;
+    return [
+      {
+        id: `taxonomy-${node.slug}`,
+        slug: node.slug,
+        parentSlug,
+        name: node.name,
+        description: node.description,
+        icon: rootIcon,
+        sortOrder,
+        depth,
+        productCount: localProducts.filter(
+          (product) => product.categorySlug === node.slug,
+        ).length,
+      },
+      ...(node.children
+        ? flattenTaxonomyBranch(
+            node.children,
+            node.slug,
+            rootIcon,
+            sortOrder,
+            depth + 1,
+          )
+        : []),
+    ];
+  });
+}
+
+function taxonomyCategoriesForLocale(locale = "en"): CatalogCategory[] {
+  return marketplaceTaxonomy.flatMap((category, categoryIndex) => {
+    const rootOrder = (categoryIndex + 1) * 1000;
+    const branch = flattenTaxonomyBranch(
+      category.subcategories,
+      category.slug,
+      category.icon,
+      rootOrder,
+    ).map((item) => ({
+      ...item,
+      name: locale === "en" ? item.name : uiText(item.name, locale),
+      description:
+        locale === "en" ? item.description : uiText(item.description, locale),
+    }));
+
+    return [
+      {
+        id: `taxonomy-${category.slug}`,
+        slug: category.slug,
+        name: locale === "en" ? category.name : uiText(category.name, locale),
+        description:
+          locale === "en"
+            ? category.description
+            : uiText(category.description, locale),
+        icon: category.icon,
+        sortOrder: rootOrder,
+        productCount: localProducts.filter(
+          (product) => product.categorySlug === category.slug,
+        ).length,
+        isFeatured: true,
+        depth: 0,
+      },
+      ...branch,
+    ];
+  });
+}
+
+function localCategoriesForLocale(locale = "en") {
+  const localizedCatalogCategories = catalogCategories.map((category) => ({
+    ...category,
+    name: locale === "en" ? category.name : uiText(category.name, locale),
+    description:
+      locale === "en"
+        ? category.description
+        : uiText(category.description, locale),
+  }));
+
+  return [
+    ...new Map(
+      [
+        ...taxonomyCategoriesForLocale(locale),
+        ...localizedCatalogCategories,
+      ].map((category) => [category.slug, category]),
+    ).values(),
+  ];
+}
+
+function mergeWithLocalCategories(
+  remoteCategories: CatalogCategory[],
+  locale = "en",
+) {
+  const merged = new Map(
+    localCategoriesForLocale(locale).map((category) => [category.slug, category]),
+  );
+  remoteCategories.forEach((remote) => {
+    const local = merged.get(remote.slug);
+    merged.set(remote.slug, {
+      ...local,
+      ...remote,
+      name: remote.name || local?.name || remote.slug,
+      description: remote.description || local?.description || "",
+      parentSlug: local?.parentSlug ?? remote.parentSlug,
+      icon: remote.icon || local?.icon || "◉",
+      sortOrder: local?.sortOrder ?? remote.sortOrder,
+      isFeatured: remote.isFeatured ?? local?.isFeatured,
+      isTrending: remote.isTrending ?? local?.isTrending,
+      isSupplierCategory:
+        remote.isSupplierCategory ?? local?.isSupplierCategory ?? false,
+      depth: local?.depth,
+    });
+  });
+  return [...merged.values()].sort(
+    (a, b) =>
+      (a.sortOrder ?? 0) - (b.sortOrder ?? 0) || a.name.localeCompare(b.name),
+  );
+}
+
+function badgeFor(product: ApiProduct) {
+  if (product.isOfficial) return "Official";
+  if (product.salesCount > 500) return "Popular";
+  if (product.salesCount > 100) return "Bundle";
+  if (product.type === "SERVICE") return "Service";
+  return "New";
+}
+
+function normalizePublicMediaUrl(value?: string | null) {
+  if (!value) return null;
+  return mediaUrl(value);
+}
+
+function mapProduct(
+  product: ApiProduct,
+  index = 0,
+  locale = "en",
+): CatalogProduct {
+  const translation =
+    product.translations?.[locale] ??
+    (locale.startsWith("zh") ? product.translations?.["zh-CN"] : undefined) ??
+    product.translations?.en;
+  const marketplaceCategorySlug =
+    product.productAttributes?.supplierFulfilled !== true &&
+    typeof product.productAttributes?.marketplaceCategorySlug === "string"
+      ? product.productAttributes.marketplaceCategorySlug
+      : product.category.slug;
+  const marketplaceCategoryPath =
+    product.productAttributes?.supplierFulfilled !== true &&
+    typeof product.productAttributes?.marketplaceCategoryPath === "string"
+      ? product.productAttributes.marketplaceCategoryPath
+      : [
+          product.category.parent?.parent?.name,
+          product.category.parent?.name,
+          product.category.name,
+        ]
+          .filter(Boolean)
+          .join(" / ");
+  const categoryPathSlugs = [
+    product.category.parent?.parent?.slug,
+    product.category.parent?.slug,
+    product.category.slug,
+  ].filter((slug): slug is string => Boolean(slug));
+  const compactCategoryPathSlugs = [
+    categoryPathSlugs[0],
+    categoryPathSlugs[categoryPathSlugs.length - 1],
+  ].filter(
+    (slug, index, slugs): slug is string =>
+      Boolean(slug) && slugs.indexOf(slug) === index,
+  );
+  return {
+    id: product.id,
+    slug: product.slug,
+    category: marketplaceCategoryPath,
+    categorySlug: marketplaceCategorySlug,
+    title:
+      translation?.title ??
+      translation?.name ??
+      (locale === "en" ? product.name : uiText(product.name, locale)),
+    description:
+      translation?.shortDescription ??
+      (locale === "en"
+        ? product.shortDescription
+        : uiText(product.shortDescription, locale)),
+    longDescription:
+      translation?.description ??
+      (locale === "en" ? product.description : uiText(product.description, locale)),
+    seller:
+      (product.isOfficial ? product.officialStoreName : null) ??
+      product.seller.sellerProfile?.storeName ??
+      "Marketplace seller",
+    sellerSlug: product.seller.sellerProfile?.slug ?? "",
+    isOfficial: product.isOfficial,
+    categoryPathSlugs: compactCategoryPathSlugs,
+    seoPath: `/product/${[...compactCategoryPathSlugs, product.slug].join("/")}`,
+    priceCents:
+      product.salePriceCents && product.salePriceCents > 0
+        ? Math.min(product.priceCents, product.salePriceCents)
+        : product.priceCents,
+    originalPriceCents:
+      product.salePriceCents &&
+      product.salePriceCents > 0 &&
+      product.salePriceCents < product.priceCents
+        ? product.priceCents
+        : undefined,
+    priceCnyCents: product.priceCnyCents,
+    priceRubCents: product.priceRubCents,
+    afterSalesServiceHours: product.afterSalesServiceHours,
+    rating: Number(product.averageRating) || 0,
+    reviews: product.reviewCount,
+    sales: product.salesCount.toLocaleString(),
+    delivery:
+      product.deliveryNote ||
+      (product.type === "DOWNLOAD" ? "Instant download" : "Seller delivery"),
+    badge: badgeFor(product),
+    type: product.type,
+    icon: iconForSlug(product.category.slug, index),
+    imageUrl: normalizePublicMediaUrl(product.coverImageUrl),
+    stockCount:
+      product.type === "SERVICE"
+        ? 999
+        : product.productAttributes?.supplierFulfilled === true
+          ? (product.stockQuantity ?? 0)
+          : Math.max(
+              product._count?.inventoryItems ?? 0,
+              product._count?.files ?? 0,
+            ),
+    galleryUrls: product.galleryUrls?.map(
+      (url) => normalizePublicMediaUrl(url) ?? url,
+    ),
+    videoUrl: product.videoUrl,
+    attributes: product.productAttributes,
+    facts: Object.fromEntries(
+      Object.entries({
+        brand: product.brand,
+        platform: product.platform,
+        region: product.region,
+        country: product.country,
+        server: product.server,
+        language: product.language,
+        deliveryMethod: product.deliveryMethod,
+        productKind: product.productKind,
+        condition: product.condition,
+        stockType: product.stockType,
+        duration: product.duration,
+      }).filter(
+        (entry): entry is [string, string] =>
+          typeof entry[1] === "string" && entry[1].length > 0,
+      ),
+    ),
+    warranty: product.warranty,
+    refundPolicy: product.refundPolicy,
+    salePriceCents: product.salePriceCents,
+    minimumOrder: product.minimumOrder,
+    maximumOrder: product.maximumOrder,
+    sku: product.sku,
+    tags: product.tags,
+    publishedAt: product.publishedAt,
+    verifiedReviews: product.reviews?.map((review) => ({
+      id: review.id,
+      rating: review.rating,
+      body: review.body,
+      createdAt: review.createdAt,
+      buyerName: review.buyer.firstName || "Verified buyer",
+    })),
+  };
+}
+
+function mapCategories(categories: ApiCategory[], locale = "en"): CatalogCategory[] {
+  const byId = new Map(categories.map((category) => [category.id, category]));
+  return categories
+    .map((category, index) => {
+      const parent = category.parentId
+        ? byId.get(category.parentId)
+        : undefined;
+      return {
+        id: category.id,
+        slug: category.slug,
+        name: uiText(category.name, locale),
+        description: uiText(category.description, locale),
+        parentId: category.parentId ?? null,
+        parentSlug: parent?.slug ?? null,
+        icon:
+          category.icon || iconForSlug(parent?.slug ?? category.slug, index),
+        sortOrder: category.sortOrder ?? index,
+        productCount: category._count?.products ?? 0,
+        imageUrl: normalizePublicMediaUrl(category.imageUrl),
+        bannerUrl: normalizePublicMediaUrl(category.bannerUrl),
+        isFeatured: category.isFeatured,
+        isTrending: category.isTrending,
+        isSupplierCategory: category.isSupplierCategory,
+      };
+    })
+    .sort(
+      (a, b) =>
+        (a.sortOrder ?? 0) - (b.sortOrder ?? 0) || a.name.localeCompare(b.name),
+    );
+}
+
+const MARKETPLACE_CACHE_TTL_MS = 120_000;
+type TimedCache<T> = { value: T; expiresAt: number };
+const productFeedCache = new Map<string, TimedCache<CatalogProduct[]>>();
+const productFeedInflight = new Map<string, Promise<CatalogProduct[]>>();
+const categoryCache = new Map<string, TimedCache<CatalogCategory[]>>();
+const categoryInflight = new Map<string, Promise<CatalogCategory[]>>();
+
+function cachedValue<T>(cache: Map<string, TimedCache<T>>, key: string) {
+  const entry = cache.get(key);
+  if (!entry || entry.expiresAt <= Date.now()) return undefined;
+  return entry.value;
+}
+
+function loadProductFeed(locale: string) {
+  const cached = cachedValue(productFeedCache, locale);
+  if (cached) return Promise.resolve(cached);
+  const running = productFeedInflight.get(locale);
+  if (running) return running;
+  const request = apiRequest<{ products: ApiProduct[] }>(
+    "/api/marketplace/products?take=50&page=1&sort=popular",
+  )
+    .then((data) => {
+      const products = data.products.map((product, index) =>
+        mapProduct(product, index, locale),
+      );
+      productFeedCache.set(locale, {
+        value: products,
+        expiresAt: Date.now() + MARKETPLACE_CACHE_TTL_MS,
+      });
+      return products;
+    })
+    .finally(() => productFeedInflight.delete(locale));
+  productFeedInflight.set(locale, request);
+  return request;
+}
+
+function loadMarketplaceCategories(locale: string) {
+  const cached = cachedValue(categoryCache, locale);
+  if (cached) return Promise.resolve(cached);
+  const running = categoryInflight.get(locale);
+  if (running) return running;
+  const request = apiRequest<{ categories: ApiCategory[] }>(
+    "/api/marketplace/categories",
+  )
+    .then((data) => {
+      const categories = mapCategories(data.categories, locale);
+      categoryCache.set(locale, {
+        value: categories,
+        expiresAt: Date.now() + MARKETPLACE_CACHE_TTL_MS,
+      });
+      return categories;
+    })
+    .finally(() => categoryInflight.delete(locale));
+  categoryInflight.set(locale, request);
+  return request;
+}
+
+export function useMarketplaceProductFeed() {
+  const { locale } = useLocale();
+  const cached = cachedValue(productFeedCache, locale);
+  const [products, setProducts] = useState<CatalogProduct[]>(cached ?? []);
+  const [loading, setLoading] = useState(!cached);
+  const [error, setError] = useState(false);
+  useEffect(() => {
+    let active = true;
+    const immediate = cachedValue(productFeedCache, locale);
+    if (immediate) {
+      setProducts(immediate);
+      setLoading(false);
+      setError(false);
+      return () => {
+        active = false;
+      };
+    }
+    setLoading(true);
+    setError(false);
+    void loadProductFeed(locale)
+      .then((remoteProducts) => {
+        if (active) setProducts(remoteProducts);
+      })
+      .catch(() => {
+        if (active) {
+          setProducts([]);
+          setError(true);
+        }
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [locale]);
+  return { products, loading, error };
+}
+
+export function useMarketplaceProducts() {
+  return useMarketplaceProductFeed().products;
+}
+
+export function useMarketplaceCategories() {
+  const { locale } = useLocale();
+  const cached = cachedValue(categoryCache, locale);
+  const [categories, setCategories] = useState<CatalogCategory[]>(cached ?? []);
+  useEffect(() => {
+    let active = true;
+    const immediate = cachedValue(categoryCache, locale);
+    if (immediate) {
+      setCategories(immediate);
+      return () => {
+        active = false;
+      };
+    }
+    void loadMarketplaceCategories(locale)
+      .then((items) => {
+        if (active) setCategories(items);
+      })
+      .catch(() => undefined);
+    return () => {
+      active = false;
+    };
+  }, [locale]);
+  return categories;
+}
+
+export function useMarketplaceProduct(slug?: string) {
+  const { locale } = useLocale();
+  const [product, setProduct] = useState<CatalogProduct | undefined>();
+  const [loading, setLoading] = useState(Boolean(slug));
+  useEffect(() => {
+    if (!slug) {
+      setProduct(undefined);
+      setLoading(false);
+      return;
+    }
+    setProduct(undefined);
+    setLoading(true);
+    void apiRequest<{ product: ApiProduct }>(
+      `/api/marketplace/products/${encodeURIComponent(slug)}`,
+    )
+      .then((data) => setProduct(mapProduct(data.product, 0, locale)))
+      .catch((error) => {
+        if (error instanceof ApiError && error.status === 404) {
+          setProduct(undefined);
+          return;
+        }
+        setProduct(undefined);
+      })
+      .finally(() => setLoading(false));
+  }, [locale, slug]);
+  return { product, loading };
+}
+
+export function useMarketplaceRelatedProducts(
+  categorySlug?: string,
+  excludeProductId?: string,
+) {
+  const { locale } = useLocale();
+  const [products, setProducts] = useState<CatalogProduct[]>([]);
+  useEffect(() => {
+    let active = true;
+    if (!categorySlug) {
+      setProducts([]);
+      return () => {
+        active = false;
+      };
+    }
+    const query = new URLSearchParams({
+      category: categorySlug,
+      take: "6",
+      page: "1",
+      sort: "popular",
+    });
+    void apiRequest<{ products: ApiProduct[] }>(
+      `/api/marketplace/products?${query.toString()}`,
+    )
+      .then((data) => {
+        if (!active) return;
+        setProducts(
+          data.products
+            .map((item, index) => mapProduct(item, index, locale))
+            .filter((item) => item.id !== excludeProductId)
+            .slice(0, 4),
+        );
+      })
+      .catch(() => {
+        if (active) setProducts([]);
+      });
+    return () => {
+      active = false;
+    };
+  }, [categorySlug, excludeProductId, locale]);
+  return products;
+}
+
+export type PublicStore = {
+  name: string;
+  about: string;
+  policy: string;
+  isOfficial: boolean;
+  rating: number;
+  sales: string;
+  joined: string;
+  mark: string;
+  logoUrl?: string | null;
+  bannerUrl?: string | null;
+};
+
+export type FeaturedStore = {
+  name: string;
+  slug: string;
+  about: string;
+  isOfficial: boolean;
+  rating: number;
+  sales: number;
+  joined: string;
+  mark: string;
+  logoUrl?: string | null;
+  bannerUrl?: string | null;
+};
+
+export type PublicMarketplaceReview = {
+  id: string;
+  buyerName: string;
+  initials: string;
+  productName: string;
+  productSlug: string;
+  rating: number;
+  body: string;
+  createdAt: string;
+  date: string;
+};
+
+export function useMarketplaceReviews() {
+  const [reviews, setReviews] = useState<PublicMarketplaceReview[]>([]);
+  useEffect(() => {
+    void apiRequest<{
+      reviews: Array<{
+        id: string;
+        rating: number;
+        body: string;
+        createdAt: string;
+        buyer: { firstName: string };
+        product: { name: string; slug: string };
+      }>;
+    }>("/api/marketplace/reviews")
+      .then((data) =>
+        setReviews(
+          data.reviews.map((review) => {
+            const buyerName = review.buyer.firstName || "Verified buyer";
+            return {
+              id: review.id,
+              buyerName,
+              initials: buyerName.slice(0, 2).toUpperCase(),
+              productName: review.product.name,
+              productSlug: review.product.slug,
+              rating: review.rating,
+              body: review.body,
+              createdAt: review.createdAt,
+              date: new Intl.DateTimeFormat("en", {
+                month: "short",
+                day: "numeric",
+                year: "numeric",
+              }).format(new Date(review.createdAt)),
+            };
+          }),
+        ),
+      )
+      .catch(() => setReviews([]));
+  }, []);
+  return reviews;
+}
+export function useMarketplaceStores() {
+  const [stores, setStores] = useState<FeaturedStore[]>([]);
+  useEffect(() => {
+    void apiRequest<{
+      stores: Array<{
+        storeName: string;
+        slug: string;
+        about: string;
+        averageRating: number | string;
+        totalSales: number;
+        createdAt: string;
+        isOfficial?: boolean;
+        logoUrl?: string | null;
+        bannerUrl?: string | null;
+      }>;
+    }>("/api/marketplace/stores")
+      .then((data) =>
+        setStores(
+          data.stores
+            .map((store) => ({
+              name: store.storeName,
+              slug: store.slug,
+              about: store.about,
+              isOfficial:
+                store.isOfficial === true ||
+                ["Official", "Ysello Official"].includes(store.storeName),
+              rating: Number(store.averageRating) || 0,
+              sales: store.totalSales,
+              joined: new Date(store.createdAt).getFullYear().toString(),
+              mark: store.storeName
+                .split(/\s+/)
+                .map((word) => word[0])
+                .join("")
+                .slice(0, 2)
+                .toUpperCase(),
+              logoUrl: normalizePublicMediaUrl(store.logoUrl),
+              bannerUrl: normalizePublicMediaUrl(store.bannerUrl),
+            }))
+            .sort(
+              (a, b) =>
+                Number(b.isOfficial) - Number(a.isOfficial) ||
+                b.sales - a.sales ||
+                b.rating - a.rating,
+            ),
+        ),
+      )
+      .catch(() => setStores([]));
+  }, []);
+  return stores;
+}
+
+export function useMarketplaceStore(slug?: string) {
+  const { locale } = useLocale();
+  const [store, setStore] = useState<PublicStore | undefined>();
+  const [products, setProducts] = useState<CatalogProduct[]>([]);
+  const [loading, setLoading] = useState(Boolean(slug));
+  useEffect(() => {
+    if (!slug) return;
+    setStore(undefined);
+    setProducts([]);
+    setLoading(true);
+    void apiRequest<{
+      store: {
+        storeName: string;
+        about: string;
+        policy?: string | null;
+        averageRating: number | string;
+        totalSales: number;
+        createdAt: string;
+        isOfficial?: boolean;
+        logoUrl?: string | null;
+        bannerUrl?: string | null;
+      };
+      products: Array<Omit<ApiProduct, "seller">>;
+    }>(`/api/marketplace/stores/${encodeURIComponent(slug)}`)
+      .then((data) => {
+        setStore({
+          name: data.store.storeName,
+          about: data.store.about,
+          policy:
+            data.store.policy ||
+            "Ysello buyer protection applies to every order.",
+          isOfficial:
+            data.store.isOfficial === true ||
+            ["Official", "Ysello Official"].includes(data.store.storeName),
+          rating: Number(data.store.averageRating),
+          sales: data.store.totalSales.toLocaleString(),
+          joined: new Date(data.store.createdAt).getFullYear().toString(),
+          mark: data.store.storeName
+            .split(/\s+/)
+            .map((word) => word[0])
+            .join("")
+            .slice(0, 2)
+            .toUpperCase(),
+          logoUrl: normalizePublicMediaUrl(data.store.logoUrl),
+          bannerUrl: normalizePublicMediaUrl(data.store.bannerUrl),
+        });
+        setProducts(
+          data.products.map((product, index) =>
+            mapProduct(
+              {
+                ...product,
+                seller: {
+                  sellerProfile: { storeName: data.store.storeName, slug },
+                },
+              },
+              index,
+              locale,
+            ),
+          ),
+        );
+      })
+      .catch(() => {
+        setStore(undefined);
+        setProducts([]);
+      })
+      .finally(() => setLoading(false));
+  }, [locale, slug]);
+  return { store, products, loading };
+}
+
+export function useMarketplaceCategory(slug?: string) {
+  const { locale } = useLocale();
+  const localCategory = useMemo(() => {
+    const item = localCategoriesForLocale(locale).find((entry) => entry.slug === slug);
+    return item
+      ? {
+          ...item,
+          name: uiText(item.name, locale),
+          description: uiText(item.description, locale),
+        }
+      : undefined;
+  }, [locale, slug]);
+  const [category, setCategory] = useState<CatalogCategory | undefined>(
+    localCategory,
+  );
+  const [loading, setLoading] = useState(Boolean(slug && !localCategory));
+
+  useEffect(() => {
+    if (!slug) {
+      setCategory(undefined);
+      setLoading(false);
+      return;
+    }
+
+    const immediate = localCategoriesForLocale(locale).find((item) => item.slug === slug);
+    if (immediate) {
+      setCategory({
+        ...immediate,
+        name: uiText(immediate.name, locale),
+        description: uiText(immediate.description, locale),
+      });
+      setLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+    setLoading(true);
+    void apiRequest<{ categories: ApiCategory[] }>(
+      "/api/marketplace/categories",
+    )
+      .then((data) => {
+        if (cancelled) return;
+        const merged = mergeWithLocalCategories(
+          mapCategories(data.categories, locale),
+          locale,
+        );
+        setCategory(merged.find((item) => item.slug === slug));
+      })
+      .catch(() => {
+        if (!cancelled) setCategory(undefined);
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [locale, slug]);
+
+  return { category, loading };
+}
+
+export function useMarketplaceProductPage(input: {
+  category?: string;
+  q?: string;
+  seller?: string;
+  page: number;
+  sort: string;
+  stock?: string;
+}) {
+  const { locale } = useLocale();
+  const query = new URLSearchParams({
+    take: "50",
+    page: String(input.page),
+    sort: input.sort,
+  });
+  if (input.category && input.category !== "all")
+    query.set("category", input.category);
+  if (input.q) query.set("q", input.q);
+  if (input.seller) query.set("seller", input.seller);
+  if (input.stock === "in_stock") query.set("stock", "in_stock");
+  const key = query.toString();
+  const [state, setState] = useState<{
+    products: CatalogProduct[];
+    loading: boolean;
+    error: string;
+    pagination: {
+      page: number;
+      pageSize: number;
+      total: number;
+      totalPages: number;
+    };
+  }>({
+    products: [],
+    loading: true,
+    error: "",
+    pagination: { page: 1, pageSize: 50, total: 0, totalPages: 1 },
+  });
+  useEffect(() => {
+    let active = true;
+    setState((old) => ({ ...old, loading: true, error: "", products: [] }));
+    void apiRequest<{
+      products: ApiProduct[];
+      pagination: {
+        page: number;
+        pageSize: number;
+        total: number;
+        totalPages: number;
+      };
+    }>(`/api/marketplace/products?${key}`)
+      .then((data) => {
+        if (!data.pagination)
+          throw new Error(
+            "The catalog API needs the latest update. Please try again after deployment.",
+          );
+        if (active)
+          setState({
+            products: data.products.map((product, i) =>
+              mapProduct(product, i, locale),
+            ),
+            pagination: data.pagination,
+            loading: false,
+            error: "",
+          });
+      })
+      .catch((error) => {
+        if (active)
+          setState((old) => ({
+            ...old,
+            loading: false,
+            error:
+              error instanceof Error
+                ? error.message
+                : "Catalog unavailable. Please try again.",
+          }));
+      });
+    return () => {
+      active = false;
+    };
+  }, [key, locale]);
+  return state;
+}

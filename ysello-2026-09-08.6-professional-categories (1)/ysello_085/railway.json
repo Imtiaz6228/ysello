@@ -1,0 +1,15 @@
+{
+  "$schema": "https://railway.com/railway.schema.json",
+  "build": {
+    "builder": "RAILPACK",
+    "buildCommand": "echo \"[ysello] building release 2026-09-08.4\" && npm run build:railway"
+  },
+  "deploy": {
+    "preDeployCommand": "openssl version && npm run prisma:migrate:recover && npm run prisma:migrate",
+    "startCommand": "npm start",
+    "healthcheckPath": "/api/health",
+    "healthcheckTimeout": 300,
+    "restartPolicyType": "ON_FAILURE",
+    "restartPolicyMaxRetries": 10
+  }
+}
