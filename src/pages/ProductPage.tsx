@@ -17,7 +17,6 @@ import {
   RefreshCw,
   ShieldCheck,
   ShoppingBag,
-  Star,
 } from "lucide-react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
@@ -85,15 +84,6 @@ export function ProductPage() {
           url: `https://ysello.com/stores/${product.sellerSlug}`,
         },
       },
-      ...(product.reviews > 0 && product.rating > 0
-        ? {
-            aggregateRating: {
-              "@type": "AggregateRating",
-              ratingValue: product.rating,
-              reviewCount: product.reviews,
-            },
-          }
-        : {}),
     };
   }, [currency, product]);
 
@@ -306,12 +296,6 @@ export function ProductPage() {
           <h1>
             <UiText value={product.title} />
           </h1>
-          <div className="detail-rating">
-            <Star fill="currentColor" /> <strong>{product.rating}</strong>
-            <span>{product.reviews} verified reviews</span>
-            <span>·</span>
-            <span>{product.sales} sales</span>
-          </div>
           <p>{product.longDescription}</p>
           <Link
             className="seller-identity"
@@ -647,47 +631,6 @@ export function ProductPage() {
               Open a support request directly from the relevant order.
             </small>
           </span>
-        </div>
-      </section>
-
-      <section className="detail-section review-showcase">
-        <div>
-          <span className="section-index">VERIFIED REVIEWS</span>
-          <h2>
-            <UiText value="Buyers know what arrived." />
-          </h2>
-          <p>
-            Only customers with a paid order can publish a review. Sellers can
-            respond, and abusive content enters moderation.
-          </p>
-        </div>
-        <div className="review-cards">
-          {product.verifiedReviews?.length ? (
-            product.verifiedReviews.map((review) => (
-              <article key={review.id}>
-                <span>{review.rating.toFixed(1)} / 5</span>
-                <p>“{review.body}”</p>
-                <small>
-                  <BadgeCheck aria-hidden="true" /> {review.buyerName} ·
-                  Verified purchase ·{" "}
-                  {new Intl.DateTimeFormat("en", {
-                    month: "short",
-                    day: "numeric",
-                    year: "numeric",
-                  }).format(new Date(review.createdAt))}
-                </small>
-              </article>
-            ))
-          ) : (
-            <article>
-              <span>NEW</span>
-              <p>
-                This listing has no verified buyer reviews yet. Only customers
-                with an eligible completed order can publish one.
-              </p>
-              <small>Be the first verified buyer to review</small>
-            </article>
-          )}
         </div>
       </section>
 

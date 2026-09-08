@@ -1226,13 +1226,6 @@ if (isProduction && fs.existsSync(frontendIndex)) {
           },
         },
       };
-      if (Number(product.averageRating) > 0 && product.reviewCount > 0) {
-        schema.aggregateRating = {
-          "@type": "AggregateRating",
-          ratingValue: Number(product.averageRating),
-          reviewCount: product.reviewCount,
-        };
-      }
       const facts = [
         product.deliveryNote
           ? `<li><strong>${escapeHtml(uiText("Delivery", locale))}:</strong> ${escapeHtml(product.deliveryNote)}</li>`

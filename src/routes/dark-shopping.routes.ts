@@ -16,6 +16,7 @@ import {
   importDarkShoppingCategory,
   repairDarkShoppingCatalog,
   importDarkShoppingProducts,
+  importAllDarkShoppingLiveProducts,
   listDarkShoppingCategoryMappings,
   listDarkShoppingFulfillments,
   listDarkShoppingListings,
@@ -182,6 +183,14 @@ darkShoppingRouter.post(
       ...input,
       adminId: req.auth!.id,
     });
+    res.status(201).json(result);
+  }),
+);
+
+darkShoppingRouter.post(
+  "/resale/import-all",
+  asyncHandler(async (req, res) => {
+    const result = await importAllDarkShoppingLiveProducts(req.auth!.id);
     res.status(201).json(result);
   }),
 );

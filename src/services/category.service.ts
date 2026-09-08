@@ -826,9 +826,9 @@ function socialInventorySegment(product: {
     ...(product.tags ?? []),
     product.productAttributes ? JSON.stringify(product.productAttributes) : "",
   ].join(" ").toLowerCase();
-  if (/followers?|fans?|subscribers?|members?|audience/.test(text)) return "accounts-with-followers";
-  if (/\bposts?\b|posted|content\s+history/.test(text)) return "accounts-with-posts";
-  if (/\b(old|aged|vintage)\b|created\s+(?:in\s+)?20\d{2}|\b20(?:0\d|1\d|2[0-5])\b/.test(text)) return "old-accounts";
+  if (/followers?|fans?|subscribers?|members?|audience|подписчик|фолловер|участник/.test(text)) return "accounts-with-followers";
+  if (/\bposts?\b|posted|content\s+history|пост(?:ы|ов)?|публикац/.test(text)) return "accounts-with-posts";
+  if (/\b(old|aged|vintage|mature)\b|отлеж|отл[её]г|стар(?:ый|ые|ых)|возраст|created\s+(?:in\s+)?20\d{2}|registered\s+(?:in\s+)?20\d{2}|\b20(?:0\d|1\d|2[0-6])\b/.test(text)) return "old-accounts";
   return "new-accounts";
 }
 

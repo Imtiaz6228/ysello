@@ -11,6 +11,7 @@ import {
   processPendingDarkShoppingFulfillments,
   syncDarkShoppingListings,
   repairDarkShoppingCatalog,
+  importAllDarkShoppingLiveProducts,
 } from "./services/dark-shopping-resale.service.js";
 
 const server = await (async () => {
@@ -82,6 +83,37 @@ const supplierFulfillmentTimer = env.DARK_SHOPPING_API_KEY
   : null;
 supplierFulfillmentTimer?.unref();
 
+let supplierCatalogImportRunning = false;
+const runSupplierCatalogImport = async () => {
+  if (supplierCatalogImportRunning) return;
+  supplierCatalogImportRunning = true;
+  try {
+    const result = await importAllDarkShoppingLiveProducts();
+    console.log("Dark Shopping live catalog import", {
+      discovered: result.discovered,
+      imported: result.imported,
+      skipped: result.skipped.length,
+      repaired: result.repaired,
+    });
+  } catch (error) {
+    console.warn(
+      "Dark Shopping live catalog import skipped:",
+      error instanceof Error ? error.message : error,
+    );
+  } finally {
+    supplierCatalogImportRunning = false;
+  }
+};
+
+const supplierCatalogInitialTimer = env.DARK_SHOPPING_API_KEY
+  ? setTimeout(() => void runSupplierCatalogImport(), 2 * 60 * 1_000)
+  : null;
+supplierCatalogInitialTimer?.unref();
+const supplierCatalogImportTimer = env.DARK_SHOPPING_API_KEY
+  ? setInterval(() => void runSupplierCatalogImport(), 6 * 60 * 60 * 1_000)
+  : null;
+supplierCatalogImportTimer?.unref();
+
 let supplierSyncRunning = false;
 const supplierSyncTimer = env.DARK_SHOPPING_API_KEY
   ? setInterval(
@@ -107,6 +139,8 @@ supplierSyncTimer?.unref();
 async function shutdown(signal: string) {
   console.log(`Received ${signal}. Shutting down.`);
   if (supplierFulfillmentTimer) clearInterval(supplierFulfillmentTimer);
+  if (supplierCatalogInitialTimer) clearTimeout(supplierCatalogInitialTimer);
+  if (supplierCatalogImportTimer) clearInterval(supplierCatalogImportTimer);
   if (supplierSyncTimer) clearInterval(supplierSyncTimer);
   server.close(async () => {
     await prisma.$disconnect();

@@ -1,11 +1,9 @@
 import {
   BadgeCheck,
-  BarChart3,
   Clock3,
   Eye,
   PackageCheck,
   ShoppingCart,
-  Star,
   Zap,
 } from "lucide-react";
 import { Link } from "react-router-dom";
@@ -87,14 +85,6 @@ export function MarketplaceProductCard({
           </span>
           <span>
             <PackageCheck /> {stockLabel}
-          </span>
-          <span>
-            <Star fill="currentColor" />{" "}
-            {product.rating > 0 ? product.rating : "No rating"}{" "}
-            <small>({product.reviews})</small>
-          </span>
-          <span>
-            <BarChart3 /> {product.sales || "0"} sales
           </span>
           <span>
             <Zap /> Auto

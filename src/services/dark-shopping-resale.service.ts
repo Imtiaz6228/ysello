@@ -4,7 +4,7 @@ import {
   platformImage,
   type ProductPlatform,
 } from "../data/platformIdentity.js";
-import { OrderStatus, ProductStatus, ProductType } from "@prisma/client";
+import { OrderStatus, ProductStatus, ProductType, Role } from "@prisma/client";
 import { env } from "../config/env.js";
 import { prisma } from "../lib/prisma.js";
 import { ApiError } from "../middleware/error-handler.js";
@@ -14,6 +14,7 @@ import {
   type DarkShoppingProduct,
 } from "./dark-shopping.client.js";
 import { darkShoppingClient } from "./dark-shopping.service.js";
+import { ensureDefaultMarketplaceCategories } from "./category.service.js";
 
 export const DARK_SHOPPING_RUB_PER_USD = env.DARK_SHOPPING_RUB_PER_USD;
 export const DARK_SHOPPING_CNY_PER_USD = 7.24;
@@ -160,7 +161,6 @@ async function ensurePlatformCategory(platform: ProductPlatform) {
   const existing = await prisma.category.findUnique({ where: { slug } });
   const data = {
     name: platform.name,
-    parentId: null,
     isActive: true,
     imageUrl: platformImage(platform),
     description: `Browse ${platform.name} accounts and digital products. Compare availability, pricing and delivery terms before checkout.`,
@@ -174,9 +174,152 @@ async function ensurePlatformCategory(platform: ProductPlatform) {
   };
   return prisma.category.upsert({
     where: { slug },
-    create: { ...data, slug },
+    create: { ...data, slug, parentId: null },
+    // Preserve the existing Ysello taxonomy parent when this category was
+    // already created by the marketplace taxonomy service.
     update: data,
   });
+}
+
+const DARK_SOCIAL_INVENTORY_PLATFORMS = new Set([
+  "instagram",
+  "facebook",
+  "x",
+  "tiktok",
+  "threads",
+  "telegram",
+  "discord",
+  "whatsapp",
+  "youtube",
+  "snapchat",
+  "linkedin",
+  "pinterest",
+  "reddit",
+]);
+
+type DarkSocialInventorySegment =
+  | "new-accounts"
+  | "old-accounts"
+  | "accounts-with-followers"
+  | "accounts-with-posts";
+
+function darkShoppingSocialSegment(product: DarkShoppingProduct): DarkSocialInventorySegment {
+  const attributes = (product.attributes ?? [])
+    .map((attribute) => `${attribute.name ?? ""} ${String(attribute.value ?? "")}`)
+    .join(" ");
+  const text = [
+    product.name,
+    product.description,
+    product.manual,
+    product.group?.name,
+    product.category?.name,
+    attributes,
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
+
+  // Followers/audience takes precedence because those listings can also mention posts/age.
+  if (/followers?|subscribers?|members?|fans?|audience|подписчик|фолловер|участник/.test(text)) {
+    return "accounts-with-followers";
+  }
+  if (/\bposts?\b|posted|publications?|content\s+history|пост(?:ы|ов)?|публикац/.test(text)) {
+    return "accounts-with-posts";
+  }
+  if (
+    /\b(old|aged|vintage|mature)\b|отлеж|отл[её]г|стар(?:ый|ые|ых)|возраст|created\s+(?:in\s+)?20\d{2}|registered\s+(?:in\s+)?20\d{2}|\b20(?:0\d|1\d|2[0-6])\b/.test(
+      text,
+    )
+  ) {
+    return "old-accounts";
+  }
+  return "new-accounts";
+}
+
+async function ensureDarkShoppingGroupCategory(input: {
+  parentId: string;
+  parentSlug: string;
+  parentName: string;
+  groupId: number;
+  groupName: string;
+  imageUrl?: string | null;
+}) {
+  const cleanName = yselloPublicText(input.groupName).slice(0, 120) || `${input.parentName} products`;
+  const slug = `${input.parentSlug}-${slugBase(cleanName)}-g${input.groupId}`.slice(0, 150);
+  return prisma.category.upsert({
+    where: { slug },
+    create: {
+      parentId: input.parentId,
+      slug,
+      name: cleanName,
+      description: `Browse ${cleanName} products with current availability and secure Ysello checkout.`,
+      imageUrl: input.imageUrl ?? null,
+      metaKeywords: [
+        "supplier:dark-shopping",
+        `supplier:dark-shopping:group:${input.groupId}`,
+      ],
+      isActive: true,
+      sortOrder: 500,
+    },
+    update: {
+      parentId: input.parentId,
+      name: cleanName,
+      imageUrl: input.imageUrl ?? null,
+      isActive: true,
+    },
+  });
+}
+
+async function darkShoppingDestinationCategory(
+  product: DarkShoppingProduct,
+  platform?: ProductPlatform,
+) {
+  if (platform) {
+    const root = await ensurePlatformCategory(platform);
+    if (DARK_SOCIAL_INVENTORY_PLATFORMS.has(platform.slug)) {
+      const segment = darkShoppingSocialSegment(product);
+      const child = await prisma.category.findUnique({
+        where: { slug: `${platform.slug}-${segment}` },
+        select: { id: true, isActive: true },
+      });
+      if (child?.isActive) return child.id;
+    }
+
+    const groupName = product.group?.name?.trim();
+    if (groupName && product.group?.id) {
+      const normalizedGroup = groupName.toLowerCase();
+      const normalizedPlatform = platform.name.toLowerCase();
+      if (normalizedGroup !== normalizedPlatform && normalizedGroup !== platform.slug) {
+        return (
+          await ensureDarkShoppingGroupCategory({
+            parentId: root.id,
+            parentSlug: platformCategorySlug(platform),
+            parentName: platform.name,
+            groupId: product.group.id,
+            groupName,
+            imageUrl: platformImage(platform),
+          })
+        ).id;
+      }
+    }
+    return root.id;
+  }
+
+  const remoteCategory = await importDarkShoppingCategory(product.category.id);
+  const groupName = product.group?.name?.trim();
+  if (groupName && product.group?.id) {
+    return (
+      await ensureDarkShoppingGroupCategory({
+        parentId: remoteCategory.category.id,
+        parentSlug: remoteCategory.category.slug,
+        parentName: remoteCategory.category.name,
+        groupId: product.group.id,
+        groupName,
+        imageUrl: remoteCategory.category.imageUrl,
+      })
+    ).id;
+  }
+  return remoteCategory.category.id;
 }
 
 /** Repairs local imported listings without calling the supplier or touching order/inventory records. */
@@ -228,6 +371,10 @@ export async function repairDarkShoppingCatalog() {
     where: { storeName: "Ysello Official", bannerUrl: null },
     data: { bannerUrl: "/ysello-official-banner.svg" },
   });
+  // Re-run the stable Ysello taxonomy organizer so legacy supplier imports that
+  // were previously attached to a platform root are moved into the same
+  // New/Aged/Followers/Posts subcategories used by fresh Dark imports.
+  await ensureDefaultMarketplaceCategories(true);
   return { repaired, unclassified };
 }
 
@@ -626,14 +773,27 @@ function remoteProductData(product: DarkShoppingProduct) {
       productAttributes: {
         supplierFulfilled: true,
         supplier: "dark.shopping",
+        supplierRemoteProductId: product.id,
+        supplierRemoteProductUrl: trustedDarkShoppingAsset(product.url),
+        supplierRemoteMiniature: trustedDarkShoppingAsset(product.miniature),
+        supplierCategoryId: product.category?.id ?? null,
         supplierCategory: product.category?.name ?? null,
+        supplierCategoryIcon: trustedDarkShoppingAsset(product.category?.icon),
+        supplierGroupId: product.group?.id ?? null,
+        supplierGroupCategoryId: product.group?.category_id ?? null,
+        supplierGroupAdditionalCategoryId: product.group?.additional_category_id ?? null,
         supplierGroup: product.group?.name ?? null,
+        supplierAttributes: product.attributes ?? [],
+        supplierRating: product.rating ?? null,
         supplierQualityPercent: product.quality_percent ?? null,
         supplierInvalidItemsPercent: product.invalid_items_percent ?? null,
         supplierPurchaseCounter: product.purchase_counter ?? 0,
         supplierViews: product.view ?? 0,
         supplierGuaranteeSeconds: product.guarantee_time_seconds ?? null,
-        supplierRemoteProductId: product.id,
+        supplierMinimumOrder: minimumOrder,
+        supplierQuantity: remoteQuantity,
+        supplierManualDelivery: Boolean(product.is_manual_order_delivery),
+        supplierReplacementTerms: product.replacement_terms_public ?? null,
       },
     },
     listing: {
@@ -711,13 +871,12 @@ export async function importDarkShoppingProducts(input: {
           remote.category?.name,
         );
         if (identity) {
-          categoryId = (await ensurePlatformCategory(identity)).id;
+          categoryId = await darkShoppingDestinationCategory(remote, identity);
         } else {
           categoryId = mappedCategories.get(remote.category.id);
-          if (!categoryId) {
-            categoryId = (await importDarkShoppingCategory(remote.category.id))
-              .category.id;
-            mappedCategories.set(remote.category.id, categoryId);
+          if (!categoryId || remote.group?.id) {
+            categoryId = await darkShoppingDestinationCategory(remote);
+            if (!remote.group?.id) mappedCategories.set(remote.category.id, categoryId);
           }
         }
       }
@@ -880,6 +1039,74 @@ async function syncListingRecords(
     }
   }
   return { synced, unavailable };
+}
+
+export async function importAllDarkShoppingLiveProducts(adminId?: string) {
+  const ownerId = adminId ?? (
+    await prisma.user.findFirst({
+      where: {
+        role: { in: [Role.SUPER_ADMIN, Role.ADMIN] },
+        isSuspended: false,
+      },
+      orderBy: { createdAt: "asc" },
+      select: { id: true },
+    })
+  )?.id;
+  if (!ownerId) {
+    throw new ApiError(
+      409,
+      "Ysello needs an active admin account before the supplier catalog can be imported.",
+      "DARK_SHOPPING_IMPORT_ADMIN_REQUIRED",
+    );
+  }
+
+  const remoteIds: number[] = [];
+  let page = 1;
+  let pageCount = 1;
+  do {
+    const response = await darkShoppingClient().listProducts({
+      page,
+      perPage: 100,
+      onlyInStock: true,
+      deliveryType: "auto",
+    });
+    for (const product of response.items) {
+      const minimum = Math.max(1, Math.trunc(product.minimum_order || 1));
+      const quantity = Math.max(0, Math.trunc(product.quantity || 0));
+      if (
+        product.is_manual_order_delivery === true ||
+        product.is_manual_order_delivery === 1 ||
+        minimum > 20 ||
+        quantity < minimum
+      ) {
+        continue;
+      }
+      remoteIds.push(product.id);
+    }
+    pageCount = Math.max(1, response._meta?.pageCount ?? 1);
+    page += 1;
+  } while (page <= pageCount && page <= 100);
+
+  const uniqueIds = [...new Set(remoteIds)];
+  let imported = 0;
+  const skipped: Array<{ remoteProductId: number; reason: string }> = [];
+  for (let offset = 0; offset < uniqueIds.length; offset += 25) {
+    const result = await importDarkShoppingProducts({
+      adminId: ownerId,
+      remoteProductIds: uniqueIds.slice(offset, offset + 25),
+      autoCategory: true,
+      publish: true,
+    });
+    imported += result.imported.length;
+    skipped.push(...result.skipped);
+  }
+  const repaired = await repairDarkShoppingCatalog();
+  return {
+    discovered: uniqueIds.length,
+    imported,
+    skipped,
+    repaired,
+  };
 }
 
 export async function syncDarkShoppingListings(listingId?: string) {

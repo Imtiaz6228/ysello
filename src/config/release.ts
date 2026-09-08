@@ -1,4 +1,4 @@
-export const YSELLO_RELEASE_ID = "2026-09-08.4";
+export const YSELLO_RELEASE_ID = "2026-09-08.5";
 // Supplier protocol version is intentionally independent from the overall Ysello release.
 // General frontend/backend releases after 2026-09-05.6 remain compatible with this Dark Shopping client contract.
 export const DARK_SHOPPING_INTEGRATION_VERSION = "2026-09-05.6";

@@ -2,7 +2,6 @@ import { UiText } from "../i18n/UiText";
 import { ProductArtwork } from "./ProductArtwork";
 import {
   BadgeCheck,
-  BarChart3,
   Boxes,
   BriefcaseBusiness,
   ChevronRight,
@@ -12,7 +11,6 @@ import {
   Search,
   ShieldCheck,
   ShoppingBag,
-  Star,
   UserRound,
   X,
   Zap,
@@ -379,16 +377,6 @@ export function YselloReferenceProductCard({
           {secondaryFact ? <span>{secondaryFact}</span> : null}
         </div>
         <div className="ys-ref-product-meta g2-product-meta product-commerce-metrics">
-          <span>
-            <Star fill="currentColor" aria-hidden="true" />{" "}
-            <b>{product.rating || "New"}</b>
-            <small>{product.reviews} ratings</small>
-          </span>
-          <span>
-            <BarChart3 aria-hidden="true" />
-            <b>{product.sales || "0"}</b>
-            <small>total sales</small>
-          </span>
           <span className={canPurchase ? "" : "sold-out"}>
             <Boxes aria-hidden="true" />
             <b>

@@ -43,6 +43,7 @@ import {
   ChevronLeft,
   Command,
   Database,
+  Download,
   HardDrive,
   Home,
   Menu,
@@ -1466,6 +1467,36 @@ export function OperationsAdminPage() {
         error instanceof Error
           ? error.message
           : "Selection stopped. Loaded selections are preserved.",
+      );
+    } finally {
+      setBusy("");
+    }
+  }
+
+  async function importAllDarkShoppingLiveProducts() {
+    setBusy("dark-shopping-import-all");
+    setMessage(
+      "Importing the complete in-stock automatic-delivery Dark Shopping catalog and classifying it into Ysello subcategories…",
+    );
+    try {
+      const result = await apiRequest<{
+        discovered: number;
+        imported: number;
+        skipped: Array<{ remoteProductId: number; reason: string }>;
+        repaired: { repaired: number; unclassified: number };
+      }>("/api/admin/dark-shopping/resale/import-all", {
+        method: "POST",
+        body: {},
+      });
+      await load();
+      setMessage(
+        `${result.imported} of ${result.discovered} live supplier products imported/updated and published. Existing imports were reorganized too.${result.skipped.length ? ` ${result.skipped.length} incompatible supplier items were skipped.` : ""}`,
+      );
+    } catch (error) {
+      setMessage(
+        error instanceof Error
+          ? error.message
+          : "The complete Dark Shopping catalog import stopped unexpectedly.",
       );
     } finally {
       setBusy("");
@@ -3335,6 +3366,18 @@ export function OperationsAdminPage() {
                       restore local product artwork.
                     </p>
                   </div>
+                  <div className="row-actions">
+                    <button
+                      type="button"
+                      className="primary-button"
+                      disabled={Boolean(busy)}
+                      onClick={() => void importAllDarkShoppingLiveProducts()}
+                    >
+                      <Download size={16} />
+                      {busy === "dark-shopping-import-all"
+                        ? "Importing full catalog…"
+                        : "Import all live products"}
+                    </button>
                   <button
                     type="button"
                     className="primary-button"
@@ -3366,6 +3409,7 @@ export function OperationsAdminPage() {
                   >
                     <UiText value="Repair categories & images" />
                   </button>
+                  </div>
                 </div>
                 <CatalogTranslationStatus />
                 <form
