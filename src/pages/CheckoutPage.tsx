@@ -55,6 +55,7 @@ export function CheckoutPage() {
   const [method, setMethod] = useState<MethodId>("WALLET");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [telegramContact, setTelegramContact] = useState("");
 
   const paymentMethods = useMemo<Method[]>(() => {
     const walletMethod: Method = {
@@ -65,6 +66,22 @@ export function CheckoutPage() {
     };
     return [walletMethod, ...methods];
   }, [balanceCents, formatMoney, methods, subtotalCents]);
+
+  useEffect(() => {
+    try {
+      setTelegramContact(window.localStorage.getItem("ysello-order-telegram") || "");
+    } catch {
+      // Storage can be unavailable in privacy-restricted browsers.
+    }
+  }, []);
+
+  useEffect(() => {
+    try {
+      if (telegramContact.trim()) window.localStorage.setItem("ysello-order-telegram", telegramContact.trim());
+    } catch {
+      // Contact still travels with checkout even when storage is unavailable.
+    }
+  }, [telegramContact]);
 
   useEffect(() => {
     void apiRequest<{ methods: Method[] }>("/api/commerce/payment-methods")
@@ -101,7 +118,7 @@ export function CheckoutPage() {
           message: string;
         }>("/api/wallet/purchase-cart", {
           method: "POST",
-          body: { items: cartItems },
+          body: { items: cartItems, telegramContact: telegramContact.trim() || undefined },
         });
         setBalanceCents(data.balanceCents);
         if (user) setUser({ ...user, balanceCents: data.balanceCents });
@@ -119,7 +136,7 @@ export function CheckoutPage() {
         cryptoPayment?: CryptoPayment;
       }>("/api/commerce/checkout", {
         method: "POST",
-        body: { items: cartItems, method },
+        body: { items: cartItems, method, telegramContact: telegramContact.trim() || undefined },
       });
       if (data.redirectUrl) {
         location.assign(data.redirectUrl);
@@ -205,6 +222,18 @@ export function CheckoutPage() {
             </div>
             <Check />
           </div>
+          <label className="checkout-contact-field">
+            <span>Telegram contact <small>optional · used for order coordination</small></span>
+            <input
+              type="text"
+              inputMode="text"
+              autoComplete="off"
+              placeholder="@username"
+              maxLength={80}
+              value={telegramContact}
+              onChange={(event) => setTelegramContact(event.target.value)}
+            />
+          </label>
           <div className="payment-methods">
             {paymentMethods.map((item) => {
               const Icon = icons[item.id];

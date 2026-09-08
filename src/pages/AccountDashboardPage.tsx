@@ -3530,6 +3530,7 @@ function WalletTabContent({
   const [busy, setBusy] = useState(false);
   const [depositMethod, setDepositMethod] = useState("");
   const [depositAmount, setDepositAmount] = useState("");
+  const [topupTelegram, setTopupTelegram] = useState("");
   const [activeTopup, setActiveTopup] = useState<Deposit | null>(null);
   const [proofTx, setProofTx] = useState("");
   const [proofFile, setProofFile] = useState<File | null>(null);
@@ -3544,6 +3545,22 @@ function WalletTabContent({
   useEffect(() => {
     setBalance(initialBalance ?? user.balanceCents ?? 0);
   }, [initialBalance, user.balanceCents]);
+
+  useEffect(() => {
+    try {
+      setTopupTelegram(window.localStorage.getItem("ysello-order-telegram") || "");
+    } catch {
+      // Ignore storage failures in privacy-restricted browsers.
+    }
+  }, []);
+
+  useEffect(() => {
+    try {
+      if (topupTelegram.trim()) window.localStorage.setItem("ysello-order-telegram", topupTelegram.trim());
+    } catch {
+      // The form still submits the Telegram contact without local storage.
+    }
+  }, [topupTelegram]);
 
   useEffect(() => {
     if (!activeTopup) return;
@@ -3614,7 +3631,11 @@ function WalletTabContent({
         "/api/wallet/topups",
         {
           method: "POST",
-          body: { amountCents: cents, method: depositMethod },
+          body: {
+            amountCents: cents,
+            method: depositMethod,
+            telegramContact: topupTelegram.trim() || undefined,
+          },
         },
       );
       setMessage(data.message);
@@ -3665,6 +3686,7 @@ function WalletTabContent({
     try {
       const payload = new FormData();
       payload.append("txHash", proofTx.trim());
+      if (topupTelegram.trim()) payload.append("telegramContact", topupTelegram.trim());
       payload.append("screenshot", proofFile);
       const data = await apiRequest<{ message: string }>(
         `/api/wallet/topups/${activeTopup.id}/proof`,
@@ -3932,6 +3954,16 @@ function WalletTabContent({
                 <small>{selectedMethod.amountPolicy}</small>
               </div>
             ) : null}
+            <label className="field topup-telegram-contact">
+              <span>Telegram contact <small>optional · shown to admin with your payment request</small></span>
+              <input
+                type="text"
+                placeholder="@username"
+                maxLength={80}
+                value={topupTelegram}
+                onChange={(event) => setTopupTelegram(event.target.value)}
+              />
+            </label>
             <div className="deposit-input-row">
               <div className="field">
                 <span>{t("amountUsd")}</span>

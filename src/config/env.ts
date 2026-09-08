@@ -285,6 +285,18 @@ const envSchema = z.object({
     .max(1440)
     .default(30),
   TELEGRAM_SUPPORT_FORWARDING_ENABLED: booleanFromEnv.default(true),
+  ORDER_TELEGRAM_BOT_TOKEN: z.preprocess(
+    trimmedStringToUndefined,
+    z
+      .string()
+      .regex(/^\d+:[A-Za-z0-9_-]{20,}$/, "must be a Telegram Bot API token")
+      .optional(),
+  ),
+  ORDER_TELEGRAM_CHAT_ID: z.preprocess(
+    trimmedStringToUndefined,
+    z.string().regex(/^-?\d+$/, "must be a numeric Telegram chat ID").optional(),
+  ),
+  ORDER_TELEGRAM_NOTIFICATIONS_ENABLED: booleanFromEnv.default(true),
   DARK_SHOPPING_API_KEY: z.preprocess(
     trimmedStringToUndefined,
     z.string().min(1).max(255).optional(),

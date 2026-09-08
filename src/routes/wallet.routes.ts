@@ -28,6 +28,11 @@ import {
   getTopupRequests,
   submitTopupProof,
 } from "../services/topup.service.js";
+import {
+  queueOrderCreatedTelegram,
+  queueTopupCreatedTelegram,
+  queueTopupProofTelegram,
+} from "../services/order-telegram.service.js";
 
 export const walletRouter = Router();
 
@@ -105,6 +110,7 @@ walletRouter.post(
 
 const cryptoTopupSchema = z.object({
   amountCents: z.number().int().min(100).max(10_000_000),
+  telegramContact: z.string().trim().max(80).optional(),
   method: z.enum([
     TopupMethod.CRYPTO_TRC20,
     TopupMethod.CRYPTO_BEP20,
@@ -123,6 +129,11 @@ walletRouter.post(
       input.amountCents,
       input.method,
     );
+    queueTopupCreatedTelegram({
+      topupId: result.topup.id,
+      req,
+      telegramContact: input.telegramContact,
+    });
     res.status(201).json({
       message:
         "Payment request created. Transfer the exact wallet-credit amount on the selected network; your wallet or exchange charges the displayed buyer-paid network fee in addition. Then submit the TXID and screenshot.",
@@ -138,7 +149,10 @@ walletRouter.post(
     try {
       const id = z.string().uuid().parse(req.params.id);
       const input = z
-        .object({ txHash: z.string().trim().min(64).max(66) })
+        .object({
+          txHash: z.string().trim().min(64).max(66),
+          telegramContact: z.string().trim().max(80).optional(),
+        })
         .parse(req.body);
       if (!req.file)
         throw new ApiError(
@@ -154,6 +168,11 @@ walletRouter.post(
         `/api/wallet/topups/${id}/proof-image`,
         req.file.mimetype,
       );
+      queueTopupProofTelegram({
+        topupId: id,
+        req,
+        telegramContact: input.telegramContact,
+      });
       res.status(201).json({
         message: result.autoVerified
           ? "Transaction found. It is ready for final approval."
@@ -227,8 +246,17 @@ const walletItemsSchema = z
 walletRouter.post(
   "/purchase-cart",
   asyncHandler(async (req, res) => {
-    const input = z.object({ items: walletItemsSchema }).parse(req.body);
-    const result = await createWalletCheckout(req.auth!.id, input.items);
+    const input = z.object({
+      items: walletItemsSchema,
+      telegramContact: z.string().trim().max(80).optional(),
+    }).parse(req.body);
+    const result = await createWalletCheckout(req.auth!.id, input.items, input.telegramContact);
+    queueOrderCreatedTelegram({
+      orderId: result.order.id,
+      req,
+      telegramContact: input.telegramContact,
+      event: "✅ NEW YSELLO PAID ORDER",
+    });
     res.status(201).json({
       message:
         "Purchase completed with wallet balance. Ready downloads appear in your dashboard; supplier-fulfilled items may remain processing briefly.",
@@ -245,16 +273,27 @@ walletRouter.post(
         productId: z.string().uuid(),
         quantity: z.number().int().min(1).max(20).default(1),
         expectedUnitPriceCents: z.number().int().min(1).optional(),
+        telegramContact: z.string().trim().max(80).optional(),
       })
       .parse(req.body);
 
-    const result = await createWalletCheckout(req.auth!.id, [
-      {
-        productId: input.productId,
-        quantity: input.quantity,
-        expectedUnitPriceCents: input.expectedUnitPriceCents,
-      },
-    ]);
+    const result = await createWalletCheckout(
+      req.auth!.id,
+      [
+        {
+          productId: input.productId,
+          quantity: input.quantity,
+          expectedUnitPriceCents: input.expectedUnitPriceCents,
+        },
+      ],
+      input.telegramContact,
+    );
+    queueOrderCreatedTelegram({
+      orderId: result.order.id,
+      req,
+      telegramContact: input.telegramContact,
+      event: "✅ NEW YSELLO PAID ORDER",
+    });
     res.status(201).json({
       message:
         "Purchase completed with wallet balance. Ready downloads appear in your dashboard; supplier-fulfilled items may remain processing briefly.",

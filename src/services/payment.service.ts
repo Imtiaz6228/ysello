@@ -429,6 +429,7 @@ export async function createCheckout(
   items: CheckoutItemInput[],
   method: PaymentMethod,
   couponCode?: string,
+  buyerTelegram?: string,
 ) {
   const paymentOption = availablePaymentMethods().find(
     (option) => option.id === method,
@@ -518,6 +519,7 @@ export async function createCheckout(
           amountCents: totalCents,
           currency: "USD",
           status: PaymentStatus.REQUIRES_ACTION,
+          providerPayload: buyerTelegram ? { buyerTelegram } : undefined,
         },
       },
     },
@@ -564,7 +566,11 @@ export async function createCheckout(
       where: { orderId: order.id },
       data: {
         providerReference: provider.providerReference,
-        providerPayload: provider.cryptoPayment ?? undefined,
+        providerPayload: provider.cryptoPayment
+          ? { ...provider.cryptoPayment, ...(buyerTelegram ? { buyerTelegram } : {}) }
+          : buyerTelegram
+            ? { buyerTelegram }
+            : undefined,
       },
     });
   }
@@ -580,6 +586,7 @@ export async function createCheckout(
 export async function createWalletCheckout(
   buyerId: string,
   items: CheckoutItemInput[],
+  buyerTelegram?: string,
 ) {
   const buyer = await checkoutBuyer(buyerId);
   const { normalized, products, subtotalCents } = await checkoutProducts(items);
@@ -660,6 +667,7 @@ export async function createWalletCheckout(
             providerPayload: {
               kind: "WALLET_BALANCE",
               debitedCents: subtotalCents,
+              ...(buyerTelegram ? { buyerTelegram } : {}),
             },
           },
         },

@@ -6,6 +6,7 @@ import { prisma } from "./lib/prisma.js";
 import { ensureDefaultMarketplaceCategories } from "./services/category.service.js";
 import { submitFreshMarketplaceToIndexNow } from "./services/indexnow.service.js";
 import { telegramDestinationChatId } from "./services/telegram-notify.service.js";
+import { orderTelegramChatId } from "./services/order-telegram.service.js";
 import {
   processPendingDarkShoppingFulfillments,
   syncDarkShoppingListings,
@@ -28,6 +29,12 @@ const server = await (async () => {
       chatId: telegramDestinationChatId(),
       includeBots: env.VISITOR_NOTIFY_INCLUDE_BOTS,
       dedupeMinutes: env.VISITOR_NOTIFY_DEDUPE_MINUTES,
+    });
+    console.log("Telegram order/top-up notifications", {
+      enabled: env.ORDER_TELEGRAM_NOTIFICATIONS_ENABLED,
+      botConfigured: Boolean(env.ORDER_TELEGRAM_BOT_TOKEN),
+      chatConfigured: Boolean(orderTelegramChatId()),
+      chatId: orderTelegramChatId(),
     });
   });
 })().catch(async (error) => {

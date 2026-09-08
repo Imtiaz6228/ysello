@@ -29,6 +29,7 @@ import {
   createCheckout,
   getPaymentStatusForBuyer,
 } from "../services/payment.service.js";
+import { queueOrderCreatedTelegram } from "../services/order-telegram.service.js";
 
 export const commerceRouter = Router();
 
@@ -45,6 +46,7 @@ const checkoutSchema = z.object({
     .max(30),
   method: z.nativeEnum(PaymentMethod),
   couponCode: z.string().trim().max(40).optional(),
+  telegramContact: z.string().trim().max(80).optional(),
 });
 
 const activeDisputeStatuses = new Set<DisputeStatus>([
@@ -147,6 +149,11 @@ commerceRouter.post(
       )
       .parse(req.body);
     const order = await confirmCryptoWebhook(input);
+    queueOrderCreatedTelegram({
+      orderId: order.id,
+      req,
+      event: "💳 YSELLO CRYPTO PAYMENT CONFIRMED",
+    });
     res.json({ order });
   }),
 );
@@ -202,7 +209,14 @@ commerceRouter.post(
       input.items,
       input.method,
       input.couponCode,
+      input.telegramContact,
     );
+    queueOrderCreatedTelegram({
+      orderId: result.order.id,
+      req,
+      telegramContact: input.telegramContact,
+      event: "🛒 NEW YSELLO ORDER CREATED",
+    });
     res.status(201).json(result);
   }),
 );

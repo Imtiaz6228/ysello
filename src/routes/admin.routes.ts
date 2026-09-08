@@ -57,6 +57,11 @@ import {
   telegramRecentChats,
   setTelegramRuntimeChatId,
 } from "../services/telegram-notify.service.js";
+import {
+  orderTelegramStatus,
+  orderTelegramChatId,
+  sendOrderTelegramMessage,
+} from "../services/order-telegram.service.js";
 
 export const adminRouter = Router();
 
@@ -282,6 +287,33 @@ adminRouter.post(
     );
     res.json({ chatId, test });
   }),
+);
+
+adminRouter.get(
+  "/order-telegram/status",
+  requireAdmin,
+  asyncHandler(async (_req, res) => {
+    res.json(await orderTelegramStatus());
+  }),
+);
+
+async function sendOrderTelegramTestResponse(_req: import("express").Request, res: import("express").Response) {
+  const result = await sendOrderTelegramMessage(
+    `✅ Ysello order & top-up alerts are working.\nDestination: ${orderTelegramChatId()}\n${new Date().toISOString()}`,
+  );
+  res.json({ ...result, chatId: orderTelegramChatId() });
+}
+
+adminRouter.post(
+  "/order-telegram/test",
+  requireAdmin,
+  asyncHandler(sendOrderTelegramTestResponse),
+);
+
+adminRouter.get(
+  "/order-telegram/test",
+  requireAdmin,
+  asyncHandler(sendOrderTelegramTestResponse),
 );
 
 adminRouter.get(
