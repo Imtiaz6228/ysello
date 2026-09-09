@@ -1,0 +1,584 @@
+/*
+ * Ysello production UI audit layer.
+ * Loaded last so shared accessibility, rhythm, target-size, and responsive
+ * corrections stay consistent across the marketplace and role dashboards.
+ */
+
+:root {
+  --audit-content: 1240px;
+  --audit-control: 44px;
+  --audit-gutter: clamp(16px, 3vw, 40px);
+  --audit-focus: #2563eb;
+  --audit-radius: 14px;
+  --audit-border: #e1e5ed;
+  --audit-shadow: 0 12px 32px rgba(31, 35, 48, 0.07);
+}
+
+html {
+  scroll-padding-top: 88px;
+}
+
+body {
+  line-height: 1.5;
+}
+
+:where(h1, h2, h3) {
+  text-wrap: balance;
+}
+
+:where(p, li, dd) {
+  text-wrap: pretty;
+}
+
+:where(a, button, input, select, textarea, summary):focus-visible {
+  outline-color: var(--audit-focus) !important;
+}
+
+/* The build-time SEO shell stays light and structured before React hydrates. */
+#root > .seo-static-shell {
+  min-height: 100vh;
+  padding: 0 var(--audit-gutter) 64px;
+  background: #f5f6fa;
+  color: #171926;
+}
+
+#root > .seo-static-shell > header {
+  display: flex;
+  max-width: var(--audit-content);
+  min-height: 70px;
+  margin-inline: auto;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  border-bottom: 1px solid var(--audit-border);
+}
+
+#root > .seo-static-shell > article {
+  max-width: 1120px;
+  margin: 18px auto 0;
+  padding: clamp(28px, 5vw, 64px);
+  border: 1px solid var(--audit-border);
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: var(--audit-shadow);
+}
+
+#root > .seo-static-shell h1,
+#root > .seo-static-shell p,
+#root > .seo-static-shell a {
+  color: inherit;
+}
+
+/* Route transitions now match the light storefront instead of flashing black. */
+.route-loading {
+  min-height: calc(100dvh - 70px);
+  padding: clamp(56px, 9vw, 112px) var(--audit-gutter);
+  background: #f5f6fa;
+}
+
+.route-loading-bar,
+.route-loading-shell span {
+  border: 1px solid #e6e8ef;
+  background: linear-gradient(90deg, #eef0f5, #ffffff, #eef0f5);
+  background-size: 220% 100%;
+  box-shadow: 0 10px 24px rgba(31, 35, 48, 0.04);
+}
+
+.route-loading-shell {
+  width: min(100%, var(--audit-content));
+  margin-right: auto;
+  margin-left: auto;
+}
+
+.route-loading-bar {
+  width: min(600px, 72%);
+  height: 48px;
+  margin-right: auto;
+  margin-left: max(0px, calc((100% - var(--audit-content)) / 2));
+}
+
+.blog-hero {
+  padding-block: 38px;
+}
+
+.blog-hero h1 {
+  max-width: 16ch;
+  font-size: clamp(44px, 6.4vw, 78px);
+  line-height: 0.98;
+}
+
+/* Shared storefront navigation */
+.commerce-header {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  width: 100%;
+  padding-inline: max(20px, calc((100vw - var(--audit-content)) / 2));
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+}
+
+.commerce-header .brand-lockup {
+  min-height: var(--audit-control);
+}
+
+.commerce-header .brand-lockup small {
+  font-size: 9px;
+  line-height: 1.2;
+}
+
+.commerce-global-search {
+  height: 46px;
+}
+
+.commerce-global-search button,
+.commerce-mobile-search button,
+.commerce-menu-button,
+.commerce-menu-close {
+  min-width: var(--audit-control);
+  min-height: var(--audit-control);
+}
+
+.commerce-header > nav > a,
+.commerce-header .cart-link,
+.commerce-header .header-account,
+.commerce-header .header-register {
+  min-height: var(--audit-control);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+}
+
+.commerce-header > nav > a[aria-current="page"] {
+  color: var(--polish-accent, #5a4ce6);
+  background: var(--polish-accent-soft, #efedff);
+}
+
+.commerce-header-actions > a[aria-current="page"] {
+  border-color: #bbb5ff;
+  box-shadow: 0 0 0 3px rgba(90, 76, 230, 0.09);
+}
+
+/* Public marketplace hierarchy and controls */
+.commerce-page {
+  min-width: 0;
+}
+
+.commerce-page small {
+  font-size: clamp(11px, 0.66rem + 0.08vw, 12px);
+  line-height: 1.4;
+}
+
+.commerce-page
+  :where(
+    button,
+    input:not([type="checkbox"]):not([type="radio"]),
+    select,
+    textarea
+  ) {
+  min-height: 40px;
+}
+
+.commerce-page :where(input, select, textarea) {
+  font-size: max(13px, 0.8125rem);
+}
+
+.commerce-page
+  :where(.primary-link, .primary-button, .secondary-button, .checkout-button) {
+  min-height: var(--audit-control);
+}
+
+.commerce-page .section-index,
+.commerce-page :where(.lux-product-category, .lux-seller, .lux-rating) {
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.pro-home .pro-market-hero {
+  padding-top: 34px;
+  padding-bottom: 26px;
+}
+
+.pro-home .pro-market-hero .lux-hero-copy > p {
+  max-width: 56ch;
+  font-size: 15px;
+}
+
+.pro-home .lux-section,
+.pro-home .lux-new-section,
+.pro-home .lux-sellers,
+.pro-home .lux-journal {
+  padding-top: 36px;
+  padding-bottom: 36px;
+}
+
+.pro-home .lux-section-head > a,
+.pro-home .lux-category-preview > header > a,
+.pro-home .lux-category-view-all {
+  min-height: var(--audit-control);
+  display: inline-flex;
+  align-items: center;
+}
+
+.pro-home .lux-seller-grid article > a:last-child,
+.pro-home .lux-blog-grid article > div > a:last-child,
+.commerce-footer a {
+  min-height: 34px;
+  display: flex;
+  align-items: center;
+}
+
+.commerce-footer a {
+  width: fit-content;
+}
+
+.pro-home .lux-tabs button,
+.subcategory-strip button,
+.mobile-category-pills button {
+  min-height: 42px;
+}
+
+.pro-home .lux-product-body h3 {
+  font-size: 15px;
+}
+
+.pro-home .lux-product-body {
+  padding: 16px;
+}
+
+.pro-home .lux-price > a {
+  width: var(--audit-control);
+  height: var(--audit-control);
+  display: inline-grid;
+  place-items: center;
+}
+
+.pro-home .lux-trust small,
+.pro-home .lux-subcategory-preview-grid small,
+.pro-home .lux-price small {
+  font-size: 11px;
+}
+
+.lux-product-card,
+.market-product-card,
+.blog-card,
+.store-products article,
+.catalog-department-grid > button {
+  border-color: var(--audit-border);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .lux-product-card:hover,
+  .market-product-card:hover,
+  .blog-card:hover,
+  .store-products article:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 18px 40px rgba(31, 35, 48, 0.11);
+  }
+}
+
+/* Catalog density and state clarity */
+.market-browser-hero .catalog-search,
+.directory-search,
+.directory-filter-stack select {
+  min-height: var(--audit-control);
+}
+
+.catalog-department-grid > button {
+  min-height: 92px;
+}
+
+.catalog-department-grid small,
+.catalog-results-context p,
+.directory-filter-stack label > span {
+  font-size: 11px;
+}
+
+.catalog-department-grid > button[aria-pressed="true"],
+.mobile-category-pills button[aria-pressed="true"],
+.directory-list button[aria-pressed="true"],
+.directory-all[aria-pressed="true"] {
+  border-color: #aaa2ff;
+  box-shadow: 0 0 0 3px rgba(90, 76, 230, 0.08);
+}
+
+.directory-card button,
+.directory-list > .directory-group > button,
+.filter-controls > button,
+.market-card-actions > a,
+.market-card-actions > button,
+.active-filter-summary button,
+.no-results button {
+  min-height: var(--audit-control);
+}
+
+.filter-controls > button {
+  min-width: var(--audit-control);
+}
+
+.market-product-card
+  :where(
+    p,
+    .market-product-meta,
+    .market-product-category,
+    .market-product-seller
+  ) {
+  font-size: 12px;
+}
+
+.market-product-card h2 {
+  font-size: 17px;
+  line-height: 1.3;
+}
+
+/* Product, cart, forms, and content pages */
+.product-gallery-thumbs button,
+.quantity-control button,
+.product-quantity button,
+.buy-panel button,
+.buy-panel a,
+.product-faq-section summary {
+  min-height: var(--audit-control);
+}
+
+.buy-panel {
+  scroll-margin-top: 90px;
+}
+
+.empty-cart {
+  min-height: 270px;
+  padding: 44px 24px;
+}
+
+.auth-form
+  :where(input:not([type="checkbox"]):not([type="radio"]), select, textarea),
+.checkout-layout
+  :where(input:not([type="checkbox"]):not([type="radio"]), select, textarea) {
+  min-height: 48px;
+  font-size: 16px;
+}
+
+.auth-form .primary-button,
+.auth-form .secondary-button {
+  min-height: 48px;
+}
+
+.auth-form .check-row,
+.auth-form a {
+  min-height: var(--audit-control);
+  display: inline-flex;
+  align-items: center;
+}
+
+.legal-layout p,
+.blog-card p,
+.blog-article-body p,
+.support-layout p {
+  font-size: 15px;
+  line-height: 1.72;
+}
+
+/* Dialogs and support widget */
+[role="dialog"] {
+  overscroll-behavior: contain;
+}
+
+.ticket-modal,
+.support-widget-pro,
+.locale-popover {
+  max-height: calc(100dvh - 24px);
+}
+
+.support-widget-fab,
+.support-fab-polished {
+  right: max(20px, env(safe-area-inset-right)) !important;
+  bottom: max(20px, env(safe-area-inset-bottom)) !important;
+}
+
+.support-widget-pro button[aria-label="Close support chat"],
+.support-widget-pro button[aria-label="Send support message"] {
+  min-width: var(--audit-control);
+  min-height: var(--audit-control);
+  display: inline-grid;
+  place-items: center;
+}
+
+.support-widget-pro input {
+  min-height: var(--audit-control);
+  font-size: 16px !important;
+}
+
+.support-widget-pro .admin-handoff-button {
+  min-height: var(--audit-control);
+}
+
+/* Buyer, seller, and admin workspaces */
+:where(.buyer-premium-dashboard, .seller-pro-dashboard, .admin-enterprise) {
+  font-size: 14px;
+}
+
+:where(.buyer-premium-dashboard, .seller-pro-dashboard, .admin-enterprise)
+  small {
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+:where(.buyer-premium-dashboard, .seller-pro-dashboard, .admin-enterprise)
+  :where(
+    button,
+    input:not([type="checkbox"]):not([type="radio"]),
+    select,
+    textarea
+  ) {
+  min-height: 38px;
+}
+
+:where(.buyer-grouped-nav, .seller-premium-nav, .admin-grouped-nav)
+  :where(a, button),
+:where(.buyer-premium-dashboard, .seller-pro-dashboard, .admin-enterprise)
+  :where([class*="icon-button"], [class*="mobile-menu"], [class*="close"]) {
+  min-width: 40px;
+  min-height: var(--audit-control);
+}
+
+:where(.buyer-premium-dashboard, .seller-pro-dashboard, .admin-enterprise)
+  :where(input:not([type="checkbox"]):not([type="radio"]), select, textarea) {
+  font-size: 14px;
+}
+
+:where(.buyer-premium-dashboard, .seller-pro-dashboard, .admin-enterprise)
+  :where(.table-wrap, .table-shell, [class*="table-scroll"]) {
+  max-width: 100%;
+  overflow-x: auto;
+  overscroll-behavior-inline: contain;
+}
+
+@media (max-width: 980px) {
+  .commerce-header {
+    position: sticky;
+    padding-inline: 18px;
+  }
+
+  .commerce-header > nav > a[aria-current="page"] {
+    border-color: #aaa2ff;
+  }
+}
+
+@media (max-width: 720px) {
+  html {
+    scroll-padding-top: 74px;
+  }
+
+  .commerce-page
+    :where(
+      button,
+      input:not([type="checkbox"]):not([type="radio"]),
+      select,
+      textarea
+    ) {
+    min-height: var(--audit-control);
+  }
+
+  .commerce-page
+    :where(input:not([type="checkbox"]):not([type="radio"]), select, textarea) {
+    font-size: 16px;
+  }
+
+  .pro-home .lux-section,
+  .pro-home .lux-new-section,
+  .pro-home .lux-sellers,
+  .pro-home .lux-journal {
+    padding-top: 28px;
+    padding-bottom: 28px;
+  }
+
+  .catalog-discovery-intro {
+    padding: 20px;
+  }
+
+  .catalog-results-context,
+  .market-filter-bar {
+    align-items: flex-start;
+  }
+
+  .auth-panel-inner {
+    width: min(100%, 560px);
+  }
+
+  .support-widget-pro {
+    right: 8px !important;
+    bottom: 8px !important;
+    width: calc(100vw - 16px) !important;
+    max-height: calc(100dvh - 16px) !important;
+    border-radius: 14px !important;
+  }
+
+  :where(.buyer-premium-dashboard, .seller-pro-dashboard, .admin-enterprise)
+    :where(
+      button,
+      input:not([type="checkbox"]):not([type="radio"]),
+      select,
+      textarea
+    ) {
+    min-height: var(--audit-control);
+  }
+}
+
+@media (max-width: 480px) {
+  .commerce-header {
+    padding-inline: 14px;
+  }
+
+  .commerce-header .brand-lockup {
+    min-width: auto;
+  }
+
+  .commerce-header .brand-lockup > span:last-child,
+  .commerce-header .brand-lockup small {
+    display: none;
+  }
+
+  .pro-home .pro-market-hero h1,
+  .market-browser-hero h1,
+  .simple-hero h1,
+  .support-hero h1,
+  .blog-hero h1,
+  .legal-hero h1 {
+    font-size: clamp(31px, 11vw, 42px);
+  }
+
+  .catalog-section-heading {
+    align-items: flex-start;
+  }
+
+  .catalog-results-context > div {
+    grid-template-columns: 42px minmax(0, 1fr);
+  }
+
+  .catalog-results-context > div > span {
+    width: 42px;
+    height: 42px;
+  }
+
+  .empty-cart {
+    min-height: 240px;
+    padding: 36px 18px;
+  }
+
+  .route-loading {
+    padding-inline: 14px;
+  }
+
+  .route-loading-bar {
+    width: 82%;
+    margin-left: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .route-loading-bar,
+  .route-loading-shell span {
+    animation: none;
+  }
+}

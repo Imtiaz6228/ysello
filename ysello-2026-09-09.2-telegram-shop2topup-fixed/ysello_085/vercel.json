@@ -1,0 +1,61 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "cleanUrls": true,
+  "trailingSlash": false,
+  "installCommand": "node -e \"console.log(\\\"[ysello] proxy deployment: npm install skipped\\\")\"",
+  "buildCommand": "node scripts/prepare-vercel-proxy.mjs",
+  "outputDirectory": "vercel-dist",
+  "headers": [
+    {
+      "source": "/:path*",
+      "headers": [
+        {
+          "key": "Referrer-Policy",
+          "value": "strict-origin-when-cross-origin"
+        },
+        {
+          "key": "Permissions-Policy",
+          "value": "camera=(), microphone=(), geolocation=(), payment=(self)"
+        },
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        },
+        {
+          "key": "X-Frame-Options",
+          "value": "DENY"
+        },
+        {
+          "key": "Strict-Transport-Security",
+          "value": "max-age=63072000; includeSubDomains; preload"
+        },
+        {
+          "key": "x-vercel-enable-rewrite-caching",
+          "value": "1"
+        }
+      ]
+    }
+  ],
+  "redirects": [
+    {
+      "source": "/categories/:slug",
+      "destination": "/category/:slug",
+      "permanent": true
+    },
+    {
+      "source": "/products/:slug",
+      "destination": "/product/:slug",
+      "permanent": true
+    }
+  ],
+  "rewrites": [
+    {
+      "source": "/",
+      "destination": "https://hsello-production.up.railway.app/"
+    },
+    {
+      "source": "/:path*",
+      "destination": "https://hsello-production.up.railway.app/:path*"
+    }
+  ]
+}
