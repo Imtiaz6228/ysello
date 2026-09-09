@@ -149,7 +149,7 @@ commerceRouter.post(
       )
       .parse(req.body);
     const order = await confirmCryptoWebhook(input);
-    queueOrderCreatedTelegram({
+    if (order) queueOrderCreatedTelegram({
       orderId: order.id,
       req,
       event: "💳 YSELLO CRYPTO PAYMENT CONFIRMED",

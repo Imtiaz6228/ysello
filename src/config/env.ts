@@ -277,7 +277,7 @@ const envSchema = z.object({
     z.string().regex(/^-?\d+$/, "must be a numeric Telegram chat ID").optional(),
   ),
   VISITOR_NOTIFY_ENABLED: booleanFromEnv.default(true),
-  VISITOR_NOTIFY_INCLUDE_BOTS: booleanFromEnv.default(true),
+  VISITOR_NOTIFY_INCLUDE_BOTS: booleanFromEnv.default(false),
   VISITOR_NOTIFY_DEDUPE_MINUTES: z.coerce
     .number()
     .int()

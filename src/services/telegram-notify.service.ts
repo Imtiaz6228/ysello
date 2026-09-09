@@ -7,6 +7,7 @@ import { env } from "../config/env.js";
 const PROJECT_DEFAULT_CHAT_ID = "-1003862484719";
 let runtimeChatId: string | null = null;
 const dedupe = new Map<string, number>();
+const pendingVisitors = new Set<string>();
 
 type TelegramChat = {
   id: number;
@@ -140,7 +141,7 @@ function osFromUa(ua: string) {
   return "Unknown";
 }
 
-const BOT_UA = /bot\b|crawler|spider|slurp|bingpreview|google(?:bot|other)|adsbot|mediapartners|duckduckbot|baiduspider|yandex(?:bot|images)|sogou|exabot|facebot|facebookexternalhit|twitterbot|linkedinbot|pinterestbot|applebot|semrushbot|ahrefsbot|mj12bot|bytespider|gptbot|oai-searchbot|chatgpt-user|claude(?:bot|-searchbot|-user)|perplexity(?:bot|-user)|uptimerobot|headlesschrome|lighthouse/i;
+const BOT_UA = /bot\b|crawler|spider|slurp|bingpreview|google(?:bot|other)|adsbot|mediapartners|duckduckbot|baiduspider|yandex(?:bot|images)|sogou|exabot|facebot|facebookexternalhit|twitterbot|linkedinbot|pinterestbot|applebot|semrushbot|ahrefsbot|mj12bot|bytespider|gptbot|oai-searchbot|chatgpt-user|claude(?:bot|-searchbot|-user)|perplexity(?:bot|-user)|uptimerobot|headlesschrome|lighthouse|curl|wget|python|httpclient|axios|node-fetch|undici|playwright|puppeteer|selenium|phantomjs|monitor|scanner/i;
 
 function visitorType(ua: string) {
   if (BOT_UA.test(ua)) return "Bot / crawler";
@@ -375,7 +376,7 @@ async function visitorMessage(req: Request, client: VisitorClientContext = {}) {
   const ua = req.get("user-agent") || "";
   const baseType = visitorType(ua);
   const engaged = (client.dwellSeconds ?? 0) >= 30 && (client.visibilitySeconds ?? client.dwellSeconds ?? 0) >= 25;
-  const type = baseType === "Bot / crawler" ? baseType : engaged ? "Real engaged visitor" : "Likely human";
+  const type = baseType === "Bot / crawler" ? baseType : engaged ? "Likely human · engaged" : "Likely human";
   const ip = firstForwardedIp(req);
   const headerCode = countryCode(req);
   const headerCity = cityLabel(req);
@@ -419,17 +420,25 @@ async function visitorMessage(req: Request, client: VisitorClientContext = {}) {
 }
 
 async function queueVisitor(req: Request, client: VisitorClientContext, force: boolean) {
-  if (!env.VISITOR_NOTIFY_ENABLED || !env.TELEGRAM_BOT_TOKEN) return false;
-  if (!force && !shouldNotifyPath(req)) return false;
+  if (!env.VISITOR_NOTIFY_ENABLED || !env.TELEGRAM_BOT_TOKEN || !force) return false;
   const ua = req.get("user-agent") || "";
-  const baseType = visitorType(ua);
-  // Normal humans are notified only by the browser engagement beacon after 30-40 seconds.
-  if (!force && baseType !== "Bot / crawler") return false;
-  if (force && baseType !== "Bot / crawler" && (client.dwellSeconds ?? 0) < 30) return false;
-  if (isDuplicate(req)) return false;
-  const message = await visitorMessage(req, client);
-  if (message.type === "Bot / crawler" && !env.VISITOR_NOTIFY_INCLUDE_BOTS) return false;
+  if (!ua || BOT_UA.test(ua) || !/Mozilla\/5\.0/i.test(ua)) return false;
+  if (![client.dwellSeconds, client.visibilitySeconds, client.interactions].every(Number.isFinite)) return false;
+  if ((client.dwellSeconds ?? 0) < 35 || (client.visibilitySeconds ?? 0) < 30 || (client.interactions ?? 0) < 1) return false;
   try {
+    const page = new URL(client.page || "");
+    if (page.origin !== "https://ysello.com" && page.origin !== "https://www.ysello.com") return false;
+    if (!shouldNotifyPath({ method: "GET", accepts: () => true, path: decodeURIComponent(page.pathname) } as unknown as Request)) return false;
+    const origin = req.get("origin");
+    if (origin && !["https://ysello.com", "https://www.ysello.com"].includes(origin)) return false;
+    if (req.get("sec-fetch-site") === "cross-site") return false;
+  } catch { return false; }
+  const key = duplicateKey(req);
+  if (isDuplicate(req)) return true;
+  if (pendingVisitors.has(key)) return false;
+  pendingVisitors.add(key);
+  try {
+    const message = await visitorMessage(req, client);
     const result = await sendTelegramMessage(message.text);
     if (!result.sent) return false;
     markNotified(req);
@@ -437,12 +446,14 @@ async function queueVisitor(req: Request, client: VisitorClientContext, force: b
   } catch (error) {
     console.warn("Telegram visitor notification failed:", error instanceof Error ? error.message : error);
     return false;
+  } finally {
+    pendingVisitors.delete(key);
   }
 }
 
 export function queueVisitorTelegramNotification(req: Request) {
-  void queueVisitor(req, {}, false);
-  return true;
+  // HTTP page requests never prove human engagement.
+  return false;
 }
 
 export async function queueVisitorTelegramBeacon(req: Request, client: VisitorClientContext = {}) {

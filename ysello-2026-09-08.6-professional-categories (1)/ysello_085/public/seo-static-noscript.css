@@ -1,4 +1,0 @@
-/* Reveal the prerendered route only when JavaScript is unavailable. */
-#root > .seo-static-shell {
-  display: block !important;
-}

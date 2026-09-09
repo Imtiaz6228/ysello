@@ -1,7 +1,0 @@
-{
-  "$schema": "https://schema.railpack.com",
-  "buildAptPackages": ["...", "openssl"],
-  "deploy": {
-    "aptPackages": ["...", "openssl"]
-  }
-}

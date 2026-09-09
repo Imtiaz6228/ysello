@@ -58,6 +58,7 @@ import {
   setTelegramRuntimeChatId,
 } from "../services/telegram-notify.service.js";
 import {
+  queueTopupReviewedTelegram,
   orderTelegramStatus,
   orderTelegramChatId,
   sendOrderTelegramMessage,
@@ -1194,6 +1195,7 @@ adminRouter.patch(
       .object({ adminNotes: z.string().trim().max(1000).optional() })
       .parse(req.body);
     const updated = await approveTopup(id, req.auth!.id, input.adminNotes);
+    void queueTopupReviewedTelegram(id);
     res.json({
       message: "Deposit approved and user balance updated.",
       deposit: updated,
@@ -1210,6 +1212,7 @@ adminRouter.patch(
       .object({ adminNotes: z.string().trim().max(1000).optional() })
       .parse(req.body);
     const updated = await rejectTopup(id, input.adminNotes);
+    void queueTopupReviewedTelegram(id);
 
     res.json({ message: "Deposit rejected.", deposit: updated });
   }),

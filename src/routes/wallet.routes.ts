@@ -251,7 +251,7 @@ walletRouter.post(
       telegramContact: z.string().trim().max(80).optional(),
     }).parse(req.body);
     const result = await createWalletCheckout(req.auth!.id, input.items, input.telegramContact);
-    queueOrderCreatedTelegram({
+    if (result.order) queueOrderCreatedTelegram({
       orderId: result.order.id,
       req,
       telegramContact: input.telegramContact,
@@ -288,7 +288,7 @@ walletRouter.post(
       ],
       input.telegramContact,
     );
-    queueOrderCreatedTelegram({
+    if (result.order) queueOrderCreatedTelegram({
       orderId: result.order.id,
       req,
       telegramContact: input.telegramContact,

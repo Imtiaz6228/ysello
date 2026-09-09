@@ -28,12 +28,12 @@ const server = await (async () => {
       botConfigured: Boolean(env.TELEGRAM_BOT_TOKEN),
       chatConfigured: Boolean(telegramDestinationChatId()),
       chatId: telegramDestinationChatId(),
-      includeBots: env.VISITOR_NOTIFY_INCLUDE_BOTS,
+      includeBots: false,
       dedupeMinutes: env.VISITOR_NOTIFY_DEDUPE_MINUTES,
     });
     console.log("Telegram order/top-up notifications", {
       enabled: env.ORDER_TELEGRAM_NOTIFICATIONS_ENABLED,
-      botConfigured: Boolean(env.ORDER_TELEGRAM_BOT_TOKEN),
+      botConfigured: Boolean(env.ORDER_TELEGRAM_BOT_TOKEN || env.TELEGRAM_BOT_TOKEN),
       chatConfigured: Boolean(orderTelegramChatId()),
       chatId: orderTelegramChatId(),
     });

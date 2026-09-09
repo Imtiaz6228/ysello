@@ -144,31 +144,38 @@ function VisitorNotificationBeacon() {
     ];
     if (privatePrefixes.some((prefix) => path === prefix || path.startsWith(`${prefix}/`))) return;
 
-    const sessionKey = "ysello-engaged-visitor-v2";
+    if (navigator.webdriver) return;
+    // Storage may be unavailable in privacy mode; tracking must not break the app.
+    const read = (key: string) => { try { return sessionStorage.getItem(key); } catch { return null; } };
+    const write = (key: string, value: string) => { try { sessionStorage.setItem(key, value); } catch { /* optional */ } };
+    const sessionKey = "ysello-engaged-visitor-v3";
     const firstSeenKey = "ysello-engaged-first-seen-v2";
     const pagesKey = "ysello-engaged-pages-v2";
     const interactionsKey = "ysello-engaged-interactions-v2";
-    const firstSeen = Number(sessionStorage.getItem(firstSeenKey) || Date.now());
-    if (!sessionStorage.getItem(firstSeenKey)) sessionStorage.setItem(firstSeenKey, String(firstSeen));
-    const visited = new Set<string>(JSON.parse(sessionStorage.getItem(pagesKey) || "[]"));
+    const firstSeen = Number(read(firstSeenKey) || Date.now());
+    if (!read(firstSeenKey)) write(firstSeenKey, String(firstSeen));
+    const visited = new Set<string>((() => { try { const v = JSON.parse(read(pagesKey) || "[]"); return Array.isArray(v) ? v.filter((x): x is string => typeof x === "string") : []; } catch { return []; } })());
     visited.add(`${location.pathname}${location.search}`);
-    sessionStorage.setItem(pagesKey, JSON.stringify([...visited].slice(-50)));
-    let interactions = Number(sessionStorage.getItem(interactionsKey) || 0);
-    let visibleSeconds = 0;
-    let sent = sessionStorage.getItem(sessionKey) === "sent";
+    write(pagesKey, JSON.stringify([...visited].slice(-50)));
+    let interactions = Number(read(interactionsKey) || 0);
+    let visibleSeconds = Math.max(0, Number(read("ysello-visible-v3")) || 0);
+    let nextAttempt = 0;
+    let sent = read(sessionKey) === "sent";
 
-    const onInteraction = () => {
+    const onInteraction = (event: Event) => {
+      if (!event.isTrusted || document.hidden) return;
       interactions += 1;
-      sessionStorage.setItem(interactionsKey, String(interactions));
+      write(interactionsKey, String(interactions));
     };
     window.addEventListener("pointerdown", onInteraction, { passive: true });
     window.addEventListener("keydown", onInteraction);
-    window.addEventListener("scroll", onInteraction, { passive: true });
+    window.addEventListener("wheel", onInteraction, { passive: true });
 
     const interval = window.setInterval(() => {
-      if (!document.hidden) visibleSeconds += 1;
+      if (!document.hidden) { visibleSeconds += 1; write("ysello-visible-v3", String(visibleSeconds)); }
       const dwellSeconds = Math.floor((Date.now() - firstSeen) / 1000);
-      if (sent || dwellSeconds < 35 || visibleSeconds < 30) return;
+      if (sent || document.hidden || interactions < 1 || dwellSeconds < 35 || visibleSeconds < 30 || Date.now() < nextAttempt) return;
+      nextAttempt = Date.now() + 15000;
       sent = true;
       const payload = {
         page: `https://ysello.com${window.location.pathname}${window.location.search}`,
@@ -187,8 +194,9 @@ function VisitorNotificationBeacon() {
         headers: { "content-type": "application/json" },
         body: JSON.stringify(payload),
         keepalive: true,
-      }).then((response) => {
-        if (response.ok) sessionStorage.setItem(sessionKey, "sent");
+      }).then(async (response) => {
+        const result = response.ok ? await response.json() : null;
+        if (result?.accepted === true) write(sessionKey, "sent");
         else sent = false;
       }).catch(() => { sent = false; });
     }, 1000);
@@ -197,7 +205,7 @@ function VisitorNotificationBeacon() {
       window.clearInterval(interval);
       window.removeEventListener("pointerdown", onInteraction);
       window.removeEventListener("keydown", onInteraction);
-      window.removeEventListener("scroll", onInteraction);
+      window.removeEventListener("wheel", onInteraction);
     };
   }, [location.pathname, location.search]);
 

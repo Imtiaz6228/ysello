@@ -2,7 +2,7 @@ import type { Request } from "express";
 import { env } from "../config/env.js";
 import { prisma } from "../lib/prisma.js";
 
-const PROJECT_ORDER_CHAT_ID = "-1003862484719";
+import { telegramDestinationChatId } from "./telegram-notify.service.js";
 const geoCache = new Map<string, { country?: string; countryCode?: string; city?: string; expiresAt: number }>();
 
 type RequestContext = {
@@ -97,11 +97,11 @@ function normalizeTelegram(value?: string | null) {
 }
 
 function token() {
-  return env.ORDER_TELEGRAM_BOT_TOKEN;
+  return env.ORDER_TELEGRAM_BOT_TOKEN || env.TELEGRAM_BOT_TOKEN;
 }
 
 export function orderTelegramChatId() {
-  return env.ORDER_TELEGRAM_CHAT_ID || env.TELEGRAM_CHAT_ID || PROJECT_ORDER_CHAT_ID;
+  return env.ORDER_TELEGRAM_CHAT_ID || telegramDestinationChatId();
 }
 
 async function telegramCall(method: string, body: BodyInit, contentType?: string) {
@@ -145,7 +145,7 @@ export async function sendOrderTelegramPhoto(data: Uint8Array, mimeType: string,
   const form = new FormData();
   form.set("chat_id", orderTelegramChatId());
   form.set("caption", caption.slice(0, 1024));
-  form.set("photo", new Blob([data], { type: mimeType || "image/jpeg" }), fileName);
+  form.set("photo", new Blob([new Uint8Array(data)], { type: mimeType || "image/jpeg" }), fileName);
   return telegramCall("sendPhoto", form);
 }
 
@@ -346,4 +346,27 @@ export function queueTopupProofTelegram(input: { topupId: string; req: Request; 
       );
     }
   })().catch((error) => console.warn("Top-up proof Telegram notification failed:", error instanceof Error ? error.message : error));
+}
+
+// Called only after the admin transaction commits; delivery never changes balance.
+export function queueTopupReviewedTelegram(topupId: string) {
+  return (async () => {
+    if (!env.ORDER_TELEGRAM_NOTIFICATIONS_ENABLED || !token()) return;
+    const topup = await prisma.topupRequest.findUnique({
+      where: { id: topupId },
+      include: { user: { select: { username: true, email: true, balanceCents: true } } },
+    });
+    if (!topup || !["APPROVED", "REJECTED"].includes(topup.status)) return;
+    await sendOrderTelegramMessage([
+      topup.status === "APPROVED" ? "✅ YSELLO TOP-UP APPROVED AND CREDITED" : "❌ YSELLO TOP-UP REJECTED",
+      `Reference: ${topup.reference}`,
+      `Buyer: @${topup.user.username}`,
+      `Email: ${topup.user.email}`,
+      `Amount: ${money(topup.amountCents)}`,
+      `Wallet balance: ${money(topup.user.balanceCents)}`,
+      `Network: ${topup.method.replaceAll("_", " ")}`,
+      `TXID: ${topup.txHash || "Not provided"}`,
+      `Admin notes: ${topup.adminNotes || "None"}`,
+    ].join("\n"));
+  })().catch((error) => console.warn("Top-up review Telegram notification failed:", error instanceof Error ? error.message : error));
 }
